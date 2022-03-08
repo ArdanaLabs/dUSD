@@ -1,5 +1,6 @@
-*.pdf
-*.dvi
-*.aux
-*.fdb_latexmk
-*.fls
+nix/documentation/*.pdf
+nix/documentation/*.dvi
+nix/documentation/*.aux
+nix/documentation/*.fdb_latexmk
+nix/documentation/*.fls
+nix/documentation/*.log

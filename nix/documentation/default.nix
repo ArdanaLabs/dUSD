@@ -11,6 +11,7 @@ writeShellApplication
     runtimeInputs = [ entr latexEnv ];
     text =
       ''
+      cd nix/documentation
       echo "test-plan.tex" | entr latexmk -pdf test-plan.tex
       '';
   }
