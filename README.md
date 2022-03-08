@@ -2,12 +2,10 @@
 
 You can set up a feedback loop through
 ```
+cd nix/documentation
 echo "test-plan.tex" | entr latexmk -pdf test-plan.tex
 ```
-within a nix shell (`nix develop`), or by running
+or simply by running
 ```
 nix run .#feedback-loop
 ```
-
-
-
