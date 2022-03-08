@@ -1,6 +1,6 @@
-nix/documentation/*.pdf
-nix/documentation/*.dvi
-nix/documentation/*.aux
-nix/documentation/*.fdb_latexmk
-nix/documentation/*.fls
-nix/documentation/*.log
+documentation/*.pdf
+documentation/*.dvi
+documentation/*.aux
+documentation/*.fdb_latexmk
+documentation/*.fls
+documentation/*.log
