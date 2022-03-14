@@ -18,28 +18,32 @@
     flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (system:
     let
         pkgs = import nixpkgs {inherit system; };
-        latexEnv = [ (pkgs.texlive.combine { inherit ( pkgs.texlive ) scheme-basic latexmk; })];
     in
     {
+      ciNix =
+        flake-compat-ci.lib.recurseIntoFlakeWith
+        {
+          flake = self;
+          systems = [ "x86_64-linux" ];
+        };
 
       devShell =
+        let
+          latexEnv = [ (pkgs.texlive.combine { inherit ( pkgs.texlive ) scheme-basic latexmk; })];
+        in
         pkgs.mkShell
         {
-          # with pkgs;
           name = "dUSD";
           buildInputs = [ pkgs.entr latexEnv];
         };
-      ciNix =
-        flake-compat-ci.lib.recurseIntoFlakeWith
-          {
-            flake = self;
-            systems = [ "x86_64-linux" ];
-          };
 
-        apps.feedback-loop =
-          {
-            type = "app";
-            program = "${ pkgs.callPackage ./documentation/test-plan-loop.nix { } }/bin/feedback-loop";
-          };
+       packages.test-plan =
+        pkgs.callPackage ./documentation/test-plan-build.nix {};
+
+      apps.feedback-loop =
+        {
+          type = "app";
+          program = "${ pkgs.callPackage ./documentation/test-plan-loop.nix { } }/bin/feedback-loop";
+        };
     });
 }
