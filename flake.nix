@@ -29,18 +29,17 @@
           name = "dUSD";
           buildInputs = [ pkgs.entr latexEnv];
         };
-      apps =
-        {
-          feedback-loop = {
-            type = "app";
-            program = "${ pkgs.callPackage ./documentation/test-plan-loop.nix { } }/bin/feedback-loop";
-          };
-        };
       ciNix =
         flake-compat-ci.lib.recurseIntoFlakeWith
           {
             flake = self;
             systems = [ "x86_64-linux" ];
+          };
+
+        apps.feedback-loop =
+          {
+            type = "app";
+            program = "${ pkgs.callPackage ./documentation/test-plan-loop.nix { } }/bin/feedback-loop";
           };
     });
 }
