@@ -33,7 +33,7 @@
         {
           feedback-loop = {
             type = "app";
-            program = "${ pkgs.callPackage ./documentation.test-plan-loop.nix { } }/bin/feedback-loop";
+            program = "${ pkgs.callPackage ./documentation/test-plan-loop.nix { } }/bin/feedback-loop";
           };
         };
       ciNix =
