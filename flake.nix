@@ -17,29 +17,25 @@
     }:
     flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (system:
     let
-        pkgs = import nixpkgs {inherit system;};
+        pkgs = import nixpkgs {inherit system; };
+        latexEnv = [ (pkgs.texlive.combine { inherit ( pkgs.texlive ) scheme-basic latexmk; })];
     in
     {
-      devShell = self.devShells.${ system }.default;
-      devShells =
-            let
-              latexEnv = with pkgs; texlive.combine { inherit ( texlive ) scheme-basic latexmk; };
-            in
-            rec {
-              default =
-                pkgs.mkShell
-                  {
-                    name = "dUSD";
-                    buildInputs = [ latexEnv pkgs.entr ];
-                  };
-            };
+
+      devShell =
+        pkgs.mkShell
+        {
+          # with pkgs;
+          name = "dUSD";
+          buildInputs = [ pkgs.entr latexEnv];
+        };
       apps =
-            {
-              feedback-loop = {
-                type = "app";
-                program = "${ pkgs.callPackage ./documentation { } }/bin/feedback-loop";
-              };
-            };
+        {
+          feedback-loop = {
+            type = "app";
+            program = "${ pkgs.callPackage ./documentation.test-plan-loop.nix { } }/bin/feedback-loop";
+          };
+        };
       ciNix =
         flake-compat-ci.lib.recurseIntoFlakeWith
           {
