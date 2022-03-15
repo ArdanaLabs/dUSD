@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Apropos.Plutarch (testTree) where
+module Apropos.Plutarch (spec) where
 
 import Apropos
 import Apropos.Script.Model
@@ -9,8 +9,8 @@ import GHC.Generics
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Crypto (PubKey)
 import Plutus.V1.Ledger.Value (AssetClass)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (fromGroup)
+import Test.Syd
+import Test.Syd.Hedgehog
 
 {-
     Port of https://github.com/ArdanaLabs/ardana-dollar/blob/main/test/Test/ArdanaDollar/PriceOracle/OnChain/Model/Proper.hs
@@ -245,14 +245,12 @@ instance ScriptModel PriceOracleProp PriceOracleModel where
             ]
     script _ = undefined
 
-testTree :: TestTree
-testTree =
-    testGroup
-        "cos"
+spec :: Spec
+spec = do
+    xdescribe "cos" $ do
         -- TODO is this the indended type for this test?
-        [ fromGroup $ runGeneratorTestsWhere (Apropos :: PriceOracleModel :+ PriceOracleProp) "" Yes
-        , fromGroup $ runScriptTestsWhere (Apropos :: PriceOracleModel :+ PriceOracleProp) "" Yes
-        ]
+        fromHedgehogGroup $ runGeneratorTestsWhere (Apropos :: PriceOracleModel :+ PriceOracleProp) "" Yes
+        fromHedgehogGroup $ runScriptTestsWhere (Apropos :: PriceOracleModel :+ PriceOracleProp) "" Yes
 
 oracleCurrencySymbol ::
     OracleMintingParams ->
