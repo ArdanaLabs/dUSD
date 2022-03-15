@@ -89,6 +89,7 @@ test-suite tests
     Models.Vault
     Models.Auction
     Gen
+    Apropos.Plutarch
     Apropos.Plutus.SingletonValue
     Apropos.Plutus.AssetClass
     Apropos.Plutus.Integer
