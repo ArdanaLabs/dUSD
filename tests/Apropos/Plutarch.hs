@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Apropos.Plutarch (testTree) where
+module Apropos.Plutarch () where
 
 import Apropos
 import Apropos.Script.Model
@@ -9,8 +9,8 @@ import GHC.Generics
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Crypto (PubKey)
 import Plutus.V1.Ledger.Value (AssetClass)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (fromGroup)
+--import Test.Tasty (TestTree, testGroup)
+--import Test.Tasty.Hedgehog (fromGroup)
 
 {-
     Port of https://github.com/ArdanaLabs/ardana-dollar/blob/main/test/Test/ArdanaDollar/PriceOracle/OnChain/Model/Proper.hs
@@ -23,6 +23,21 @@ import Test.Tasty.Hedgehog (fromGroup)
 -}
 
 -- STUBS
+
+pubKey :: a
+pubKey = undefined
+
+pubKeyHash :: a
+pubKeyHash = undefined
+
+knownWallet :: a
+knownWallet = undefined
+
+scriptCurrencySymbol :: a
+scriptCurrencySymbol = undefined
+
+oracleMintingPolicy :: a
+oracleMintingPolicy = undefined
 
 newtype UniqueMap a b = UM () deriving stock (Show)
 
@@ -167,7 +182,7 @@ stateTokenReturned model =
      in case assocMapLookup c $ getValue $ stateTokenValue $ outputParams model of
             Nothing -> False
             Just so -> case assocMapLookup (snd $ stateNFTCurrency model) so of
-                Just 1 -> True
+                Just (1 :: Integer) -> True
                 _ -> False
 
 inputDatumIsCorrectType :: PriceOracleModel -> Bool
@@ -196,6 +211,9 @@ inputPriceTrackingDatumIsEmpty _ = False
 
 correctNFTCurrency :: OracleMintingParams -> (CurrencySymbol, TokenName)
 correctNFTCurrency params = (oracleCurrencySymbol params, "PriceTracking")
+
+instance HasParameterisedGenerator PriceOracleProp PriceOracleModel where
+  parameterisedGenerator = undefined
 
 instance ScriptModel PriceOracleProp PriceOracleModel where
     expect _ =
@@ -227,6 +245,7 @@ instance ScriptModel PriceOracleProp PriceOracleModel where
             ]
     script _ = undefined
 
+  {-
 testTree :: TestTree
 testTree =
     testGroup
@@ -234,6 +253,7 @@ testTree =
         [ fromGroup $ runGeneratorTestsWhere Apropos "" Yes
         , fromGroup $ runScriptTestsWhere Apropos "" Yes
         ]
+        -}
 
 oracleCurrencySymbol ::
     OracleMintingParams ->
@@ -248,3 +268,5 @@ oracleMintingParams walletIdx = OracleMintingParams ownerPubKey ownerPubKeyHash
     ownerPubKey = pubKey $ knownWallet walletIdx
     ownerPubKeyHash :: PubKeyHash
     ownerPubKeyHash = pubKeyHash ownerPubKey
+
+
