@@ -1,10 +1,11 @@
-# Feedback loops
+# dUSD
 
-You can set up a feedback loop through
-```
-echo "test-plan.tex" | entr latexmk -pdf test-plan.tex
-```
-within a nix shell (`nix develop`), or by running
+The Ardana Dollar Stablecoin
+
+## test-plan document
+`./docs/test-plan/test-plan.pdf` documents design decisions, testing, and acceptance criteria for the project.
+
+When editing the docuement `./docs/test-plan.tex` you can set up a latex pdf rendering feedback loop by running
 ```
 nix run .#feedback-loop
 ```
