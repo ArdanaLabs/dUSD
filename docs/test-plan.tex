@@ -161,6 +161,10 @@ the protocol-wide parameters, and for enacting debt and surplus auctions.
 
 \subsubsection{Set liquidation ratio}
 
+\subsubsection{Set minimum collateralization ratio}
+
+\todo{Do we want to have an on-chain enforced minimum collateralization ratio?}
+
 \subsubsection{Set stability fee}
 
 \section{Acceptance criteria}
@@ -252,6 +256,14 @@ Restrictions:
     to deposit.
 \end{itemize}
 
+Decisions to be made:
+\begin{itemize}
+  \item Do we want to implement a maximum amount of collateral? MakerDAO has
+    this, not sure why.
+  \item Do we want to implement a mininum amount of collateral? If so, is this
+    in total per vault, or per deposit?
+\end{itemize}
+
 Questions:
 \begin{itemize}
   \item How will we figure out from which UTXO in your wallet to take the ADA?
@@ -278,8 +290,6 @@ Restrictions:
   \item If the total amount of debt in the vault before taking out the loan is 0,
     the amount of the loan must be greater than or equal to the debt floor for the
     vault's collateral type.
-  \item The total amount of debt in the vault after taking out the loan is less than or
-    equal to the debt ceiling for the vault's collateral type.
   \item The collateralization ratio in the vault after taking out the loan is greater than
     or equal to the liquidation ratio for the vault's collateral type.
 \end{itemize}
@@ -291,7 +301,7 @@ pay back a (part of a) dUSD loan in it. \\
 
 Restrictions:
 \begin{itemize}
-  \item The amount of dUSD paid back by the user is less than or equal to the
+  \item The amount of dUSD paid back by the user is equal to or smaller than the
     amount of dUSD debt in the vault.
   \item The stability fee for the part of loan that is paid back, is sent to the
     buffer as community profit
@@ -318,11 +328,9 @@ Any updates to the protocol will be decided on by admin, and later governance.
 
 \subsubsection{Set liquidation ratio}
 
-\subsubsection{Set stability fee}
-
 \subsubsection{Set debt floor}
 
-\subsubsection{Set debt ceiling}
+\subsubsection{Set stability fee}
 
 \subsubsection{Set list of price oracles to consider in OSM}
 
@@ -404,14 +412,6 @@ hour ago state that the current collateralization ratio is below the liquidation
 ratio.
 This is a measure taken to allow vault owners a chance to add collateral or pay
 back some of the debt whenever the price of the collateral dropped.
-
-\subsection{Admin}
-
-In order for the admin to add and configure supported collateral types for vaults,
-we need an appropriate data structure. We could accomplish this with a map keyed by
-collatoral type token name pointing to a record of params containing liquidation ratio,
-debt ceiling, debt floor, liquidation fee, stability fee, and any other params to control
-incentives for vault participation per that collateral type.
 
 \section{Tests}
 
