@@ -6,6 +6,7 @@ import qualified Apropos.Plutus.Integer as Integer
 import qualified Apropos.Plutus.SingletonValue as SingletonValue
 import qualified Apropos.Plutus.Value as Value
 import qualified Apropos.Plutus.Vault as Vault
+import qualified Apropos.Plutus.Credential as Credential
 
 import Test.Syd
 
@@ -21,3 +22,4 @@ main = sydTest $
       Value.spec
       Vault.spec
       Auction.spec
+      Credential.spec
