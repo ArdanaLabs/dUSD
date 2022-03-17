@@ -15,7 +15,7 @@
 
 \todo{What will the price oracle store? Suggestion: The last 48h of data. \\
 The reason to store more than only the most recent price, is such that the OSM
-can be used to determine how long a vault has been in a disasterous state (i.e.
+can be used to determine how long a vault has been in a disastrous state (i.e.
 collateralization ratio smaller than $1$), which is useful to determine when to
 bind the vault to the buffer and mint dUSD in order to pay back the debt.}
 
@@ -132,9 +132,11 @@ one of my vaults. In doing so, I am paying a stability fee to the buffer.
 
 \subsubsection{Set liquidation ratio}
 
-\subsubsection{Set minimum collateralization ratio}
-
 \subsubsection{Set stability fee}
+
+\subsubsection{Set debt floor}
+
+\subsubsection{Set debt ceiling}
 
 \section{Acceptance criteria}
 
@@ -223,7 +225,7 @@ and withdraw ADA from it. \\
 Restrictions:
 \begin{itemize}
   \item Withdrawing this amount of ADA from that vault doesn't sink its
-    collateralization ratio below the minimum collateralization ratio.
+    collateralization ratio below the liquidation ratio.
 \end{itemize}
 
 \subsubsection{Take out loan}
@@ -233,15 +235,14 @@ take out a dUSD loan in it, against his collateral. \\
 
 Restrictions:
 \begin{itemize}
-  \item This transaction doesn't make the collateralization ratio drop below the
-    minimum collateralization ratio.
+  \item If the total amount of debt in the vault before taking out the loan is 0,
+    the amount of the loan must be greater than or equal to the debt floor for the
+    vault's collateral type.
+  \item The total amount of debt in the vault after taking out the loan is less than or
+    equal to the debt ceiling for the vault's collateral type.
+  \item The collateralization ratio in the vault after taking out the loan is greater than
+    or equal to the liquidation ratio for the vault's collateral type.
 \end{itemize}
-
-\todo{What should the minimum collateralization ratio be?}
-\todo{Should the minimum collateralization ratio be different from the
-liquidation ratio??}
-\todo{Should there be a minimum amount one can take out as a loan? If so, is
-this per vault or per loan transaction?}
 
 \subsubsection{Pay back loan}
 
@@ -250,19 +251,10 @@ pack back a (part of a) dUSD loan in it. \\
 
 Restrictions:
 \begin{itemize}
-  \item The amount of dUSD paid back by the user is equal to or smaller than the
+  \item The amount of dUSD paid back by the user is less than or equal to the
     amount of dUSD debt in the vault.
   \item The stability fee for the part of loan that is paid back, is sent to the
     buffer as community profit
-\end{itemize}
-
-Design decisions:
-\begin{itemize}
-  \item What should the minimum collateralization ratio be?
-  \item Should the minimum collateralization ratio be different from the
-    liquidation ratio??
-  \item Should there be a minimum amount one can take out as a loan? If so, is
-    this per vault or per loan transaction?
 \end{itemize}
 
 \subsubsection{Liquidate someone else's vault}
@@ -281,9 +273,11 @@ Design decisions:
 
 \subsubsection{Set liquidation ratio}
 
-\subsubsection{Set minimum collateralization ratio}
-
 \subsubsection{Set stability fee}
+
+\subsubsection{Set debt floor}
+
+\subsubsection{Set debt ceiling}
 
 \subsubsection{Set list of price oracles to consider in OSM}
 
@@ -301,6 +295,15 @@ In addition, each price oracle contains the public hash key of the wallet which
 created it, so as to only allow the creator to update the oracle.
 
 \subsection{Oracle security module}
+
+\subsection{Admin}
+
+In order for the admin to add and configure supported collateral types for vaults,
+we need an appropriate data structure. We could accomplish this with a map keyed by
+collatoral type token name pointing to a record of params containing liquidation ratio,
+debt ceiling, debt floor, liquidation fee, stability fee, and any other params to control
+incentives for vault participation per that collateral type.
+
 
 \section{Tests}
 
