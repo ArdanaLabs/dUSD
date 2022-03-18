@@ -294,6 +294,11 @@ Restrictions:
     or equal to the liquidation ratio for the vault's collateral type.
 \end{itemize}
 
+The debt floor is the minimum amount of debt that can issued against a vault's
+collateral for a given collateral type. The purpose of the debt floor is to
+ensure enough debt is issued against a vault to incentivize a liquidator to
+liquidate it should it become under-collateralized.
+
 \subsubsection{Pay back loan}
 
 The vault website has a form that allows a user to pick one of their vaults and
@@ -329,6 +334,19 @@ Any updates to the protocol will be decided on by admin, and later governance.
 \subsubsection{Set liquidation ratio}
 
 \subsubsection{Set debt floor}
+
+The debt floor is the minimum amount of debt that can issued against a vault's
+collateral for a given collateral type.
+
+% For V2, or when multi collateral types are supported and we have an oracle containing
+% aggregate vault data:
+%
+% \subsubsection{Set debt ceiling}
+% The debt ceiling is the maximum amount of debt allowed to be issued for a collateral type.
+% It has two purposes:
+% 1. Deprecating collateral types by lowering the debt ceiling to below the current amount of issued debt
+% 2. Stopping OSM timing attacks, where vault owners exploit the OSM time delay during a price crash,
+%    issuing a massive amount of debt thus cashing out on worthless collateral.
 
 \subsubsection{Set stability fee}
 
