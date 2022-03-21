@@ -31,8 +31,9 @@ instance HasLogicalModel CredentialProp Credential where
 
 instance HasPermutationGenerator CredentialProp Credential where
   generators =
+
     [Morphism
-      {name = "make pubkey"
+      { name = "make pubkey"
       , match = Yes
       , contract = clear >> add IsPubKey
       , morphism = const $ PubKeyCredential <$> pubKeyHash
