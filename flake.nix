@@ -86,7 +86,7 @@
             ];
           };
           sha256map = {
-            "https://github.com/mlabs-haskell/apropos"."c79fe4fcee7f838c483462c97543884613bcb44f" = "sha256-H44rt5RlDkdgZ1gMzHBOiv6tqixLZVQezzfVYeIUy9U=";
+            "https://github.com/mlabs-haskell/apropos"."ae8d01fa4b6e5322a69fb01423ed82b490466c93" = "sha256-vZ65OcsYm68lAJRVr+fZY/TqH2/TifceCOHQ9/7fy1Q=";
             "https://github.com/mlabs-haskell/apropos-tx"."d5a90656ad77a48d2291748e1bb5ae072c85eaa4" = "sha256-SkWvW7EyI94BoFWvzyk+MsTNd3eomRlwaBovIQtI71o=";
             "https://github.com/Plutonomicon/plutarch"."aecc2050eb63ff0041576473aa3193070fe91314" = "sha256-pVvSa4fBoKXCdCu/NGduoKhr1/gGESCmj/Tr9Y5l9B4=";
             "https://github.com/input-output-hk/plutus.git"."6d8d25d1e84b2a4278da1036aab23da4161b8df8" = "o8m86TkI1dTo74YbE9CPPNrBfSDSrf//DMq+v2+woEY=";

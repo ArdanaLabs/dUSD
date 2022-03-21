@@ -4,16 +4,13 @@ module Apropos.Plutus.StakingCredential
   ) where
 
 import Apropos
-import Apropos.LogicalModel
 import Gen
 
 import Apropos.Plutus.Credential (CredentialProp(..))
 import GHC.Generics (Generic)
 import Plutus.V1.Ledger.Api (
   StakingCredential(..),
-  Credential,
                             )
-import qualified Data.Map as M
 import Control.Lens
 
 import Test.Syd
@@ -40,36 +37,34 @@ instance HasLogicalModel StakingCredentialProp StakingCredential where
   satisfiesProperty (HashProp p) (StakingHash cred) = satisfiesProperty p cred
   satisfiesProperty (HashProp _) _ = False
 
+instance HasAbstractions StakingCredentialProp StakingCredential where
+  abstractions =
+    [ WrapAbs $
+      SumAbstraction
+        { abstractionName = "hash"
+        , propertyAbstraction = abstractsProperties HashProp
+        , propLabel = IsHash
+        , sumModelAbstraction =
+            prism'
+              StakingHash
+              $ \case
+                StakingHash cred -> Just cred
+                _ -> Nothing
+        , propConstructor = HashProp
+        , modelConstructor = StakingHash
+        }
+    ]
+
 instance HasPermutationGenerator StakingCredentialProp StakingCredential where
-  generators =
-    let hash :: Abstraction CredentialProp Credential StakingCredentialProp StakingCredential =
-          Abstraction
-            { abstractionName = "hash"
-            , propertyAbstraction = abstractsProperties HashProp
-            , modelAbstraction = lens
-              (\case
-                StakingHash cred -> cred
-                StakingPtr{} -> error "abstraction applied on bad data in StakingCredential permutation generator "
-              )
-              (\_ c -> StakingHash c)
-            }
-    in
+  generators = abstractionGenerators
+    ++
     [ Morphism
       { name = "makePtr"
       , match = Yes
       , contract = clear >> add IsPtr
       , morphism = const $ StakingPtr <$> integer <*> integer <*> integer
       }
-    , Morphism
-      { name = "makeHash"
-      , match = Yes
-      , contract = clear >> addAll (HashProp <$> vars)
-      , morphism = const $ StakingHash <$> genSatisfying (All $ Var <$> vars)
-      }
-    ] ++ (abstract hash <$> generators )
-        where
-          vars :: [CredentialProp]
-          vars = M.keys $ M.filter id $ head $ solveAll logic
+    ]
 
 instance HasParameterisedGenerator StakingCredentialProp StakingCredential where
   parameterisedGenerator = buildGen baseGen

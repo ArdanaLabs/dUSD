@@ -93,6 +93,8 @@ test-suite tests
     Apropos.Plutus.Vault
     Apropos.Plutus.Credential
     Apropos.Plutus.StakingCredential
+    Apropos.Plutus.Maybe
+    Apropos.Plutus.Address
     Gen
     Tests
 

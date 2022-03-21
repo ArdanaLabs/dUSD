@@ -8,6 +8,7 @@ import qualified Apropos.Plutus.Value as Value
 import qualified Apropos.Plutus.Vault as Vault
 import qualified Apropos.Plutus.Credential as Credential
 import qualified Apropos.Plutus.StakingCredential as StakingCredential
+import qualified Apropos.Plutus.Address as Address
 
 import Test.Syd
 
@@ -25,3 +26,4 @@ main = sydTest $
       Auction.spec
       Credential.spec
       StakingCredential.spec
+      Address.spec

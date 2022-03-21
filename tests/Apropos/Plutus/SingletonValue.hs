@@ -8,7 +8,6 @@ import Apropos
 import Apropos.Plutus.AssetClass (AssetClassProp)
 import Apropos.Plutus.Integer (IntegerProp)
 import Control.Lens
-import Control.Monad (join)
 import GHC.Generics ( Generic )
 import Plutus.V1.Ledger.Value (AssetClass)
 
@@ -30,21 +29,24 @@ instance HasLogicalModel SingletonValueProp SingletonValue where
     satisfiesProperty (AC p) (ac, _) = satisfiesProperty p ac
     satisfiesProperty (Amt p) (_, amt) = satisfiesProperty p amt
 
+instance HasAbstractions SingletonValueProp SingletonValue where
+  abstractions =
+    [ WrapAbs $
+        ProductAbstraction
+            { abstractionName = "assetClass"
+            , propertyAbstraction = abstractsProperties AC
+            , productModelAbstraction = _1
+            }
+    , WrapAbs $
+      ProductAbstraction
+          { abstractionName = "amt"
+          , propertyAbstraction = abstractsProperties Amt
+          , productModelAbstraction = _2
+          }
+    ]
+
 instance HasPermutationGenerator SingletonValueProp SingletonValue where
-    generators =
-        let l =
-                Abstraction
-                    { abstractionName = "assetClass"
-                    , propertyAbstraction = abstractsProperties AC
-                    , modelAbstraction = _1
-                    }
-            r =
-                Abstraction
-                    { abstractionName = "amt"
-                    , propertyAbstraction = abstractsProperties Amt
-                    , modelAbstraction = _2
-                    }
-         in join [abstract l <$> generators, abstract r <$> generators]
+    generators = abstractionGenerators
 
 instance HasParameterisedGenerator SingletonValueProp SingletonValue where
     parameterisedGenerator = buildGen baseGen
