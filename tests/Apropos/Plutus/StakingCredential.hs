@@ -50,8 +50,6 @@ instance HasAbstractions StakingCredentialProp StakingCredential where
               $ \case
                 StakingHash cred -> Just cred
                 _ -> Nothing
-        , propConstructor = HashProp
-        , modelConstructor = StakingHash
         }
     ]
 

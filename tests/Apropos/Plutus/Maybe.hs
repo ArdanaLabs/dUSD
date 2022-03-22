@@ -38,8 +38,6 @@ instance
         , propertyAbstraction = abstractsProperties JustAnd
         , propLabel = IsJust
         , sumModelAbstraction = _Just
-        , propConstructor = JustAnd
-        , modelConstructor = Just
         }
     ]
 
