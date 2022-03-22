@@ -8,7 +8,7 @@ import Apropos
 import Apropos.Plutus.AssetClass (AssetClassProp)
 import Apropos.Plutus.Integer (IntegerProp)
 import Control.Lens
-import GHC.Generics ( Generic )
+import GHC.Generics (Generic)
 import Plutus.V1.Ledger.Value (AssetClass)
 
 import Test.Syd
@@ -20,7 +20,7 @@ data SingletonValueProp
     = AC AssetClassProp
     | Amt IntegerProp
     deriving stock (Eq, Ord, Show, Generic)
-    deriving anyclass Enumerable
+    deriving anyclass (Enumerable)
 
 instance LogicalModel SingletonValueProp where
     logic = (AC <$> logic) :&&: (Amt <$> logic)
@@ -30,23 +30,23 @@ instance HasLogicalModel SingletonValueProp SingletonValue where
     satisfiesProperty (Amt p) (_, amt) = satisfiesProperty p amt
 
 instance HasAbstractions SingletonValueProp SingletonValue where
-  abstractions =
-    [ WrapAbs $
-        ProductAbstraction
-            { abstractionName = "assetClass"
-            , propertyAbstraction = abstractsProperties AC
-            , productModelAbstraction = _1
-            }
-    , WrapAbs $
-      ProductAbstraction
-          { abstractionName = "amt"
-          , propertyAbstraction = abstractsProperties Amt
-          , productModelAbstraction = _2
-          }
-    ]
+    abstractions =
+        [ WrapAbs $
+            ProductAbstraction
+                { abstractionName = "assetClass"
+                , propertyAbstraction = abstractsProperties AC
+                , productModelAbstraction = _1
+                }
+        , WrapAbs $
+            ProductAbstraction
+                { abstractionName = "amt"
+                , propertyAbstraction = abstractsProperties Amt
+                , productModelAbstraction = _2
+                }
+        ]
 
 instance HasPermutationGenerator SingletonValueProp SingletonValue where
-    generators = abstractionGenerators
+    generators = abstractionMorphisms
 
 instance HasParameterisedGenerator SingletonValueProp SingletonValue where
     parameterisedGenerator = buildGen baseGen

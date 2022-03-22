@@ -1,81 +1,84 @@
-module Apropos.Plutus.StakingCredential
-  ( StakingCredentialProp
-  , spec
-  ) where
+module Apropos.Plutus.StakingCredential (
+    StakingCredentialProp,
+    spec,
+) where
 
 import Apropos
 import Gen
 
-import Apropos.Plutus.Credential (CredentialProp(..))
+import Apropos.Plutus.Credential (CredentialProp (..))
+import Control.Lens (prism')
 import GHC.Generics (Generic)
 import Plutus.V1.Ledger.Api (
-  StakingCredential(..),
-                            )
-import Control.Lens
+    StakingCredential (..),
+ )
 
-import Test.Syd
-import Test.Syd.Hedgehog ( fromHedgehogGroup )
+import Test.Syd (Spec, describe)
+import Test.Syd.Hedgehog (fromHedgehogGroup)
 
 data StakingCredentialProp
-  = IsHash
-  | HashProp CredentialProp
-  | IsPtr
-  deriving stock (Eq,Ord,Show,Generic)
-  deriving anyclass Enumerable
+    = IsHash
+    | HashProp CredentialProp
+    | IsPtr
+    deriving stock (Eq, Ord, Show, Generic)
+    deriving anyclass (Enumerable)
 
 instance LogicalModel StakingCredentialProp where
-  logic =
-    ExactlyOne [ Var IsHash , Var IsPtr ]
-    :&&: (Var IsHash :->: HashProp <$> logic)
-    :&&: (Var IsPtr :->: None (Var . HashProp <$> enumerated))
+    logic =
+        ExactlyOne [Var IsHash, Var IsPtr]
+            :&&: (Var IsHash :->: HashProp <$> logic)
+            :&&: (Var IsPtr :->: None (Var . HashProp <$> enumerated))
 
 instance HasLogicalModel StakingCredentialProp StakingCredential where
-  satisfiesProperty IsHash StakingHash{} = True
-  satisfiesProperty IsHash _ = False
-  satisfiesProperty IsPtr StakingPtr{} = True
-  satisfiesProperty IsPtr _ = False
-  satisfiesProperty (HashProp p) (StakingHash cred) = satisfiesProperty p cred
-  satisfiesProperty (HashProp _) _ = False
+    satisfiesProperty IsHash StakingHash{} = True
+    satisfiesProperty IsHash _ = False
+    satisfiesProperty IsPtr StakingPtr{} = True
+    satisfiesProperty IsPtr _ = False
+    satisfiesProperty (HashProp p) (StakingHash cred) = satisfiesProperty p cred
+    satisfiesProperty (HashProp _) _ = False
 
 instance HasAbstractions StakingCredentialProp StakingCredential where
-  abstractions =
-    [ WrapAbs $
-      SumAbstraction
-        { abstractionName = "hash"
-        , propertyAbstraction = abstractsProperties HashProp
-        , propLabel = IsHash
-        , sumModelAbstraction =
-            prism'
-              StakingHash
-              $ \case
-                StakingHash cred -> Just cred
-                _ -> Nothing
-        }
-    ]
+    abstractions =
+        [ WrapAbs $
+            SumAbstraction
+                { abstractionName = "hash"
+                , propertyAbstraction = abstractsProperties HashProp
+                , propLabel = IsHash
+                , sumModelAbstraction =
+                    prism'
+                        StakingHash
+                        $ \case
+                            StakingHash cred -> Just cred
+                            _ -> Nothing
+                }
+        ]
 
 instance HasPermutationGenerator StakingCredentialProp StakingCredential where
-  generators = abstractionGenerators
-    ++
-    [ Morphism
-      { name = "makePtr"
-      , match = Yes
-      , contract = clear >> add IsPtr
-      , morphism = const $ StakingPtr <$> integer <*> integer <*> integer
-      }
-    ]
+    generators =
+        abstractionMorphisms
+            ++ [ Morphism
+                    { name = "make StakingPtr"
+                    , match = Yes
+                    , contract = clear >> add IsPtr
+                    , morphism = const $ StakingPtr <$> integer <*> integer <*> integer
+                    }
+               ]
 
 instance HasParameterisedGenerator StakingCredentialProp StakingCredential where
-  parameterisedGenerator = buildGen baseGen
+    parameterisedGenerator = buildGen baseGen
 
 baseGen :: Gen StakingCredential
-baseGen = pure $ StakingPtr 0 0 0
+baseGen =
+    choice
+        [ pure $ StakingPtr 0 0 0
+        , StakingHash <$> genSatisfying @CredentialProp Yes
+        ]
 
 spec :: Spec
 spec = do
     describe "StakingCredentialGenTests" $
-      mapM_ fromHedgehogGroup $
-        permutationGeneratorSelfTest
-          True
-          (\(_ :: Morphism StakingCredentialProp assetClassGenSelfTest) -> True)
-          baseGen
-
+        mapM_ fromHedgehogGroup $
+            permutationGeneratorSelfTest
+                True
+                (\(_ :: Morphism StakingCredentialProp assetClassGenSelfTest) -> True)
+                baseGen

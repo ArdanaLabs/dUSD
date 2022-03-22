@@ -1,66 +1,69 @@
-module Apropos.Plutus.Maybe
-  (MaybeProp(..),
-  ) where
+module Apropos.Plutus.Maybe (
+    MaybeProp (..),
+) where
 
 import Apropos
-import GHC.Generics
-import Control.Lens
+import Control.Lens (_Just)
+import GHC.Generics (Generic)
 
 data MaybeProp p
-  = IsNothing
-  | IsJust
-  | JustAnd p
-  deriving stock (Eq,Ord,Show,Generic)
-  deriving anyclass Enumerable
+    = IsNothing
+    | IsJust
+    | JustAnd p
+    deriving stock (Eq, Ord, Show, Generic)
+    deriving anyclass (Enumerable)
 
 instance LogicalModel p => LogicalModel (MaybeProp p) where
-  logic = ExactlyOne [Var IsNothing,Var IsJust]
-    :&&: (Var IsNothing :->: None ( Var . JustAnd <$> enumerated))
-    :&&: (Var IsJust :->: JustAnd <$> logic)
+    logic =
+        ExactlyOne [Var IsNothing, Var IsJust]
+            -- TODO type ambiguity makes it hard to use abstractionLogic here
+            :&&: (Var IsNothing :->: None (Var . JustAnd <$> enumerated))
+            :&&: (Var IsJust :->: JustAnd <$> logic)
 
 instance HasLogicalModel p m => HasLogicalModel (MaybeProp p) (Maybe m) where
-  satisfiesProperty IsNothing Nothing = True
-  satisfiesProperty IsNothing (Just _) = False
-  satisfiesProperty IsJust (Just _) = True
-  satisfiesProperty IsJust Nothing = False
-  satisfiesProperty (JustAnd _) Nothing = False
-  satisfiesProperty (JustAnd p) (Just m) = satisfiesProperty p m
+    satisfiesProperty IsNothing Nothing = True
+    satisfiesProperty IsNothing (Just _) = False
+    satisfiesProperty IsJust (Just _) = True
+    satisfiesProperty IsJust Nothing = False
+    satisfiesProperty (JustAnd _) Nothing = False
+    satisfiesProperty (JustAnd p) (Just m) = satisfiesProperty p m
 
 instance
-  (HasParameterisedGenerator p m
-  ,HasPermutationGenerator p m
-  )
-  => HasAbstractions (MaybeProp p) (Maybe m) where
-  abstractions =
-    [ WrapAbs $
-      SumAbstraction
-        { abstractionName = "Just"
-        , propertyAbstraction = abstractsProperties JustAnd
-        , propLabel = IsJust
-        , sumModelAbstraction = _Just
-        }
-    ]
+    ( HasParameterisedGenerator p m
+    , HasPermutationGenerator p m
+    ) =>
+    HasAbstractions (MaybeProp p) (Maybe m)
+    where
+    abstractions =
+        [ WrapAbs $
+            SumAbstraction
+                { abstractionName = "Just"
+                , propertyAbstraction = abstractsProperties JustAnd
+                , propLabel = IsJust
+                , sumModelAbstraction = _Just
+                }
+        ]
 
 instance
-  (HasParameterisedGenerator p m
-  ,HasPermutationGenerator p m
-  )
-  => HasPermutationGenerator (MaybeProp p) (Maybe m) where
-  generators =
-    abstractionGenerators
-    ++
-    [ Morphism
-      { name = "make Nothing"
-      , contract = clear >> add IsNothing
-      , match = Yes
-      , morphism = const $ pure Nothing
-      }
-    ]
+    ( HasParameterisedGenerator p m
+    , HasPermutationGenerator p m
+    ) =>
+    HasPermutationGenerator (MaybeProp p) (Maybe m)
+    where
+    generators =
+        abstractionMorphisms
+            ++ [ Morphism
+                    { name = "make Nothing"
+                    , contract = clear >> add IsNothing
+                    , match = Yes
+                    , morphism = const $ pure Nothing
+                    }
+               ]
 
 instance
-  (HasParameterisedGenerator p m
-  ,HasPermutationGenerator p m
-  )
-  => HasParameterisedGenerator (MaybeProp p) (Maybe m) where
-    parameterisedGenerator = buildGen $ choice [pure Nothing,Just <$> genSatisfying @p @m Yes]
-
+    ( HasParameterisedGenerator p m
+    , HasPermutationGenerator p m
+    ) =>
+    HasParameterisedGenerator (MaybeProp p) (Maybe m)
+    where
+    parameterisedGenerator = buildGen $ choice [pure Nothing, Just <$> genSatisfying @p @m Yes]

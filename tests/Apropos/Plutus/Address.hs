@@ -1,66 +1,67 @@
-module Apropos.Plutus.Address
-  ( AddressProp(..)
-  , spec
-  ) where
+module Apropos.Plutus.Address (
+    AddressProp (..),
+    spec,
+) where
 
 import Apropos
-import GHC.Generics
-import Control.Lens
-import Apropos.Plutus.StakingCredential ( StakingCredentialProp )
-import Apropos.Plutus.Maybe ( MaybeProp(..) )
-import Apropos.Plutus.Credential ( CredentialProp )
+import Apropos.Plutus.Credential (CredentialProp)
+import Apropos.Plutus.Maybe (MaybeProp (..))
+import Apropos.Plutus.StakingCredential (StakingCredentialProp)
+import Control.Lens (lens)
+import GHC.Generics (Generic)
 import Plutus.V1.Ledger.Api (
-  Address(..),
-                            )
+    Address (..),
+ )
 
-import Test.Syd
-import Test.Syd.Hedgehog
+import Test.Syd (Spec, describe)
+import Test.Syd.Hedgehog (fromHedgehogGroup)
 
 data AddressProp
-  = Cred CredentialProp
-  | StakingCred (MaybeProp StakingCredentialProp)
-  deriving stock (Eq,Ord,Show,Generic)
-  deriving anyclass Enumerable
+    = Cred CredentialProp
+    | StakingCred (MaybeProp StakingCredentialProp)
+    deriving stock (Eq, Ord, Show, Generic)
+    deriving anyclass (Enumerable)
 
 instance LogicalModel AddressProp where
-  logic = (Cred <$> logic) :&&: (StakingCred <$> logic)
+    logic = (Cred <$> logic) :&&: (StakingCred <$> logic)
 
 instance HasLogicalModel AddressProp Address where
-  satisfiesProperty (Cred p) (Address c _) = satisfiesProperty p c
-  satisfiesProperty (StakingCred p) (Address _ sc) = satisfiesProperty p sc
+    satisfiesProperty (Cred p) (Address c _) = satisfiesProperty p c
+    satisfiesProperty (StakingCred p) (Address _ sc) = satisfiesProperty p sc
 
 instance HasAbstractions AddressProp Address where
-  abstractions =
-    [ WrapAbs $
-      ProductAbstraction
-        { abstractionName = "credential"
-        , propertyAbstraction = abstractsProperties Cred
-        , productModelAbstraction =
-            lens
-              (\(Address adr _) -> adr)
-              (\(Address _ msc) adr -> Address adr msc)
-        }
-    , WrapAbs $
-      ProductAbstraction
-        { abstractionName = "maybe stakingcredential"
-        , propertyAbstraction = abstractsProperties StakingCred
-        , productModelAbstraction =
-            lens
-              (\(Address _ msc) -> msc)
-              (\(Address adr _) msc -> Address adr msc)
-        }
-    ]
+    abstractions =
+        [ WrapAbs $
+            ProductAbstraction
+                { abstractionName = "credential"
+                , propertyAbstraction = abstractsProperties Cred
+                , productModelAbstraction =
+                    lens
+                        (\(Address adr _) -> adr)
+                        (\(Address _ msc) adr -> Address adr msc)
+                }
+        , WrapAbs $
+            ProductAbstraction
+                { abstractionName = "maybe stakingcredential"
+                , propertyAbstraction = abstractsProperties StakingCred
+                , productModelAbstraction =
+                    lens
+                        (\(Address _ msc) -> msc)
+                        (\(Address adr _) msc -> Address adr msc)
+                }
+        ]
 
 instance HasPermutationGenerator AddressProp Address where
-  generators = abstractionGenerators
+    generators = abstractionMorphisms
 
 instance HasParameterisedGenerator AddressProp Address where
-  parameterisedGenerator = buildGen baseGen
+    parameterisedGenerator = buildGen baseGen
 
 baseGen :: Gen Address
-baseGen = Address
-      <$> genSatisfying @CredentialProp Yes
-      <*> genSatisfying @(MaybeProp StakingCredentialProp) Yes
+baseGen =
+    Address
+        <$> genSatisfying @CredentialProp Yes
+        <*> genSatisfying @(MaybeProp StakingCredentialProp) Yes
 
 spec :: Spec
 spec = do
