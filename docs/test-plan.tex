@@ -442,6 +442,37 @@ the ADA?}
 
 \subsection{Update mechanism for the protocol (TBD)}
 
+\todo{It might be best to list what features of the protocol we foresee most 
+  frequently updating so we can effectively test-run different kinds of updates.
+  The below is proposed for schematic upgrades of the buffer and the vault.}
+
+\subsubsection{Buffer Updates}
+
+\todo{Proposal: The buffer can support several versions at the same time, which a vault
+can consume based on it's compatible version.}
+
+\subsubsection{Vault Updates}
+
+Vault updates can be performed through either a manual process or implicitly
+during a transaction. 
+ 
+Manual update:
+
+\begin{itemize}
+  \item Vault owners can check the current version of their vault and see if
+    there is a newer version to which they should update.
+  \item Vault owners can trigger an update on their vault through an update
+    transaction on their vault. 
+\end{itemize} 
+  
+Auto-update:
+
+\begin{itemize}
+  \item During a transaction on a vault that is triggered by a vault owner, the
+    current version of the vault is checked against the latest version and if the
+    vault needs to be updated, the update is rolled into the transaction. 
+\end{itemize} 
+  
 \section{Implementation details}
 
 This section discusses what we need in order to implement the interactions
@@ -621,6 +652,17 @@ trusted price, without allowing as many opportunities for manipulations.
 (Classic auctions are vulnerable for manipulations through resource contention,
 DEXes through executing big transactions, e.g. sandwich attacks.)
 The trusted DEXes would be the fastest solution.
+
+\subsection{Upgrade mechanism for the protocol (TDB)}
+
+\todo {
+  Proposal: The buffer can expose different versions of it's interface to a vault
+  and the vault can determine it's compatibility and update-ability during vault
+  operations and execute updates when (explicit update, debt payment, debt issuance)
+  are being made. This can be performed by accessing the datum of the buffer when
+  passed as a readonly input into a vault transaction.
+  Vault updates occur through composition of migration functions e.g v1 -$>$ v2, v2 -$>$ v3. 
+} 
 
 \section{Tests}
 
