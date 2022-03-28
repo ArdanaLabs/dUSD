@@ -1,31 +1,31 @@
 module Gen (
-    address,
-    assetClass,
-    currencySymbol,
-    tokenName,
-    pubKeyHash,
-    validatorHash,
-    datumHash,
-    maybeOf,
-    rational,
-    integer,
-    datum,
+  address,
+  assetClass,
+  currencySymbol,
+  tokenName,
+  pubKeyHash,
+  validatorHash,
+  datumHash,
+  maybeOf,
+  rational,
+  integer,
+  datum,
 ) where
 
 import Apropos (Gen, choice, element, int, linear, list)
 
 import Plutus.V1.Ledger.Api (
-    Address (Address),
-    Credential (..),
-    CurrencySymbol,
-    Datum (Datum),
-    DatumHash,
-    PubKeyHash,
-    StakingCredential (..),
-    TokenName,
-    ValidatorHash,
-    Value,
-    singleton,
+  Address (Address),
+  Credential (..),
+  CurrencySymbol,
+  Datum (Datum),
+  DatumHash,
+  PubKeyHash,
+  StakingCredential (..),
+  TokenName,
+  ValidatorHash,
+  Value,
+  singleton,
  )
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
 
@@ -33,7 +33,7 @@ import Control.Monad (replicateM)
 import Data.Ratio
 import Data.String (IsString (..))
 import Plutus.V1.Ledger.Value (AssetClass)
-import qualified Plutus.V1.Ledger.Value as Value
+import Plutus.V1.Ledger.Value qualified as Value
 
 -- TODO address should get it's own apropos model
 address :: Gen Address
@@ -41,22 +41,22 @@ address = Address <$> credential <*> maybeOf stakingCredential
   where
     stakingCredential :: Gen StakingCredential
     stakingCredential =
-        choice
-            [ StakingHash <$> credential
-            , StakingPtr <$> integer <*> integer <*> integer
-            ]
+      choice
+        [ StakingHash <$> credential
+        , StakingPtr <$> integer <*> integer <*> integer
+        ]
 
     credential :: Gen Credential
     credential =
-        choice
-            [ PubKeyCredential <$> pubKeyHash
-            , ScriptCredential <$> validatorHash
-            ]
+      choice
+        [ PubKeyCredential <$> pubKeyHash
+        , ScriptCredential <$> validatorHash
+        ]
 
 hexString :: IsString s => Gen s
 hexString = do
-    len <- (2 *) <$> int (linear 0 32)
-    fromString <$> replicateM len hexit
+  len <- (2 *) <$> int (linear 0 32)
+  fromString <$> replicateM len hexit
 
 hexStringName :: IsString s => Gen s
 hexStringName = fromString <$> choice [pure "", replicateM 64 hexit]
@@ -85,7 +85,6 @@ hexit = element $ ['0' .. '9'] ++ ['a' .. 'f']
 maybeOf :: Gen a -> Gen (Maybe a)
 maybeOf g = choice [pure Nothing, Just <$> g]
 
-
 integer :: Gen Integer
 integer = fromIntegral <$> int (linear (-1_000_000) 1_000_000)
 
@@ -102,7 +101,7 @@ datum = choice [datumOf integer, datumOf value]
     value = mconcat <$> list (linear 0 64) singletonValue
     singletonValue :: Gen Value
     singletonValue =
-        singleton <$> currencySymbol <*> tokenName <*> pos
+      singleton <$> currencySymbol <*> tokenName <*> pos
 
 datumOf :: ToData a => Gen a -> Gen Datum
 datumOf g = Datum . toBuiltinData <$> g
