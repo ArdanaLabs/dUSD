@@ -4,8 +4,14 @@
     haskell-nix.url = "github:input-output-hk/haskell.nix";
     nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
     haskell-nix.inputs.nixpkgs.follows = "haskell-nix/nixpkgs-2105";
-    plutus.url = "github:input-output-hk/plutus";
     #   used for libsodium-vrf
+    plutus.url = "github:input-output-hk/plutus";
+    lint-utils = {
+      type = "git";
+      url = "https://gitlab.homotopic.tech/nix/lint-utils.git";
+      ref = "master";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
   outputs =
     {
@@ -13,6 +19,7 @@
       nixpkgs,
       haskell-nix,
       plutus,
+      lint-utils
     }
     @ inputs:
     let
@@ -90,6 +97,26 @@
             "https://github.com/Srid/validity"."f7982549b95d0ab727950dc876ca06b1862135ba" = "sha256-dpMIu08qXMzy8Kilk/2VWpuwIsfqFtpg/3mkwt5pdjA=";
           };
         };
+
+        # Checks the shell script using ShellCheck
+        checkedShellScript = system: name: text:
+          ((nixpkgsFor system).writeShellApplication {
+            inherit name text;
+          }) + "/bin/${name}";
+
+        # Concat a list of Flake apps to produce a new app that runs all of them
+        # in sequence.
+        concatApps = system: apps:
+          {
+            type = "app";
+            program = checkedShellScript system "concatApps"
+              ((nixpkgsFor system).lib.strings.concatMapStringsSep
+                "\n"
+                (app: app.program)
+                apps);
+          };
+
+        fourmoluOpts = "-o-XTypeApplications -o-XImportQualifiedPost";
     in
       {
         project = forAllSystems projectFor;
@@ -131,6 +158,12 @@
               type = "app";
               program = "${ pkgs.callPackage ./nix/apps/feedback-loop { } }/bin/feedback-loop";
             };
+            format = concatApps system [
+              (lint-utils.apps.${system}.fourmolu fourmoluOpts)
+              lint-utils.apps.${system}.cabal-fmt
+              # Enable after https://github.com/ArdanaLabs/dUSD/issues/8
+              # inputs.lint-utils.apps.${system}.nixpkgs-fmt
+            ];
           });
       };
 }
