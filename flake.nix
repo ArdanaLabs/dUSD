@@ -140,7 +140,19 @@
             '';
           };
         });
-        checks = forAllSystems (system: self.flake.${system}.checks);
+        checks = forAllSystems (system: 
+          self.flake.${system}.checks // {
+            format-haskell = lint-utils.linters.${system}.fourmolu ./. fourmoluOpts;
+            format-cabal = lint-utils.linters.${system}.cabal-fmt ./.;
+            # Enable after https://github.com/ArdanaLabs/dUSD/issues/8
+            # format-nix = lint-utils.linters.${system}.nixpkgs-fmt ./.;
+            # hls = checkedShellScript system "hls" "${hp.haskell-language-server}/bin/haskell-language-server";
+          }
+        );
+        # We need this attribute because `nix flake check` won't work for Haskell
+        # projects: https://nixos.wiki/wiki/Import_From_Derivation#IFD_and_Haskell
+        #
+        # Instead, run: `nix build .#check.x86_64-linux` (replace with your system)
         check = forAllSystems (
           system:
             (nixpkgsFor system).runCommand "combined-test" {
