@@ -130,7 +130,7 @@
           };
         });
         checks = forAllSystems (system: 
-          # self.flake.${system}.checks // 
+          self.flake.${system}.checks // 
             (lint-utils.mkChecks.${system} lintSpec ./.)
         );
         # We need this attribute because `nix flake check` won't work for Haskell
