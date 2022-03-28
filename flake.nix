@@ -9,7 +9,7 @@
     lint-utils = {
       type = "git";
       url = "https://gitlab.homotopic.tech/nix/lint-utils.git";
-      ref = "master";
+      ref = "spec-type";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -98,25 +98,14 @@
           };
         };
 
-        # Checks the shell script using ShellCheck
-        checkedShellScript = system: name: text:
-          ((nixpkgsFor system).writeShellApplication {
-            inherit name text;
-          }) + "/bin/${name}";
-
-        # Concat a list of Flake apps to produce a new app that runs all of them
-        # in sequence.
-        concatApps = system: apps:
-          {
-            type = "app";
-            program = checkedShellScript system "concatApps"
-              ((nixpkgsFor system).lib.strings.concatMapStringsSep
-                "\n"
-                (app: app.program)
-                apps);
+        lintSpec = {
+          cabal-fmt = {};
+          fourmolu = {
+            ghcOpts = "-o-XTypeApplications -o-XImportQualifiedPost";
           };
-
-        fourmoluOpts = "-o-XTypeApplications -o-XImportQualifiedPost";
+          # Enable after https://github.com/ArdanaLabs/dUSD/issues/8
+          # nixpkgs-fmt = {};
+        };
     in
       {
         project = forAllSystems projectFor;
@@ -141,13 +130,8 @@
           };
         });
         checks = forAllSystems (system: 
-          self.flake.${system}.checks // {
-            format-haskell = lint-utils.linters.${system}.fourmolu ./. fourmoluOpts;
-            format-cabal = lint-utils.linters.${system}.cabal-fmt ./.;
-            # Enable after https://github.com/ArdanaLabs/dUSD/issues/8
-            # format-nix = lint-utils.linters.${system}.nixpkgs-fmt ./.;
-            # hls = checkedShellScript system "hls" "${hp.haskell-language-server}/bin/haskell-language-server";
-          }
+          # self.flake.${system}.checks // 
+            (lint-utils.mkChecks.${system} lintSpec ./.)
         );
         # We need this attribute because `nix flake check` won't work for Haskell
         # projects: https://nixos.wiki/wiki/Import_From_Derivation#IFD_and_Haskell
@@ -170,12 +154,7 @@
               type = "app";
               program = "${ pkgs.callPackage ./nix/apps/feedback-loop { } }/bin/feedback-loop";
             };
-            format = concatApps system [
-              (lint-utils.apps.${system}.fourmolu fourmoluOpts)
-              lint-utils.apps.${system}.cabal-fmt
-              # Enable after https://github.com/ArdanaLabs/dUSD/issues/8
-              # inputs.lint-utils.apps.${system}.nixpkgs-fmt
-            ];
+            format =  lint-utils.mkApp.${system} lintSpec;
           });
       };
 }
