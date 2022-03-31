@@ -631,9 +631,21 @@ The trusted DEXes would be the fastest solution.
 
 \subsection{Price module}
 
-Test 1. If one of the admin wallets tries to create a price module, it succeeds.
+\subsubsection{Price module authorisation failure}
 
-Test 2. If a non-admin wallet tries to create a price module, it fails.
+A non admin tries to create a price module.
+This fails.
+\todo{What does failure mean? The transaction is not validated?}
+
+\subsubsection{Price module creation success}
+
+An admin creates a price module.
+This succeeds.
+\todo{What does succeed mean? The transaction is validated?}
+
+\subsubsection{Price module write roundtrip}
+
+When an admin updates price information with any datum, the admin can read the same information in the next read.
 
 % \section{Remarks}
 % 
