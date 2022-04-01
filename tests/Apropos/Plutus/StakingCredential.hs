@@ -26,8 +26,7 @@ data StakingCredentialProp
 instance LogicalModel StakingCredentialProp where
     logic =
         ExactlyOne [Var IsHash, Var IsPtr]
-            :&&: (Var IsHash :->: HashProp <$> logic)
-            :&&: (Var IsPtr :->: None (Var . HashProp <$> enumerated))
+            :&&: abstractionLogic @StakingCredential
 
 instance HasLogicalModel StakingCredentialProp StakingCredential where
     satisfiesProperty IsHash StakingHash{} = True

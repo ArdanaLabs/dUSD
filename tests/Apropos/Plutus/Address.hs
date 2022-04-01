@@ -23,7 +23,7 @@ data AddressProp
     deriving anyclass (Enumerable)
 
 instance LogicalModel AddressProp where
-    logic = (Cred <$> logic) :&&: (StakingCred <$> logic)
+    logic = abstractionLogic @Address
 
 instance HasLogicalModel AddressProp Address where
     satisfiesProperty (Cred p) (Address c _) = satisfiesProperty p c

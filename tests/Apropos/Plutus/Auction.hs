@@ -1,51 +1,126 @@
-module Apropos.Plutus.Auction (spec) where
+module Apropos.Plutus.Auction
+  (
+  BidProp(..),
+  BidModel(..),
+  AuctionProp(..),
+  AuctionModel(..),
+  spec,
+  ) where
 
 import Apropos
+import Apropos.Plutus.SingletonValue(SingletonValue,SingletonValueProp(..))
 import GHC.Generics (Generic)
-import Gen
-import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Value (AssetClass, assetClassValue)
+import Plutus.V1.Ledger.Api ( PubKeyHash )
+import Gen(pubKeyHash)
+import Control.Lens ( lens )
+
 import Test.Syd
 import Test.Syd.Hedgehog (fromHedgehogGroup)
 
-spec :: Spec
-spec = do
-    xdescribe "auction model" $ do
-        fromHedgehogGroup $ runGeneratorTestsWhere (Apropos :: AuctionModel :+ AuctionProp) "generator" Yes
-
 data AuctionProp
-    = Valid
+    = Selling SingletonValueProp
+    | CurrentBid BidProp
     -- TODO real properties
-    deriving stock (Eq, Ord, Enum, Show, Bounded, Generic)
+    deriving stock (Eq, Ord, Show, Generic)
     deriving anyclass (Enumerable)
 
 data AuctionModel = AuctionModel
-    { auction :: TxOut
-    , price :: Rational
-    , buying :: AssetClass
-    , selling :: AssetClass
+    { selling :: SingletonValue
+    , currentBid :: BidModel
     }
     deriving stock (Eq, Show)
 
+newtype BidProp
+  = BidAmt SingletonValueProp
+  -- TODO props for bidder?
+    deriving stock (Eq, Ord, Show, Generic)
+    deriving anyclass (Enumerable)
+
+
+data BidModel = BidModel
+  { bidder :: PubKeyHash
+  , bid :: SingletonValue
+  }
+  deriving stock (Eq, Show)
+
+-- Bid
+
+instance HasAbstractions BidProp BidModel where
+  abstractions =
+    [WrapAbs $
+      ProductAbstraction
+        { abstractionName = "bid"
+        , propertyAbstraction = abstractsProperties BidAmt
+        , productModelAbstraction = lens bid (\am bid' -> am{bid=bid'})
+        }
+    ]
+
+instance LogicalModel BidProp where
+    logic = abstractionLogic @BidModel
+
+instance HasLogicalModel BidProp BidModel where
+  satisfiesProperty (BidAmt p) bidModel = satisfiesProperty p (bid bidModel)
+
+instance HasPermutationGenerator BidProp BidModel where
+  generators = abstractionMorphisms
+
+baseBidGen :: Gen BidModel
+baseBidGen = BidModel <$> pubKeyHash <*> genSatisfying @SingletonValueProp Yes
+
+instance HasParameterisedGenerator BidProp BidModel where
+  parameterisedGenerator = buildGen baseBidGen
+
+-- Auction
+
+instance HasAbstractions AuctionProp AuctionModel where
+  abstractions =
+    [WrapAbs $
+      ProductAbstraction
+        { abstractionName = "bid"
+        , propertyAbstraction = abstractsProperties CurrentBid
+        , productModelAbstraction = lens currentBid (\am bid' -> am{currentBid=bid'})
+        }
+    ,WrapAbs $
+      ProductAbstraction
+        { abstractionName = "selling"
+        , propertyAbstraction = abstractsProperties Selling
+        , productModelAbstraction = lens selling (\am selling' -> am{selling=selling'})
+        }
+    ]
+
 instance LogicalModel AuctionProp where
-    logic = Var Valid
+    logic = abstractionLogic @AuctionModel
 
 instance HasLogicalModel AuctionProp AuctionModel where
-    satisfiesProperty _ _ = True
+    satisfiesProperty (Selling p) am = satisfiesProperty p (selling am)
+    satisfiesProperty (CurrentBid p) am = satisfiesProperty p (currentBid am)
+
+instance HasPermutationGenerator AuctionProp AuctionModel where
+  generators = abstractionMorphisms
 
 instance HasParameterisedGenerator AuctionProp AuctionModel where
-    parameterisedGenerator s = do
-        let _var p = p `elem` s
-        adr <- address
-        buying <- assetClass
-        selling <- genFilter (/= buying) assetClass
-        price <- rational
-        amt <- integer
-        pure $
-            AuctionModel
-                { -- TODO correct datum
-                  auction = TxOut adr (assetClassValue selling amt) Nothing
-                , price = price
-                , buying = buying
-                , selling = selling
-                }
+  parameterisedGenerator = buildGen baseAuctionGen
+
+
+baseAuctionGen :: Gen AuctionModel
+baseAuctionGen =
+  AuctionModel
+    <$> genSatisfying @SingletonValueProp Yes
+    <*> genSatisfying @BidProp Yes
+
+spec :: Spec
+spec = do
+    fromHedgehogGroup $ runGeneratorTestsWhere (Apropos :: BidModel :+ BidProp) "bid generator" Yes
+    xdescribe "bidModelTests" $
+      mapM_ fromHedgehogGroup $
+        permutationGeneratorSelfTest
+          True
+          (\(_ :: Morphism BidProp bid) -> True)
+          baseBidGen
+    fromHedgehogGroup $ runGeneratorTestsWhere (Apropos :: AuctionModel :+ AuctionProp) "auction generator" Yes
+    xdescribe "auctionModelTests" $ do
+      mapM_ fromHedgehogGroup $
+        permutationGeneratorSelfTest
+          True
+          (\(_ :: Morphism AuctionProp auction) -> True)
+          baseAuctionGen

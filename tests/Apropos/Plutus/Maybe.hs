@@ -17,6 +17,7 @@ instance LogicalModel p => LogicalModel (MaybeProp p) where
     logic =
         ExactlyOne [Var IsNothing, Var IsJust]
             -- TODO type ambiguity makes it hard to use abstractionLogic here
+            -- FunctionDependencies should fix this?
             :&&: (Var IsNothing :->: None (Var . JustAnd <$> enumerated))
             :&&: (Var IsJust :->: JustAnd <$> logic)
 

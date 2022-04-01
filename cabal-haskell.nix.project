@@ -3,7 +3,7 @@
 source-repository-package
   type: git
   location: https://github.com/mlabs-haskell/apropos
-  tag: 455b1a3ad1eee35de4d3fb8c4a4527071474336c
+  tag: d2877fa22060c9e37733ae48a58317822d2ac343
 
 source-repository-package
   type: git

@@ -4,6 +4,7 @@ module Apropos.Plutus.Integer (
 ) where
 
 import Apropos
+import GHC.Generics (Generic)
 
 import Test.Syd
 import Test.Syd.Hedgehog
@@ -14,10 +15,8 @@ data IntegerProp
     | IsZero
     | IsLarge
     | IsSmall
-    deriving stock (Show, Eq, Ord, Enum, Bounded)
-
-instance Enumerable IntegerProp where
-    enumerated = [minBound .. maxBound]
+    deriving stock (Show, Eq, Ord, Enum,Generic)
+    deriving anyclass (Enumerable)
 
 instance LogicalModel IntegerProp where
     logic =

@@ -23,7 +23,7 @@ data SingletonValueProp
     deriving anyclass (Enumerable)
 
 instance LogicalModel SingletonValueProp where
-    logic = (AC <$> logic) :&&: (Amt <$> logic)
+    logic = abstractionLogic @SingletonValue
 
 instance HasLogicalModel SingletonValueProp SingletonValue where
     satisfiesProperty (AC p) (ac, _) = satisfiesProperty p ac
