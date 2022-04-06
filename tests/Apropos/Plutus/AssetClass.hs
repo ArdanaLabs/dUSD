@@ -9,6 +9,7 @@ module Apropos.Plutus.AssetClass (
 
 import Apropos
 import Control.Monad (replicateM)
+import Data.Hashable (Hashable)
 import Data.Maybe (mapMaybe)
 import Data.String
 import GHC.Generics
@@ -23,7 +24,7 @@ data AssetClassProp
   | IsLiquidity
   | IsOther
   deriving stock (Eq, Ord, Enum, Show, Bounded, Generic)
-  deriving anyclass (Enumerable)
+  deriving anyclass (Enumerable, Hashable)
 
 specialAC :: AssetClassProp -> Maybe AssetClass
 specialAC IsAda = Just ada

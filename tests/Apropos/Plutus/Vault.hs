@@ -7,21 +7,22 @@ module Apropos.Plutus.Vault (
 
 import Apropos
 
-import Apropos.Plutus.Address(AddressProp(..))
+import Apropos.Plutus.Address (AddressProp (..))
 import Apropos.Plutus.AssetClass (AssetClassProp (..))
 import Apropos.Plutus.Integer (IntegerProp (..))
 import Apropos.Plutus.SingletonValue (SingletonValue, SingletonValueProp (..))
 
 import Control.Lens (lens)
+import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 
-import Plutus.V1.Ledger.Value (AssetClass(..),assetClassValue)
 import Plutus.V1.Ledger.Api (
-    Datum (..),
-    DatumHash(..),
-    Address,
-    TxOut(..),
+  Address,
+  Datum (..),
+  DatumHash (..),
+  TxOut (..),
  )
+import Plutus.V1.Ledger.Value (AssetClass (..), assetClassValue)
 
 import Test.Syd
 import Test.Syd.Hedgehog (fromHedgehogGroup)
@@ -41,18 +42,18 @@ spec = do
     fromHedgehogGroup $ runGeneratorTestsWhere (Apropos :: VaultModel :+ VaultProp) "generator" Yes
 
 data VaultModel = VaultModel
-    { collateral :: SingletonValue
-    , debt :: SingletonValue
-    , addr :: Address
-    }
-    deriving stock (Eq, Show)
+  { collateral :: SingletonValue
+  , debt :: SingletonValue
+  , addr :: Address
+  }
+  deriving stock (Eq, Show)
 
 data VaultProp
   = DebtProp SingletonValueProp
   | CollateralProp SingletonValueProp
   | Addr AddressProp
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (Enumerable)
+  deriving anyclass (Enumerable, Hashable)
 
 instance LogicalModel VaultProp where
   logic =
@@ -64,9 +65,9 @@ instance LogicalModel VaultProp where
       :&&: Not (Var (DebtProp (Amt IsNegative)))
 
 instance HasLogicalModel VaultProp VaultModel where
-    satisfiesProperty (DebtProp p) vm = satisfiesProperty p (debt vm)
-    satisfiesProperty (CollateralProp p) vm = satisfiesProperty p (collateral vm)
-    satisfiesProperty (Addr p) vm = satisfiesProperty p (addr vm)
+  satisfiesProperty (DebtProp p) vm = satisfiesProperty p (debt vm)
+  satisfiesProperty (CollateralProp p) vm = satisfiesProperty p (collateral vm)
+  satisfiesProperty (Addr p) vm = satisfiesProperty p (addr vm)
 
 instance HasAbstractions VaultProp VaultModel where
   abstractions =
@@ -78,16 +79,16 @@ instance HasAbstractions VaultProp VaultModel where
           }
     , WrapAbs $
         ProductAbstraction
-        { abstractionName = "collateral"
-        , propertyAbstraction = abstractsProperties CollateralProp
-        , productModelAbstraction = lens collateral (\vm collateral' -> vm{collateral=collateral'})
-        }
+          { abstractionName = "collateral"
+          , propertyAbstraction = abstractsProperties CollateralProp
+          , productModelAbstraction = lens collateral (\vm collateral' -> vm {collateral = collateral'})
+          }
     , WrapAbs $
         ProductAbstraction
-        { abstractionName = "address"
-        , propertyAbstraction = abstractsProperties Addr
-        , productModelAbstraction = lens addr (\vm addr' -> vm{addr=addr'})
-        }
+          { abstractionName = "address"
+          , propertyAbstraction = abstractsProperties Addr
+          , productModelAbstraction = lens addr (\vm addr' -> vm {addr = addr'})
+          }
     ]
 
 instance HasPermutationGenerator VaultProp VaultModel where
@@ -97,18 +98,18 @@ instance HasParameterisedGenerator VaultProp VaultModel where
   parameterisedGenerator = buildGen baseGen
 
 baseGen :: Gen VaultModel
-baseGen = VaultModel
-  <$> genSatisfying (Not (Var (Amt IsNegative)) :&&: Var (AC IsAda))
-  <*> genSatisfying (Not (Var (Amt IsNegative)) :&&: Var (AC IsDUSD))
-  <*> genSatisfying @AddressProp Yes
+baseGen =
+  VaultModel
+    <$> genSatisfying (Not (Var (Amt IsNegative)) :&&: Var (AC IsAda))
+    <*> genSatisfying (Not (Var (Amt IsNegative)) :&&: Var (AC IsDUSD))
+    <*> genSatisfying @AddressProp Yes
 
-makeVaultTxout :: VaultModel -> (TxOut,(Datum,DatumHash))
+makeVaultTxout :: VaultModel -> (TxOut, (Datum, DatumHash))
 makeVaultTxout vm =
-  let
-   d = makeVaultDatum vm
-   dh = hashDatum d
-   bal = uncurry assetClassValue (collateral vm)
-    in (TxOut (addr vm) bal (Just dh),(d,dh))
+  let d = makeVaultDatum vm
+      dh = hashDatum d
+      bal = uncurry assetClassValue (collateral vm)
+   in (TxOut (addr vm) bal (Just dh), (d, dh))
 
 -- TODO real hashes
 hashDatum :: Datum -> DatumHash

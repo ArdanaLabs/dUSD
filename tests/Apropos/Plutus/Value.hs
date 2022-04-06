@@ -17,6 +17,7 @@ import Apropos.Plutus.SingletonValue (
   SingletonValueProp (..),
  )
 
+import Data.Hashable
 import Data.List (sort)
 import GHC.Generics (Generic)
 
@@ -30,7 +31,7 @@ data MultiValueProp
   | HasSomeDana
   | HasSomeJunk
   deriving stock (Eq, Ord, Show, Enum, Bounded, Generic)
-  deriving anyclass (Enumerable)
+  deriving anyclass (Enumerable, Hashable)
 
 instance LogicalModel MultiValueProp where
   logic = Yes

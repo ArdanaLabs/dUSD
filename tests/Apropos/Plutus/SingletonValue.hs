@@ -7,7 +7,9 @@ module Apropos.Plutus.SingletonValue (
 import Apropos
 import Apropos.Plutus.AssetClass (AssetClassProp)
 import Apropos.Plutus.Integer (IntegerProp)
-import Control.Lens
+
+import Control.Lens (Field1 (_1), Field2 (_2))
+import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Plutus.V1.Ledger.Value (AssetClass)
 
@@ -20,33 +22,33 @@ data SingletonValueProp
   = AC AssetClassProp
   | Amt IntegerProp
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (Enumerable)
+  deriving anyclass (Enumerable, Hashable)
 
 instance LogicalModel SingletonValueProp where
-    logic = abstractionLogic @SingletonValue
+  logic = abstractionLogic @SingletonValue
 
 instance HasLogicalModel SingletonValueProp SingletonValue where
   satisfiesProperty (AC p) (ac, _) = satisfiesProperty p ac
   satisfiesProperty (Amt p) (_, amt) = satisfiesProperty p amt
 
 instance HasAbstractions SingletonValueProp SingletonValue where
-    abstractions =
-        [ WrapAbs $
-            ProductAbstraction
-                { abstractionName = "assetClass"
-                , propertyAbstraction = abstractsProperties AC
-                , productModelAbstraction = _1
-                }
-        , WrapAbs $
-            ProductAbstraction
-                { abstractionName = "amt"
-                , propertyAbstraction = abstractsProperties Amt
-                , productModelAbstraction = _2
-                }
-        ]
+  abstractions =
+    [ WrapAbs $
+        ProductAbstraction
+          { abstractionName = "assetClass"
+          , propertyAbstraction = abstractsProperties AC
+          , productModelAbstraction = _1
+          }
+    , WrapAbs $
+        ProductAbstraction
+          { abstractionName = "amt"
+          , propertyAbstraction = abstractsProperties Amt
+          , productModelAbstraction = _2
+          }
+    ]
 
 instance HasPermutationGenerator SingletonValueProp SingletonValue where
-    generators = abstractionMorphisms
+  generators = abstractionMorphisms
 
 instance HasParameterisedGenerator SingletonValueProp SingletonValue where
   parameterisedGenerator = buildGen baseGen

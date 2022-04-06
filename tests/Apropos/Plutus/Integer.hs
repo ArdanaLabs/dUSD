@@ -4,19 +4,20 @@ module Apropos.Plutus.Integer (
 ) where
 
 import Apropos
+import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 
 import Test.Syd
 import Test.Syd.Hedgehog
 
 data IntegerProp
-    = IsNegative
-    | IsPositive
-    | IsZero
-    | IsLarge
-    | IsSmall
-    deriving stock (Show, Eq, Ord, Enum,Generic)
-    deriving anyclass (Enumerable)
+  = IsNegative
+  | IsPositive
+  | IsZero
+  | IsLarge
+  | IsSmall
+  deriving stock (Show, Eq, Ord, Enum, Generic)
+  deriving anyclass (Enumerable, Hashable)
 
 instance LogicalModel IntegerProp where
   logic =
