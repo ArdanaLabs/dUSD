@@ -20,7 +20,6 @@ import Test.Syd.Hedgehog (fromHedgehogGroup)
 data AuctionProp
     = Selling SingletonValueProp
     | CurrentBid BidProp
-    -- TODO real properties
     deriving stock (Eq, Ord, Show, Generic)
     deriving anyclass (Enumerable)
 

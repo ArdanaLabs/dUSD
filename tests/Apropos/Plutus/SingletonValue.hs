@@ -1,7 +1,7 @@
 module Apropos.Plutus.SingletonValue (
-    spec,
-    SingletonValue,
-    SingletonValueProp (..),
+  spec,
+  SingletonValue,
+  SingletonValueProp (..),
 ) where
 
 import Apropos
@@ -17,17 +17,17 @@ import Test.Syd.Hedgehog
 type SingletonValue = (AssetClass, Integer)
 
 data SingletonValueProp
-    = AC AssetClassProp
-    | Amt IntegerProp
-    deriving stock (Eq, Ord, Show, Generic)
-    deriving anyclass (Enumerable)
+  = AC AssetClassProp
+  | Amt IntegerProp
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass (Enumerable)
 
 instance LogicalModel SingletonValueProp where
     logic = abstractionLogic @SingletonValue
 
 instance HasLogicalModel SingletonValueProp SingletonValue where
-    satisfiesProperty (AC p) (ac, _) = satisfiesProperty p ac
-    satisfiesProperty (Amt p) (_, amt) = satisfiesProperty p amt
+  satisfiesProperty (AC p) (ac, _) = satisfiesProperty p ac
+  satisfiesProperty (Amt p) (_, amt) = satisfiesProperty p amt
 
 instance HasAbstractions SingletonValueProp SingletonValue where
     abstractions =
@@ -49,18 +49,18 @@ instance HasPermutationGenerator SingletonValueProp SingletonValue where
     generators = abstractionMorphisms
 
 instance HasParameterisedGenerator SingletonValueProp SingletonValue where
-    parameterisedGenerator = buildGen baseGen
+  parameterisedGenerator = buildGen baseGen
 
 baseGen :: Gen SingletonValue
 baseGen =
-    (,) <$> genSatisfying @AssetClassProp Yes
-        <*> genSatisfying @IntegerProp Yes
+  (,) <$> genSatisfying @AssetClassProp Yes
+    <*> genSatisfying @IntegerProp Yes
 
 spec :: Spec
 spec = do
-    describe "singletonValueGenSelfTests" $
-        mapM_ fromHedgehogGroup $
-            permutationGeneratorSelfTest
-                True
-                (\(_ :: Morphism SingletonValueProp singletonValueGenSelfTests) -> True)
-                baseGen
+  describe "singletonValueGenSelfTests" $
+    mapM_ fromHedgehogGroup $
+      permutationGeneratorSelfTest
+        True
+        (\(_ :: Morphism SingletonValueProp singletonValueGenSelfTests) -> True)
+        baseGen
