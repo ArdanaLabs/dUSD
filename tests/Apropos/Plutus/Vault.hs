@@ -8,8 +8,6 @@ module Apropos.Plutus.Vault (
 import Apropos
 
 import Apropos.Plutus.Address (AddressProp (..))
-import Apropos.Plutus.AssetClass (AssetClassProp (..))
-import Apropos.Plutus.Integer (IntegerProp (..))
 import Apropos.Plutus.SingletonValue (SingletonValue, SingletonValueProp (..))
 
 import Control.Lens (lens)
@@ -56,13 +54,7 @@ data VaultProp
   deriving anyclass (Enumerable, Hashable)
 
 instance LogicalModel VaultProp where
-  logic =
-    abstractionLogic @VaultModel
-      -- logic for performance
-      :&&: Var (CollateralProp (AC IsAda))
-      :&&: Var (DebtProp (AC IsDUSD))
-      :&&: Not (Var (CollateralProp (Amt IsNegative)))
-      :&&: Not (Var (DebtProp (Amt IsNegative)))
+  logic = abstractionLogic @VaultModel
 
 instance HasLogicalModel VaultProp VaultModel where
   satisfiesProperty (DebtProp p) vm = satisfiesProperty p (debt vm)
@@ -100,8 +92,8 @@ instance HasParameterisedGenerator VaultProp VaultModel where
 baseGen :: Gen VaultModel
 baseGen =
   VaultModel
-    <$> genSatisfying (Not (Var (Amt IsNegative)) :&&: Var (AC IsAda))
-    <*> genSatisfying (Not (Var (Amt IsNegative)) :&&: Var (AC IsDUSD))
+    <$> genSatisfying @SingletonValueProp Yes
+    <*> genSatisfying @SingletonValueProp Yes
     <*> genSatisfying @AddressProp Yes
 
 makeVaultTxout :: VaultModel -> (TxOut, (Datum, DatumHash))
