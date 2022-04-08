@@ -3,12 +3,12 @@
 source-repository-package
   type: git
   location: https://github.com/mlabs-haskell/apropos
-  tag: 455b1a3ad1eee35de4d3fb8c4a4527071474336c
+  tag: 828f622ca352f28e652210c1070dec008bfdcdd3
 
 source-repository-package
   type: git
   location: https://github.com/mlabs-haskell/apropos-tx
-  tag: d5a90656ad77a48d2291748e1bb5ae072c85eaa4
+  tag: a6430a9331a3ca84c7b615f1d2983b043ad95d13
 
 source-repository-package
   type: git
@@ -122,13 +122,10 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/Plutonomicon/plutarch
-  tag: aecc2050eb63ff0041576473aa3193070fe91314
+  location: https://github.com/tbidne/plutarch
+  tag: d2065876a47cec2f86b1dbe1632b3f48724c671f
 
--- Note: The plutus dependency is limited by plutus-apps and plutarch.
--- plutus-apps is the primary bottleneck here. In particular, the latest
--- plutus-apps still relies on the plutus module Plutus.V1.Ledger.TxId that
--- was removed in 4fd86930f1dc628a816adf5f5d854b3fec578312.
+-- Note: The plutus dependency is limited by the latest plutus-apps release.
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus.git
@@ -140,18 +137,20 @@ source-repository-package
     word-array
     prettyprinter-configurable
     stubs/plutus-ghc-stub
-  tag: 6c580c150b8e8afdf14e43a234fcc8db47e3c1d2
+  tag: 4127e9cd6e889824d724c30eae55033cb50cbf3e
 
+-- 2022-04-06 PAB Release
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus-apps
-  tag: c4960ae14b187978bf41832313370d282f648eee
+  tag: e4062bca213f233cdf9822833b07aa69dff6d22a
   subdir:
     freer-extras
     playground-common
     plutus-chain-index
     plutus-chain-index-core
     plutus-contract
+    plutus-contract-certification
     plutus-ledger
     plutus-ledger-constraints
     plutus-pab

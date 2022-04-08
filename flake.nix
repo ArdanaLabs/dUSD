@@ -99,11 +99,11 @@
             ];
           };
           sha256map = {
-            "https://github.com/mlabs-haskell/apropos"."455b1a3ad1eee35de4d3fb8c4a4527071474336c" = "sha256-EC6vnimXA+jBRPQLLs2dltuTx9XoSdkQfh742NnLJSQ=";
-            "https://github.com/mlabs-haskell/apropos-tx"."d5a90656ad77a48d2291748e1bb5ae072c85eaa4" = "sha256-SkWvW7EyI94BoFWvzyk+MsTNd3eomRlwaBovIQtI71o=";
-            "https://github.com/Plutonomicon/plutarch"."aecc2050eb63ff0041576473aa3193070fe91314" = "sha256-pVvSa4fBoKXCdCu/NGduoKhr1/gGESCmj/Tr9Y5l9B4=";
-            "https://github.com/input-output-hk/plutus.git"."6c580c150b8e8afdf14e43a234fcc8db47e3c1d2" = "sha256-dwDHhOAGAxRksTMozocxgmBncToLb5HOSD8lKe/UCYE=";
-            "https://github.com/input-output-hk/plutus-apps"."c4960ae14b187978bf41832313370d282f648eee" = "sha256-6aQXgtTzrp45uErLm2Uo67Tu7vkDT5w01ebe0wdi+y8=";
+            "https://github.com/mlabs-haskell/apropos"."828f622ca352f28e652210c1070dec008bfdcdd3" = "sha256-6uj6fjIqj+BkCg4uGIuwhnU9XvWPuW/345OwOFqgQOI=";
+            "https://github.com/mlabs-haskell/apropos-tx"."a6430a9331a3ca84c7b615f1d2983b043ad95d13" = "sha256-bto3w4qK/EUnIjdP0bjLnkDzC+okSmPkRRyI1Os68YY=";
+            "https://github.com/tbidne/plutarch"."d2065876a47cec2f86b1dbe1632b3f48724c671f" = "sha256-Tqg477Pv8o8diE3IjSpXr28+w3Tx8vwHdhhL4JQpaso=";
+            "https://github.com/input-output-hk/plutus.git"."4127e9cd6e889824d724c30eae55033cb50cbf3e" = "sha256-S8uvyld7ZpPsmxZlWJeRNAPd+mw3PafrtaiiuU8H3KA=";
+            "https://github.com/input-output-hk/plutus-apps"."e4062bca213f233cdf9822833b07aa69dff6d22a" = "sha256-Aoo+hGLUQTAkuIGTG+mpOE/DSlV8KEe5kvUZZdYez48=";
             "https://github.com/Quid2/flat.git"."ee59880f47ab835dbd73bea0847dab7869fc20d8" = "lRFND+ZnZvAph6ZYkr9wl9VAx41pb3uSFP8Wc7idP9M=";
             "https://github.com/input-output-hk/cardano-addresses"."5a313b60ed64e4374095de65bc13cb080001e520" = "sha256-K7j84d9UzUDH3aekpH5IMXyUpG1ciIfb2t2+0o9VHKI=";
             "https://github.com/input-output-hk/cardano-config"."e9de7a2cf70796f6ff26eac9f9540184ded0e4e6" = "sha256-jQbwcfNJ8am7Q3W+hmTFmyo3wp3QItquEH//klNiofI=";
