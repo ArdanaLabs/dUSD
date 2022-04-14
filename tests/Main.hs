@@ -10,7 +10,6 @@ import Apropos.Plutus.StakingCredential qualified as StakingCredential
 import Apropos.Plutus.Value qualified as Value
 import Apropos.Plutus.Vault qualified as Vault
 
-import System.Environment
 import Test.Syd
 
 -- TODO use sydtest-discover once nix stabalizes a bit more
