@@ -10,22 +10,22 @@ import Apropos.Plutus.StakingCredential qualified as StakingCredential
 import Apropos.Plutus.Value qualified as Value
 import Apropos.Plutus.Vault qualified as Vault
 
+import System.Environment
 import Test.Syd
 
 -- TODO use sydtest-discover once nix stabalizes a bit more
 -- TODO figure out why sydtest breaks the histograms and fix it
 
 main :: IO ()
-main =
-  sydTest $
-    describe "plutus" $ do
-      Address.spec
-      AssetClass.spec
-      Auction.spec
-      Auction.spec
-      Credential.spec
-      Integer.spec
-      SingletonValue.spec
-      StakingCredential.spec
-      Value.spec
-      Vault.spec
+main = sydTest $
+  describe "plutus" $ do
+    Address.spec
+    AssetClass.spec
+    Auction.spec
+    Auction.spec
+    Credential.spec
+    Integer.spec
+    SingletonValue.spec
+    StakingCredential.spec
+    Value.spec
+    Vault.spec

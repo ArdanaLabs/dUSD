@@ -3,12 +3,12 @@
 source-repository-package
   type: git
   location: https://github.com/mlabs-haskell/apropos
-  tag: 565f501bb66de1e9acec417a357065f979d9e37c
+  tag: 1ccda454785fe6a69ad3edc633a3db3df9b664ac
 
 source-repository-package
   type: git
   location: https://github.com/mlabs-haskell/apropos-tx
-  tag: 489eeb8c30d62d5c75eafe4242a1f133695f8564
+  tag: 3ea7a10721bb97fd9934db739df1ff1cba6de58d
 
 source-repository-package
   type: git
