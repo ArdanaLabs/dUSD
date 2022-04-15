@@ -9,10 +9,8 @@ module Apropos.Plutus.AssetClass (
 
 import Apropos
 import Control.Monad (replicateM)
-import Data.Hashable (Hashable)
 import Data.Maybe (mapMaybe)
 import Data.String
-import GHC.Generics
 import Plutus.V1.Ledger.Value
 import Test.Syd
 import Test.Syd.Hedgehog

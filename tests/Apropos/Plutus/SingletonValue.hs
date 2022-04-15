@@ -9,8 +9,6 @@ import Apropos.Plutus.AssetClass (AssetClassProp)
 import Apropos.Plutus.Integer (IntegerProp)
 
 import Control.Lens (Field1 (_1), Field2 (_2))
-import Data.Hashable (Hashable)
-import GHC.Generics (Generic)
 import Plutus.V1.Ledger.Value (AssetClass)
 
 import Test.Syd

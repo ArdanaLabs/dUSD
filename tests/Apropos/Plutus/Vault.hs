@@ -11,8 +11,6 @@ import Apropos.Plutus.Address (AddressProp (..))
 import Apropos.Plutus.SingletonValue (SingletonValue, SingletonValueProp (..))
 
 import Control.Lens (lens)
-import Data.Hashable (Hashable)
-import GHC.Generics (Generic)
 
 import Plutus.V1.Ledger.Api (
   Address,
@@ -126,3 +124,5 @@ makeVaultDatum VaultModel {collateral = (AssetClass (collateralCs, collateralTn)
                     # pdata (ppairDataBuiltin # pdata (pconstant debtCs) # pdata (pconstant debtTn))
                     # pdata (pconstant debtAmt)
                 )
+
+

@@ -4,8 +4,6 @@ module Apropos.Plutus.Integer (
 ) where
 
 import Apropos
-import Data.Hashable (Hashable)
-import GHC.Generics (Generic)
 
 import Test.Syd
 import Test.Syd.Hedgehog

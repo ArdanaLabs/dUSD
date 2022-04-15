@@ -8,11 +8,7 @@ import Apropos.Plutus.Credential (CredentialProp)
 import Apropos.Plutus.Maybe (MaybeProp (..))
 import Apropos.Plutus.StakingCredential (StakingCredentialProp)
 import Control.Lens (lens)
-import Data.Hashable (Hashable)
-import GHC.Generics (Generic)
-import Plutus.V1.Ledger.Api (
-  Address (..),
- )
+import Plutus.V1.Ledger.Api (Address (..))
 
 import Test.Syd (Spec, describe)
 import Test.Syd.Hedgehog (fromHedgehogGroup)

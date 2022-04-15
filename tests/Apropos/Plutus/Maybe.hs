@@ -4,8 +4,6 @@ module Apropos.Plutus.Maybe (
 
 import Apropos
 import Control.Lens (_Just)
-import Data.Hashable (Hashable)
-import GHC.Generics (Generic)
 
 data MaybeProp p
   = IsNothing

@@ -11,20 +11,24 @@ import Apropos.Plutus.Value qualified as Value
 import Apropos.Plutus.Vault qualified as Vault
 
 import Test.Syd
+import Apropos (LogicalModel(scenarios))
 
 -- TODO use sydtest-discover once nix stabalizes a bit more
 -- TODO figure out why sydtest breaks the histograms and fix it
 
 main :: IO ()
-main = sydTest $
-  describe "plutus" $ do
-    Address.spec
-    AssetClass.spec
-    Auction.spec
-    Auction.spec
-    Credential.spec
-    Integer.spec
-    SingletonValue.spec
-    StakingCredential.spec
-    Value.spec
-    Vault.spec
+main = do
+  print $ length $ scenarios @Vault.VaultProp
+  sydTest $ do
+    xdescribe "working but postponed for speed" $ do
+      Address.spec
+      AssetClass.spec
+      Auction.spec
+      Credential.spec
+      Integer.spec
+      SingletonValue.spec
+      StakingCredential.spec
+      Value.spec
+    xdescribe "probably works but still too slow" Vault.spec
+    describe "plutus" $ do
+      Auction.spec

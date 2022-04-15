@@ -6,8 +6,6 @@ module Apropos.Plutus.Credential (
 import Apropos
 import Gen
 
-import Data.Hashable (Hashable)
-import GHC.Generics (Generic)
 import Plutus.V1.Ledger.Api (Credential (..))
 
 import Test.Syd (Spec, describe)

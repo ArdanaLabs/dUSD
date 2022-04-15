@@ -17,9 +17,7 @@ import Apropos.Plutus.SingletonValue (
   SingletonValueProp (..),
  )
 
-import Data.Hashable
 import Data.List (sort)
-import GHC.Generics (Generic)
 
 import Test.Syd
 import Test.Syd.Hedgehog
