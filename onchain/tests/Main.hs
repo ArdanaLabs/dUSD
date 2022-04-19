@@ -6,6 +6,7 @@ import Apropos.Plutus.Integer qualified as Integer
 import Apropos.Plutus.SingletonValue qualified as SingletonValue
 import Apropos.Plutus.Value qualified as Value
 import Apropos.Plutus.Vault qualified as Vault
+import Apropos.Plutus.Hello qualified as Hello
 
 import Test.Syd
 
@@ -27,3 +28,4 @@ main =
       Value.spec
       Vault.spec
       Auction.spec
+      Hello.spec
