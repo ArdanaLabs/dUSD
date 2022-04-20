@@ -10,9 +10,9 @@ import Test.Syd.Hedgehog
 
 import Plutarch (compile, (#))
 import Plutarch.Evaluate (evalScript)
-import qualified Plutarch.Prelude as PPrelude
+import Plutarch.Prelude qualified as PPrelude
 
-import Hello(helloLogic)
+import Hello (helloLogic)
 
 type HelloModel = (Integer, Integer)
 
@@ -48,30 +48,30 @@ instance HasPermutationGenerator HelloProp HelloModel where
     ]
 
 instance HasParameterisedGenerator HelloProp HelloModel where
-  parameterisedGenerator
-    = buildGen $ (,)
-      <$> (fromIntegral <$> int (linear (-10) 10))
-      <*> (fromIntegral <$> int (linear (-10) 10))
+  parameterisedGenerator =
+    buildGen $
+      (,)
+        <$> (fromIntegral <$> int (linear (-10) 10))
+        <*> (fromIntegral <$> int (linear (-10) 10))
 
 instance HasPureRunner HelloProp HelloModel where
   expect _ = Var IsValid
   script _ (i, j) = helloLogic' i j
 
-helloLogic' :: Integer -> Integer -> Bool  
-helloLogic' i j = evaledScript == Right compiledUnit where
+helloLogic' :: Integer -> Integer -> Bool
+helloLogic' i j = evaledScript == Right compiledUnit
+  where
+    compiledUnit = compile (PPrelude.pconstant ())
 
-  compiledUnit = compile (PPrelude.pconstant ())
-
-  (evaledScript, _, _) = evalScript $ compile $ helloLogic # fromIntegral i # fromIntegral j
+    (evaledScript, _, _) = evalScript $ compile $ helloLogic # fromIntegral i # fromIntegral j
 
 spec :: Spec
 spec = do
   describe "helloGenSelfTest" $
     mapM_ fromHedgehogGroup $
-          [ runGeneratorTestsWhere (Apropos :: HelloModel :+ HelloProp) "Hello Generator" Yes
-          ]
+      [ runGeneratorTestsWhere (Apropos :: HelloModel :+ HelloProp) "Hello Generator" Yes
+      ]
   describe "helloPureTests" $
     mapM_ fromHedgehogGroup $
-          [ runPureTestsWhere (Apropos :: HelloModel :+ HelloProp) "AcceptsValid" Yes
-          ]
-
+      [ runPureTestsWhere (Apropos :: HelloModel :+ HelloProp) "AcceptsValid" Yes
+      ]

@@ -107,11 +107,11 @@ test-suite tests
   other-modules:
     Apropos.Plutus.AssetClass
     Apropos.Plutus.Auction
+    Apropos.Plutus.Hello
     Apropos.Plutus.Integer
     Apropos.Plutus.SingletonValue
     Apropos.Plutus.Value
     Apropos.Plutus.Vault
-    Apropos.Plutus.Hello
     Gen
     Tests
 
