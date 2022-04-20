@@ -27,3 +27,9 @@ Bad ✖
   };
 }
 ```
+
+##### Why:
+We need at least one branch in the repository that represents a release or
+stable version of the codebase without hacks, bodges or temporary fixes present
+inside of the Nix code. Master is not to be considered a development branch,
+since we are not performing releases of the code.
