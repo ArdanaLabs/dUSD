@@ -4,8 +4,10 @@
     haskell-nix.url = "github:input-output-hk/haskell.nix";
     nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
     haskell-nix.inputs.nixpkgs.follows = "haskell-nix/nixpkgs-2105";
+    cardano-node.url = "github:input-output-hk/cardano-node?rev=73f9a746362695dc2cb63ba757fbcabb81733d23";
     #   used for libsodium-vrf
     plutus.url = "github:input-output-hk/plutus";
+    plutus-apps.url = "github:input-output-hk/plutus-apps?rev=e4062bca213f233cdf9822833b07aa69dff6d22a";
     lint-utils = {
       type = "git";
       url = "https://gitlab.homotopic.tech/nix/lint-utils.git";
@@ -18,7 +20,9 @@
       self,
       nixpkgs,
       haskell-nix,
+      cardano-node,
       plutus,
+      plutus-apps,
       lint-utils
     }
     @ inputs:
@@ -69,6 +73,8 @@
           pkg-def-extras = [
             (hackage: {
               packages = {
+                cryptostore = (((hackage."cryptostore")."0.2.1.0").revisions).default;
+                jwt = (((hackage."jwt")."0.11.0").revisions).default;
                 random = (((hackage.random)."1.2.1").revisions).default;
               };
             })
@@ -77,6 +83,7 @@
           shell = {
             withHoogle = true;
             tools = {
+              ghcid = { };
               haskell-language-server = { };
             };
 
@@ -84,7 +91,15 @@
 
             # We use the ones from Nixpkgs, since they are cached reliably.
             # Eventually we will probably want to build these with haskell.nix.
-            nativeBuildInputs = [ pkgs.cabal-install pkgs.hlint pkgs.haskellPackages.fourmolu ];
+            nativeBuildInputs = [
+              pkgs.cabal-install
+              # cardano-node and cardano-cli need to be on the PATH to run the
+              # cluster + PAB.
+              cardano-node.outputs.packages.x86_64-linux."cardano-node:exe:cardano-node"
+              cardano-node.outputs.packages.x86_64-linux."cardano-cli:exe:cardano-cli"
+              pkgs.hlint
+              pkgs.haskellPackages.fourmolu
+            ];
 
             additional = ps: [
               ps.apropos
@@ -94,6 +109,7 @@
               ps.plutus-ledger
               ps.plutus-ledger-api
               ps.plutus-ledger-constraints
+              ps.plutus-pab
               ps.sydtest
               ps.sydtest-hedgehog
             ];
@@ -110,13 +126,15 @@
             "https://github.com/input-output-hk/cardano-crypto.git"."07397f0e50da97eaa0575d93bee7ac4b2b2576ec" = "oxIOVlgm07FAEmgGRF1C2me9TXqVxQulEOcJ22zpTRs=";
             "https://github.com/input-output-hk/cardano-base"."5c1786f3a2b9b2647489862963003afdc1f27818" = "sha256-cMQjyQDdHQvZwc9MIJ+cPyxFW0rEPPidEytAed5IZns=";
             "https://github.com/input-output-hk/cardano-ledger"."1a9ec4ae9e0b09d54e49b2a40c4ead37edadcce5" = "sha256-lRNfkGMHnpPO0T19FZY5BnuRkr0zTRZIkxZVgHH0fys=";
-            "https://github.com/input-output-hk/cardano-node"."814df2c146f5d56f8c35a681fe75e85b905aed5d" = "1hr00wqzmcyc3x0kp2hyw78rfmimf6z4zd4vv85b9zv3nqbjgrik";
+            "https://github.com/input-output-hk/cardano-node"."73f9a746362695dc2cb63ba757fbcabb81733d23" = "sha256-e4k1vCsZqUB/I3uPRDIKP9pZ81E/zosJn8kXySAfBcI=";
             "https://github.com/input-output-hk/cardano-prelude"."fd773f7a58412131512b9f694ab95653ac430852" = "BtbT5UxOAADvQD4qTPNrGfnjQNgbYNO4EAJwH2ZsTQo=";
-            "https://github.com/input-output-hk/cardano-wallet"."a5085acbd2670c24251cf8d76a4e83c77a2679ba" = "sha256-A3im2IkoumUx3NzgPooaXGC18/iYxbEooMa9ho93/6o=";
+            "https://github.com/input-output-hk/cardano-wallet"."f6d4db733c4e47ee11683c343b440552f59beff7" = "sha256-3oeHsrAhDSSKBSzpGIAqmOcFmBdAJ5FR02UXPLb/Yz0=";
+            "https://github.com/input-output-hk/ekg-forward"."297cd9db5074339a2fb2e5ae7d0780debb670c63" = "sha256-jwj/gh/A/PXhO6yVESV27k4yx9I8Id8fTa3m4ofPnP0=";
             "https://github.com/input-output-hk/goblins"."cde90a2b27f79187ca8310b6549331e59595e7ba" = "sha256-z9ut0y6umDIjJIRjz9KSvKgotuw06/S8QDwOtVdGiJ0=";
             "https://github.com/input-output-hk/iohk-monitoring-framework"."46f994e216a1f8b36fe4669b47b2a7011b0e153c" = "sha256-QE3QRpIHIABm+qCP/wP4epbUx0JmSJ9BMePqWEd3iMY=";
             "https://github.com/input-output-hk/optparse-applicative"."7497a29cb998721a9068d5725d49461f2bba0e7a" = "sha256-uQx+SEYsCH7JcG3xAT0eJck9yq3y0cvx49bvItLLer8=";
-            "https://github.com/input-output-hk/ouroboros-network"."d2d219a86cda42787325bb8c20539a75c2667132" = "sha256-fZ6FfG2z6HWDxjIHycLPSQHoYtfUmWZOX7lfAUE+s6M=";
+            "https://github.com/input-output-hk/ouroboros-network"."4fac197b6f0d2ff60dc3486c593b68dc00969fbf" = "sha256-Cy29MHrYTkN7s3Vvog5/pOzbo7jiqTeDz6OmrNvag6w=";
+            "https://github.com/input-output-hk/purescript-bridge"."47a1f11825a0f9445e0f98792f79172efef66c00" = "sha256-/SbnmXrB9Y2rrPd6E79Iu5RDaKAKozIl685HQ4XdQTU=";
             "https://github.com/input-output-hk/servant-purescript"."44e7cacf109f84984cd99cd3faf185d161826963" = "sha256-DH9ISydu5gxvN4xBuoXVv1OhYCaqGOtzWlACdJ0H64I=";
             "https://github.com/input-output-hk/Win32-network"."3825d3abf75f83f406c1f7161883c438dac7277d" = "Hesb5GXSx0IwKSIi42ofisVELcQNX6lwHcoZcbaDiqc=";
             "https://github.com/Srid/sydtest"."9c6c7678f7aabe22e075aab810a6a2e304591d24" = "sha256-P6ZwwfFeN8fpi3fziz9yERTn7BfxdE/j/OofUu+4GdA=";
@@ -172,7 +190,12 @@
             } "touch $out"
         );
 
-        devShell = forAllSystems (system: self.flake.${system}.devShell);
+        devShell = forAllSystems (system: self.flake.${system}.devShell.overrideAttrs (oa: {
+          shellHook = oa.shellHook + ''
+            # running local cluster + PAB
+            export SHELLEY_TEST_DATA="${plutus-apps}/plutus-pab/local-cluster/cluster-data/cardano-node-shelley/"
+          '';
+        }));
         defaultPackage = forAllSystems (system: self.packages.${system}."dUSD:test:tests");
         apps = forAllSystems (system: let
           pkgs = (forAllSystems nixpkgsFor)."${system}";
