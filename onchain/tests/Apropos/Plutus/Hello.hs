@@ -17,7 +17,6 @@ import Hello(helloLogic)
 type HelloModel = (Integer, Integer)
 
 data HelloProp
-  -- TODO: try to build up IsValid from basic properties
   = IsValid
   | IsInvalid
   deriving stock (Show, Eq, Ord, Enum, Bounded)
@@ -49,13 +48,21 @@ instance HasPermutationGenerator HelloProp HelloModel where
     ]
 
 instance HasParameterisedGenerator HelloProp HelloModel where
-  parameterisedGenerator = buildGen $ pure (0, 0)
+  parameterisedGenerator
+    = buildGen $ (,)
+      <$> (fromIntegral <$> int (linear (-10) 10))
+      <*> (fromIntegral <$> int (linear (-10) 10))
 
 instance HasPureRunner HelloProp HelloModel where
   expect _ = Var IsValid
-  script _ (i, j) = case (\(s, _, _) -> fmap (== compile (PPrelude.pconstant True)) s) $ evalScript $ compile $ helloLogic # fromIntegral i # fromIntegral j of
-    Left _ -> False
-    Right b -> b 
+  script _ (i, j) = helloLogic' i j
+
+helloLogic' :: Integer -> Integer -> Bool  
+helloLogic' i j = evaledScript == Right compiledUnit where
+
+  compiledUnit = compile (PPrelude.pconstant ())
+
+  (evaledScript, _, _) = evalScript $ compile $ helloLogic # fromIntegral i # fromIntegral j
 
 spec :: Spec
 spec = do
