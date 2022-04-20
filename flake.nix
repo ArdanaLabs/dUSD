@@ -9,7 +9,7 @@
     lint-utils = {
       type = "git";
       url = "https://gitlab.homotopic.tech/nix/lint-utils.git";
-      ref = "spec-type";
+      ref = "overengineered";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -147,8 +147,23 @@
               nativeBuildInputs = builtins.attrValues self.checks.${system};
             } "touch $out"
         );
-
-        devShell = forAllSystems (system: self.flake.${system}.devShell);
+        devShell = forAllSystems (system: let
+          pkgs = (forAllSystems nixpkgsFor)."${system}";
+          # https://gist.github.com/adisbladis/2a44cded73e048458a815b5822eea19
+          # mergeEnvs is a function which concatenates two devShells
+          mergeEnvs = envs: pkgs.mkShell (builtins.foldl' (a: v: {
+            buildInputs = a.buildInputs ++ v.buildInputs;
+            nativeBuildInputs = a.nativeBuildInputs ++ v.nativeBuildInputs;
+            propagatedBuildInputs = a.propagatedBuildInputs ++ v.propagatedBuildInputs;
+            propagatedNativeBuildInputs = a.propagatedNativeBuildInputs ++ v.propagatedNativeBuildInputs;
+            shellHook = a.shellHook + "\n" + v.shellHook;
+          }) (pkgs.mkShell {}) envs);
+        in mergeEnvs [
+          (self.flake.${system}.devShell)
+          # Provides a devShell with the lintSpec concatenated into a script
+          # named `dUSD-lint`
+          (lint-utils.mkConcatShellWithNamePrefix.${system} lintSpec "dUSD")
+        ]);
         defaultPackage = forAllSystems (system: self.packages.${system}."dUSD:test:tests");
         apps = forAllSystems (system: let
           pkgs = (forAllSystems nixpkgsFor)."${system}";
