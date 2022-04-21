@@ -20,4 +20,4 @@ validator' :: ClosedTerm (PInteger :--> PUnit :--> PScriptContext :--> PUnit)
 validator' = plam $ \n _unit sc -> helloLogic # n # unTermCont (getContinuingDatum sc)
 
 helloLogic :: ClosedTerm (PInteger :--> PInteger :--> PUnit)
-helloLogic = plam $ \n m -> unTermCont $ passert "int was not correct" <$> (n + 1 #==) =<< pure m
+helloLogic = plam $ \n m -> unTermCont $ passert "int was not correct" $ n + 1 #== m

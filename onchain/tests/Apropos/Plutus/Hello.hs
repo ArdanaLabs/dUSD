@@ -63,7 +63,7 @@ helloLogic' i j = evaledScript == Right compiledUnit
   where
     compiledUnit = compile (PPrelude.pconstant ())
 
-    (evaledScript, _, _) = evalScript $ compile $ helloLogic # fromIntegral i # fromIntegral j
+    (evaledScript, _, _) = evalScript $ compile $ helloLogic # PPrelude.pconstant i # PPrelude.pconstant j
 
 spec :: Spec
 spec = do
