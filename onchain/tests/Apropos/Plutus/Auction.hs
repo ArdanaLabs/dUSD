@@ -16,13 +16,13 @@ import Auction(auctionContract)
 import Control.Lens (lens)
 import Control.Monad ( liftM2 )
 import Gen (pubKeyHash)
-import Plutus.V1.Ledger.Api (PubKeyHash,Datum (Datum))
+import Plutus.V1.Ledger.Api (PubKeyHash,Datum)
 
 import Plutarch(compile,(#))
 import Plutarch.Lift(pconstant)
 
 import Test.Syd
-import Test.Syd.Hedgehog (fromHedgehogGroup)
+--import Test.Syd.Hedgehog (fromHedgehogGroup)
 
 data AuctionStateProp
   = Selling SingletonValueProp
@@ -195,9 +195,11 @@ baseAuctionGen =
 spec :: Spec
 spec = do
   it "auction model samples" $ sampleGenTest (Apropos :: AuctionModel :+ AuctionProp)
-  fromHedgehogGroup $ runGeneratorTestsWhere
-    (Apropos :: BidModel :+ BidProp) "bid generator" Yes
-  fromHedgehogGroup $ runGeneratorTestsWhere
-    (Apropos :: AuctionStateModel :+ AuctionStateProp) "auction state generator" Yes
+  it "bid generator" $ sampleGenTest (Apropos :: BidModel :+ BidProp)
+--  it "auction state generator" $ sampleGenTest (Apropos :: AuctionStateModel :+ AuctionProp)
+--  fromHedgehogGroup $ runGeneratorTestsWhere
+--    (Apropos :: BidModel :+ BidProp) "bid generator" Yes
+--  fromHedgehogGroup $ runGeneratorTestsWhere
+--    (Apropos :: AuctionStateModel :+ AuctionStateProp) "auction state generator" Yes
 
 

@@ -3,7 +3,7 @@
 source-repository-package
   type: git
   location: https://github.com/mlabs-haskell/apropos
-  tag: 4799893a228990cb4385d9701b314669a70893d3
+  tag: 22d09722dcf738cc985a03f48e1497f5510bb6b3
 
 source-repository-package
   type: git
@@ -13,7 +13,10 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/Plutonomicon/plutarch
-  tag: 4052b285eb890799332c0cbe19cb08c1070f267a
+  tag: cae000584f5492daa2e13a08632ea69221a8c147
+  subdir:
+    .
+    plutarch-extra
 
 source-repository-package
   type: git
@@ -27,7 +30,7 @@ source-repository-package
     prettyprinter-configurable
     stubs/plutus-ghc-stub
   -- Update plutus revision here! Make sure this matches `cat ./nix/sources.json | jq '.plutus.rev'`
-  tag: 3b89c2809933d798cd2ac4c72f932e61b6b35223
+  tag: 983e6af2154c4bdf86ed645062bcb62f304d0a4f
 
 -- The following sections are copied from the 'plutus' repository cabal.project at the revision
 -- given above.
@@ -157,5 +160,5 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/Geometer1729/digraph
+  location: https://github.com/mlabs-haskell/digraph
   tag: d4dfec22f6a6eb646dcfa9591eaca0a9be88d260

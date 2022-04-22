@@ -5,6 +5,7 @@ module Apropos.Plutus.Maybe (
 import Apropos
 import Control.Lens (_Just)
 
+
 data MaybeProp p
   = IsNothing
   | IsJust

@@ -8,6 +8,7 @@ import Apropos
 import Test.Syd
 import Test.Syd.Hedgehog
 
+
 data IntegerProp
   = IsNegative
   | IsPositive
