@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+<body>
+<button onclick="call('initialize')">Initialize</button>
+<button onclick="call('increment')">Increment</button>
+<button onclick="call('read')">Read</button>
+<p id="output"></p>
+
+<script>
+// TODO: don't hardcode
+var contractId = "8a2d774e-c736-4085-b100-47c7eb7b4123"
+
+// TODO: avoid cross-origin request
+var base = "http://localhost:9080"
+
+function call(endpoint) {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4) {
+      if (this.status == 200) {
+       document.getElementById("output").innerHTML = xhttp.responseText;
+      } else {
+       document.getElementById("output").innerHTML = xhttp.status;
+      }
+    }
+  };
+  xhttp.open("POST", base + "/api/contract/instance/" + contractId + "/endpoint/" + endpoint, true);
+  xhttp.setRequestHeader("Content-type", "application/json");
+  xhttp.send("[]");
+}
+</script>
+</body>
+</html>
+
+
+
