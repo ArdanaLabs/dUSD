@@ -11,7 +11,7 @@
     lint-utils = {
       type = "git";
       url = "https://gitlab.homotopic.tech/nix/lint-utils.git";
-      ref = "spec-type";
+      ref = "overengineered";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -48,6 +48,7 @@
         , extraShell      # Extra 'shell' attributes used by haskell.nix
         , pkg-def-extras  # For overriding the package set
         , sha256map       # Extra sha256 hashes used by haskell.nix
+        , extraPackages ? {}
         }:
         let
           deferPluginErrors = true;
@@ -74,7 +75,7 @@
                     nixpkgs.lib.mkForce [ [ (import plutus { inherit system; }).pkgs.libsodium-vrf ] ];
                   cardano-crypto-class.components.library.pkgconfig =
                     nixpkgs.lib.mkForce [ [ (import plutus { inherit system; }).pkgs.libsodium-vrf ] ];
-                };
+                } // extraPackages;
               }
             ];
             shell = {
@@ -161,6 +162,9 @@
 
         offchain = forAllSystems (system: rec {
           project = plutusProjectIn {
+            extraPackages = {
+              hello-world.components.library.preBuild = "export DUSD_SCRIPTS=${self.onchain-scripts.${system}}";
+            };
             inherit system;
             subdir = "offchain";
             extraShell = {
