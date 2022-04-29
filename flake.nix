@@ -162,10 +162,8 @@
 
         offchain = forAllSystems (system: rec {
           project = plutusProjectIn {
-            extraPackages = {
-              hello-world.components.library.preBuild = "export DUSD_SCRIPTS=${self.onchain-scripts.${system}}";
-            };
             inherit system;
+            DUSD_SCRIPTS = self.onchain-scripts.${system};
             subdir = "offchain";
             extraShell = {
               additional = ps: [
