@@ -23,6 +23,14 @@ Temporal inputs are sourced from external feeds such as exchanges and indexes.
 - Price of ADA in USD
 - Circulating supply of dUSD
 
+## Sizing Calculation
+
+We calculate this quantity of stablecoin to burn/mint with the following equation:
+
+```
+quantity = supply * (price - 1)
+```
+
 ## Algorithm
 
 1. Close all open orders (buying and/or selling dUSD from past runs) 
