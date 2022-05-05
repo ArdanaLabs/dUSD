@@ -286,6 +286,26 @@ running a `curl' command on the Ardana Tenant.
 The admin user can set the debt floor (in dUSD), through running a `curl'
 command on the Ardana Tenant.
 
+
+\subsection{Peg Stabilization Module (PSM)}
+
+The PSM is an off-chain admin owned process which detects when dUSD is off-peg
+and executes the stabilization algorithm which creates and destroys buy and sell 
+orders between dUSD and ADA.
+
+\subsubsection{Start}
+
+Starts the stabilization loop.
+
+\subsubsection{Stop}
+
+Stops the stabilization loop.
+
+\subsubsection{Configure}
+
+Supports overriding default values for lower peg bound, upper peg bound, deviation 
+time threshold, and stabilization interval
+
 \subsection{Update mechanism for the protocol (TBD)}
 
 One important acceptance criterium is that the protocol can be updated without
