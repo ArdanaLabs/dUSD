@@ -481,6 +481,55 @@ Acceptance criteria:
     % Comment for Version 2: Add debt ceiling to the protocol-wide parameters
 \end{itemize}  
 
+\subsection{Peg Price Module (PPM)}
+
+Off-chain and on-chain criteria:
+\begin{itemize}
+  \item Price data should be the current USD price of dUSD and it's current
+   circulating supply.
+  \item Only admin can create a peg price module
+  \item Only admin can write to the oracle
+  \item Writing a price value removes price values older than 48 hours from the
+    datum
+%   \item Writing the price value cannot be done more than once per hour
+  \item Reading the price data after writing a new price point successfully,
+    works
+  \item Anyone can read the price data
+\end{itemize}
+
+Peg Price feed bot:
+\begin{itemize}
+  \item Always collects information from at least three sources successfully
+  \item Running the systemd service makes the UTXO get updated by at least three
+    sources at least once every two hours
+\end{itemize}
+
+\subsection{Peg Stability Module (PSM)}
+
+Configuration
+\begin{itemize}
+  \item Only admin can set lower peg bound
+  \item Only admin can set upper peg bound
+  \item Only admin can set deviation time threshold
+  \item Only admin can set stabiliziation interval
+\end{itemize}
+
+Peg Stabilization Bot
+\begin{itemize}
+  \item The process will run at the rate set by the stablization interval, with
+   the default value of 1 hour.
+  \item The process will close all existing orders from previous runs.
+  \item The process will continue if the average price from the dUSD prices
+   that occurred within the deviation time threshold is above the upper peg
+   bound or below the lower peg bound. If not, it will exit.
+  \item The process will calculate the quantity of dUSD needed to bring the price
+   back to peg. The quantity should equal the following: supply * (price - 1)
+  \item If the quantity is positive, submit a UTXO that sells that quantity of dUSD
+   in exchange for it's USD value of ADA.
+  \item If the quantity is negative, submit a UTXO that buys dUSD in exchange for
+   its USD value in ADA.
+\end{itemize}
+
 \subsection{Update mechanism for the protocol (TBD)}
 
 \section{Implementation details}
@@ -719,7 +768,6 @@ The protocol parameters module will be a UTXO that includes in its datum the fol
 \end{itemize}
 
 \section{Tests}
-
 
 % \section{Remarks}
 % 
