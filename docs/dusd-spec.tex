@@ -769,6 +769,27 @@ The protocol parameters module will be a UTXO that includes in its datum the fol
 
 \section{Tests}
 
+\subsection{Auction Sizing}
+
+\subsubsection{Basic Testing}
+
+Basic testing can be performed with limited inputs. Below are some things we can test:
+
+Given the price in the auction UTXO and the price for the same quantities on a CEX, we can test
+that there is an arbitrage opportunity significant enough to incentivize spending the UTXOs
+sized by the alogrithm.
+
+Given the current circulating supply of stablecoin, it's current price, and the size we 
+want to test, if the (supply + size) * price == supply then we know our adjustment
+isn't over or under correcting.
+
+\subsubsection{Full Simulation}
+
+Given a Cardano network, a CEX where orders exchanging dUSD and USD are submitted, a set of
+arbitrage bots, and a USD price of dUSD deviating from the peg, a test can be run which
+verifies that the auctions are sized safely, that they're interesting for arbitrage, and they
+result in the price returning to peg.
+
 % \section{Remarks}
 % 
 % - Test for Cardano network congestion
