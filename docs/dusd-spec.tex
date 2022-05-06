@@ -287,11 +287,28 @@ The admin user can set the debt floor (in dUSD), through running a `curl'
 command on the Ardana Tenant.
 
 
+\subsection{Peg Price Module (PPM)}
+
+The PPM is an oracle that provides the dUSD price in USD as well as it's supply 
+for usage by the Peg Stabilization Module.
+
+\subsubsection{Write}
+
+Admin can update the dUSD price and supply in the PPM's datum by adding one more
+price point.
+When doing so, any price points older than $48$ hours are removed.
+
+\subsubsection{Read}
+
+Anyone can use the PPM as a read-only input UTXO to their transactions
+in order to discover the last $48$ hours of price information, one price point
+per hour.
+
 \subsection{Peg Stabilization Module (PSM)}
 
-The PSM is an off-chain admin owned process which detects when dUSD is off-peg
-and executes the stabilization algorithm which creates and destroys buy and sell 
-orders between dUSD and ADA.
+The PSM is an off-chain admin owned process which detects when dUSD is off-peg via 
+the PPM and executes the stabilization algorithm which creates and destroys buy and 
+sell orders between dUSD and ADA.
 
 \subsubsection{Start}
 
@@ -304,7 +321,7 @@ Stops the stabilization loop.
 \subsubsection{Configure}
 
 Supports overriding default values for lower peg bound, upper peg bound, deviation 
-time threshold, and stabilization interval
+time threshold, and stabilization interval.
 
 \subsection{Update mechanism for the protocol (TBD)}
 
