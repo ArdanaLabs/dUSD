@@ -148,7 +148,7 @@
             sha256map = {
               "https://github.com/mlabs-haskell/apropos"."455b1a3ad1eee35de4d3fb8c4a4527071474336c" = "sha256-EC6vnimXA+jBRPQLLs2dltuTx9XoSdkQfh742NnLJSQ=";
               "https://github.com/mlabs-haskell/apropos-tx"."489eeb8c30d62d5c75eafe4242a1f133695f8564" = "sha256-15nFGPhXBy+G0oocb6KQf5KVnT0fuAOoFCdzT+vyeEg=";
-              "https://github.com/Plutonomicon/plutarch"."cae000584f5492daa2e13a08632ea69221a8c147" = "sha256-ZEGKBr1q852sx5aOOAqWHKZR+//YByQmGmBKglGr+qQ=";
+              "https://github.com/Plutonomicon/plutarch"."dedcf33ad7cf56ddcd69d24d09e42fe476b44d03" = "sha256-fvochie65ADgB8tBqCoJjufVlWZ2UIHXXJt06mUjAsc=";
               "https://github.com/input-output-hk/plutus.git"."983e6af2154c4bdf86ed645062bcb62f304d0a4f" = "sha256-Ga+hIhrgq2kR5Vnso/Edo2wgQpFn167eWGl35oM093U=";
               "https://github.com/Quid2/flat.git"."ee59880f47ab835dbd73bea0847dab7869fc20d8" = "lRFND+ZnZvAph6ZYkr9wl9VAx41pb3uSFP8Wc7idP9M=";
               "https://github.com/input-output-hk/cardano-crypto.git"."07397f0e50da97eaa0575d93bee7ac4b2b2576ec" = "oxIOVlgm07FAEmgGRF1C2me9TXqVxQulEOcJ22zpTRs=";
@@ -289,7 +289,7 @@
           feedback-loop = (nixpkgsFor system).callPackage ./nix/apps/feedback-loop { inherit projectName; };
         });
 
-        ghcid = system: subProject: name: args: 
+        ghcid = system: subProject: name: args:
           (nixpkgsFor system).callPackage ./nix/apps/ghcid {
             inherit projectName args;
             name = "${subProject}-ghcid-${name}";
@@ -317,7 +317,7 @@
           '';
           envVar = "$FLAKE_ROOT";
         };
- 
+
         # We are forced to use two devshells.
         # Under ideal circumstances, we could put all the onchain and offchain
         # code in the same project, sharing the same cabal.project, but this is
@@ -365,22 +365,22 @@
           #
           # The name of the app is determined from the set keys. The derivation
           # is expected to contain a binary named `${projectName}-${key}`.
-          appsFromDerivationSet = drvs: 
+          appsFromDerivationSet = drvs:
             (nixpkgsFor system).lib.attrsets.mapAttrs (name: value: {
               type = "app";
               program = "${value}/bin/${projectName}-${name}";
             }) drvs;
           # Apps that are also available in the shell. An app named `.#foo` can
           # be run inside the shell as `dusd-foo`.
-          shellApps =  
+          shellApps =
             appsFromDerivationSet (
-                 self.commonTools.${system} 
+                 self.commonTools.${system}
               # NOTE: ghcid can only run inside nix-shell, so we cannot run these as flake apps.
-              # // self.onchainTools.${system} 
+              # // self.onchainTools.${system}
               # // self.offchainTools.${system}
             );
         in
-          shellApps // 
+          shellApps //
           {
             format =  lint-utils.mkApp.${system} lintSpec;  # TODO: Refactor this by moving it to appsFromDerivationSet
             offchain-test = {

@@ -75,6 +75,7 @@ library
     Plutarch.Extensions.Api
     Plutarch.Extensions.List
     Plutarch.Extensions.Monad
+    Validator
 
   hs-source-dirs:  src
   build-depends:
