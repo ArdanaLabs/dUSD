@@ -78,6 +78,8 @@
                     nixpkgs.lib.mkForce [ [ (import plutus { inherit system; }).pkgs.libsodium-vrf ] ];
                   cardano-crypto-class.components.library.pkgconfig =
                     nixpkgs.lib.mkForce [ [ (import plutus { inherit system; }).pkgs.libsodium-vrf ] ];
+                  plutus-minting-policy-nft.flags.defer-plugin-errors = deferPluginErrors;
+                  plutus-minting-policy-osc.flags.defer-plugin-errors = deferPluginErrors;
                 } // extraPackages;
               }
             ];
@@ -178,6 +180,7 @@
                 ps.plutus-ledger-constraints
                 ps.plutus-pab
                 ps.plutus-use-cases
+                ps.plutus-minting-policy-nft
               ];
               DUSD_SCRIPTS = self.onchain-scripts.${system};
               propagatedBuildInputs =
@@ -226,6 +229,8 @@
 
               # misc
               "https://github.com/Quid2/flat.git"."ee59880f47ab835dbd73bea0847dab7869fc20d8" = "lRFND+ZnZvAph6ZYkr9wl9VAx41pb3uSFP8Wc7idP9M=";
+              "https://gitlab.homotopic.tech/plutus/minting-policies/nft"."2d526c26f66d44b6561242f522a7dde76b63612f" = "K4gC0B3EtDOwONuxwEC1rnHiq3YeDEASQSijvcVVSm4=";
+              "https://gitlab.homotopic.tech/plutus/minting-policies/osc"."0725787dd5f747392f87646668de79c0ade083b2" = "Ay1bAnOBMiEg9dQbOPljXs1B+JiBUOjQUhf6VulqGtA=";
             };
           };
           flake = project.flake { };

@@ -10,6 +10,16 @@ source-repository-package
 
 source-repository-package
   type: git
+  location: https://gitlab.homotopic.tech/plutus/minting-policies/nft
+  tag: 2d526c26f66d44b6561242f522a7dde76b63612f
+
+source-repository-package
+  type: git
+  location: https://gitlab.homotopic.tech/plutus/minting-policies/osc
+  tag: 0725787dd5f747392f87646668de79c0ade083b2
+
+source-repository-package
+  type: git
   location: https://github.com/input-output-hk/cardano-config
   tag: e9de7a2cf70796f6ff26eac9f9540184ded0e4e6
 

@@ -15,8 +15,8 @@ import Data.Monoid (Last (..))
 import Data.Text (Text, pack)
 import Data.Void (Void)
 
-import Ledger (Datum (..), Redeemer (..))
-import Ledger.Constraints (adjustUnbalancedTx, mustPayToOtherScript, mustSpendScriptOutput, otherScript, unspentOutputs)
+import Ledger (Datum (..), Redeemer (..), pubKeyHashAddress)
+import Ledger.Constraints (adjustUnbalancedTx, mustPayToOtherScript, mustSpendScriptOutput, otherScript, unspentOutputs, mintingPolicy, mustMintValue, mustSpendPubKeyOutput)
 import Ledger.Tx (ChainIndexTxOut (..), TxOutRef (..), getCardanoTxId)
 import Ledger.Value (CurrencySymbol, TokenName (..), singleton, valueOf)
 
@@ -31,15 +31,14 @@ import Plutus.Contract (
   handleError,
   logError,
   logInfo,
-  mapError,
   mkTxConstraints,
   ownPaymentPubKeyHash,
   submitUnbalancedTx,
   tell,
   utxosAt,
-  waitNSlots,
+  submitTxConfirmed
  )
-import Plutus.Contracts.Currency (CurrencyError, OneShotCurrency, currencySymbol, mintContract)
+import Plutus.MintingPolicies.NFT
 import PlutusTx (FromData, fromBuiltinData, toBuiltinData)
 import PlutusTx.Builtins (mkI)
 
@@ -56,18 +55,42 @@ initialize = forever $ handleError (logError @Text) $ awaitPromise $ endpoint @"
 
 initializeHandler :: Integer -> Contract (Last CurrencySymbol) InitHelloWorldSchema Text ()
 initializeHandler initialInt = do
-  ownPkh <- ownPaymentPubKeyHash
-  -- TODO: remove waitNSlots. this was added because the e2e tests are
-  -- started immediately after the network is online. there seems to be a synchr problem
-  _ <- waitNSlots 1
-  cs <- currencySymbol <$> mapError (pack . show) (mintContract ownPkh [(TokenName "", 1)] :: Contract w s CurrencyError OneShotCurrency)
-  let lookups = otherScript helloValidator
-      tx = mustPayToOtherScript helloValidatorHash (Datum $ mkI initialInt) (singleton cs "" 1)
-  adjustedTx <- adjustUnbalancedTx <$> mkTxConstraints @Void lookups tx
-  ledgerTx <- submitUnbalancedTx adjustedTx
-  awaitTxConfirmed $ getCardanoTxId ledgerTx
-  tell $ Last $ Just cs
-  logInfo $ "Successfully initialized datum with value: " <> show initialInt
+  maybeMint <- mint [""]
+  case maybeMint of
+    Nothing -> logError @String "failed to mint"
+    Just cs -> do
+      let lookups = otherScript helloValidator
+          tx = mustPayToOtherScript helloValidatorHash (Datum $ mkI initialInt) (singleton cs "" 1)
+      adjustedTx <- adjustUnbalancedTx <$> mkTxConstraints @Void lookups tx
+      ledgerTx <- submitUnbalancedTx adjustedTx
+      awaitTxConfirmed $ getCardanoTxId ledgerTx
+      tell $ Last $ Just cs
+      logInfo $ "Successfully initialized datum with value: " <> show initialInt
+
+mint :: [TokenName] -> Contract w s Text (Maybe CurrencySymbol)
+mint tns = do
+  logInfo @String $ "Starting Minting Process For " <> show tns
+  pk    <- ownPaymentPubKeyHash
+  logInfo @String $ "Minting NFTs to send to " <> show pk
+  utxos <- utxosAt (pubKeyHashAddress pk Nothing)
+  logInfo @String $ "Found " <> show (length $ Map.keys utxos) <> " UTxOs"
+  case Map.keys utxos of
+    [] -> do
+      logError @String "No UTxO Found To use For Minting Process"
+      return Nothing 
+    oref : _ -> do
+      let cSym            = curSymbol oref tns
+          val             = mconcat $ fmap (\x -> singleton cSym x 1) tns
+          lookups         = mintingPolicy (policy oref tns)
+                         <> unspentOutputs utxos
+          tx              = mustMintValue val
+                         <> mustSpendPubKeyOutput oref
+      logInfo @String $ "Submitting NFT Minting Transaction For " <> show tns
+      mkTxConstraints @Void lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
+      logInfo @String $ "NFT Minting Transaction Confirmed For " <> show tns
+      -- tell [(pk, fmap (assetClass cSym) tns)]
+      return $ Just cSym
+
 
 increment :: CurrencySymbol -> Contract () IncHelloWorldSchema Text ()
 increment cs = forever $ handleError (logError @Text) $ awaitPromise $ endpoint @"increment" $ const $ incrementHandler cs
