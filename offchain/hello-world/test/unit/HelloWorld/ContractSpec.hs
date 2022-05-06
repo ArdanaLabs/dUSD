@@ -11,6 +11,7 @@ import Plutus.V1.Ledger.Api (fromBuiltinData)
 
 import HelloWorld.Contract (increment, initialize, read')
 import HelloWorld.ValidatorProxy (helloValidatorAddress)
+import Debug.Trace
 
 testTree :: TestTree
 testTree =
@@ -39,14 +40,15 @@ incrementHelloWorldDatum = do
   callEndpoint @"initialize" h1 1
   void $ waitNSlots 3
   identifier <- fromJust . getLast <$> observableState h1
-  void $ waitNSlots 1
-  h2 <- activateContractWallet (knownWallet 2) (increment identifier)
-  void $ waitNSlots 1
-  callEndpoint @"increment" h2 ()
-  void $ waitNSlots 1
-  h3 <- activateContractWallet (knownWallet 3) (increment identifier)
-  callEndpoint @"increment" h3 ()
-  void $ waitNSlots 1
+  trace ("ID: " <> show identifier) $ do
+    void $ waitNSlots 1
+    h2 <- activateContractWallet (knownWallet 2) (increment identifier)
+    void $ waitNSlots 1
+    callEndpoint @"increment" h2 ()
+    void $ waitNSlots 1
+    h3 <- activateContractWallet (knownWallet 3) (increment identifier)
+    callEndpoint @"increment" h3 ()
+    void $ waitNSlots 1
 
 readHelloWorldDatum :: EmulatorTrace ()
 readHelloWorldDatum = do

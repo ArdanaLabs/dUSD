@@ -45,6 +45,9 @@ import PlutusTx.Builtins (mkI)
 
 import HelloWorld.ValidatorProxy (helloValidator, helloValidatorAddress, helloValidatorHash)
 
+import System.IO.Unsafe
+import Debug.Trace
+
 -- | REST schema
 type InitHelloWorldSchema = Endpoint "initialize" Integer
 
@@ -55,19 +58,21 @@ initialize :: Contract (Last CurrencySymbol) InitHelloWorldSchema Text ()
 initialize = forever $ handleError (logError @Text) $ awaitPromise $ endpoint @"initialize" initializeHandler
 
 initializeHandler :: Integer -> Contract (Last CurrencySymbol) InitHelloWorldSchema Text ()
-initializeHandler initialInt = do
+initializeHandler initialInt = trace ("INIT START: " <> show initialInt) $ do
   ownPkh <- ownPaymentPubKeyHash
   -- TODO: remove waitNSlots. this was added because the e2e tests are
   -- started immediately after the network is online. there seems to be a synchr problem
-  _ <- waitNSlots 1
-  cs <- currencySymbol <$> mapError (pack . show) (mintContract ownPkh [(TokenName "", 1)] :: Contract w s CurrencyError OneShotCurrency)
-  let lookups = otherScript helloValidator
-      tx = mustPayToOtherScript helloValidatorHash (Datum $ mkI initialInt) (singleton cs "" 1)
-  adjustedTx <- adjustUnbalancedTx <$> mkTxConstraints @Void lookups tx
-  ledgerTx <- submitUnbalancedTx adjustedTx
-  awaitTxConfirmed $ getCardanoTxId ledgerTx
-  tell $ Last $ Just cs
-  logInfo $ "Successfully initialized datum with value: " <> show initialInt
+  --_ <- trace "INIT WAITING" $ waitNSlots 1
+  trace "INIT AFTER WAIT?" $ do
+    cs <- currencySymbol <$> mapError (pack . show) (mintContract ownPkh [(TokenName "A", 1)] :: Contract w s CurrencyError OneShotCurrency)
+    let lookups = otherScript helloValidator
+        tx = mustPayToOtherScript helloValidatorHash (Datum $ mkI initialInt) (singleton cs "" 1)
+    adjustedTx <- trace ("INIT CS: " <> show cs) adjustUnbalancedTx <$> mkTxConstraints @Void lookups tx
+    ledgerTx <- submitUnbalancedTx adjustedTx
+    awaitTxConfirmed $ getCardanoTxId ledgerTx
+    trace ("INIT ST: " <> show cs) $ do
+      tell $ Last $ Just cs
+      logInfo $ "Successfully initialized datum with value: " <> show initialInt
 
 increment :: CurrencySymbol -> Contract () IncHelloWorldSchema Text ()
 increment cs = forever $ handleError (logError @Text) $ awaitPromise $ endpoint @"increment" $ const $ incrementHandler cs

@@ -131,6 +131,7 @@ executable hello-world-e2e
     , hello-world
     , http-client
     , plutus-contract
+    , plutus-ledger
     , plutus-pab
     , servant-client
     , sydtest              ^>=0.8.0.0

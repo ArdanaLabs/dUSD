@@ -99,7 +99,7 @@ instance HasDefinitions HelloWorldContracts where
     Read' _ -> endpointsToSchemas @ReadHelloWorldSchema
 
   getContract = \case
-    Initialize -> SomeBuiltin $ initialize
+    Initialize -> SomeBuiltin initialize
     Increment contractId -> SomeBuiltin $ increment contractId
     Read' contractId -> SomeBuiltin $ read' contractId
 

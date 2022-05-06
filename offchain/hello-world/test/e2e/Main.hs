@@ -4,10 +4,14 @@ import Cardano.Wallet.Primitive.Types qualified as CTypes
 import Control.Concurrent qualified as CC
 import Control.Concurrent.Async qualified as Async
 import Control.Monad.IO.Class (MonadIO (..))
+import Data.Aeson (ToJSON, Value)
 import Data.Aeson qualified as Asn
+import Control.Monad (void)
+import Data.Functor (($>))
 import Data.Word (Word16)
 import HelloWorld.LocalCluster qualified as LC
 import HelloWorld.PAB (HelloWorldContracts (..))
+import Ledger.Value (CurrencySymbol (..))
 import Network.HTTP.Client qualified as HTTP
 import Plutus.PAB.Events.ContractInstanceState (PartiallyDecodedResponse (err))
 import Plutus.PAB.Webserver.Client (PabClient)
@@ -33,6 +37,8 @@ import Text.Read qualified as TR
 import Wallet.Emulator.Wallet (Wallet)
 import Wallet.Emulator.Wallet qualified as WTypes
 import Wallet.Types (ContractInstanceId)
+import Plutus.PAB.Events.ContractInstanceState
+    ( PartiallyDecodedResponse(observableState) )
 
 type LocalClusterSpec = TestDefM '[TestArgs] () ()
 
@@ -51,20 +57,23 @@ main =
 
 spec :: LocalClusterSpec
 spec = describe "End to End" $ do
-  itWithOuter "Tests contract endpoints" $
+  itWithOuter "Runs Contract" $
     \MkTestArgs {networkManager, wallet} -> do
-      let env = SC.mkClientEnv networkManager base
+      let env = SC.mkClientEnv networkManager pabBaseUrl
           pclientInitialize = PABClient.pabClient @HelloWorldContracts @()
       contractId <- activatesContract env pclientInitialize wallet
-      usesEndpoint "initialize" env pclientInitialize contractId
-  where
-    base =
-      BaseUrl
-        { baseUrlScheme = Http
-        , baseUrlHost = localhost
-        , baseUrlPort = pabBackendPort
-        , baseUrlPath = ""
-        }
+      st <- usesEndpoint "initialize" (1 :: Integer) env pclientInitialize contractId
+      putStrLn $ "ST: " <> show st
+      pure ()
+
+pabBaseUrl :: BaseUrl
+pabBaseUrl =
+  BaseUrl
+    { baseUrlScheme = Http
+    , baseUrlHost = localhost
+    , baseUrlPort = pabBackendPort
+    , baseUrlPath = ""
+    }
 
 activatesContract :: ClientEnv -> PabClient HelloWorldContracts walletId -> Wallet -> IO ContractInstanceId
 activatesContract env pclient wallet = do
@@ -73,22 +82,23 @@ activatesContract env pclient wallet = do
   res <- SC.runClientM activateContract env
   case res of
     Left ce -> SydEx.expectationFailure $ "*** Failed to activate contract: " <> show ce
-    Right cid -> do
-      verifyStatus env pclient cid
-      pure cid
+    Right cid ->
+      verifyStatus env pclient cid $> cid
 
 usesEndpoint ::
+  ToJSON params =>
   String ->
+  params ->
   ClientEnv ->
   PabClient t walletId ->
   ContractInstanceId ->
-  IO ()
-usesEndpoint endpoint env pclient contractId = do
+  IO Value
+usesEndpoint endpoint params env pclient contractId = do
   let instanceClient = PABClient.instanceClient pclient contractId
       -- TODO: this function needs to be refactored to additionally allow for passing the correct endpoint parameter
       -- preferably to enforce the same type that the schema defines and not just value
-      params = Asn.toJSON @Integer 1
-      req = PABClient.callInstanceEndpoint instanceClient endpoint params
+      --params = Asn.toJSON @Integer 1
+      req = PABClient.callInstanceEndpoint instanceClient endpoint (Asn.toJSON params)
   res <- SC.runClientM req env
   case res of
     Left ce -> reqErr ce
@@ -105,25 +115,28 @@ usesEndpoint endpoint env pclient contractId = do
 
  Luckily, these errors appear to be available on the status endpoint,
  hence this check.
+
+ If the verification succeeds, we return the observable state json. Consumers
+ can further check this state if desired.
 -}
 verifyStatus ::
   ClientEnv ->
   PabClient t walletId ->
   ContractInstanceId ->
-  IO ()
+  IO Value
 verifyStatus env pclient contractId = do
   -- Pretty hacky, but evidently we need a delay whenever one endpoint must
   -- complete before the next ones can be called. Thus we call one before
   -- this function, which should be checked after each contract step
-  sleepSeconds 1
+  sleepSeconds 5
   let instanceClient = PABClient.instanceClient pclient contractId
       req = PABClient.getInstanceStatus instanceClient
   res <- SC.runClientM req env
   case res of
     Left ce -> reqErr ce
-    Right st ->
-      let mErr = err $ cicCurrentState st
-       in maybe (pure ()) statusErr mErr
+    Right st -> do
+      let currState = cicCurrentState st
+       in maybe (pure (observableState currState)) statusErr (err currState)
   where
     reqErr = SydEx.expectationFailure . (<>) "*** Failed to get status: " . show
     statusErr = SydEx.expectationFailure . (<>) "*** Status error: " . show
