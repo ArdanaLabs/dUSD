@@ -70,39 +70,26 @@ mainValidator outRef = plam $ \_ n' sc' -> unTermCont $ do
   inputResolved <- pletFieldC @"resolved" ownInput
   -- we require the token to be "" for now
   nftAC <- pletC $ ppairDataBuiltin # pdata (pconstant $ nftCS outRef) # pdata (pcon $ PTokenName $ pconstant "")
-  inputRec <- pletFieldsC @'["address", "value", "datumHash"] inputResolved
-  pifC
-    (containsPosAmt # nftAC # getField @"value" inputRec)
-    ( do
-        -- TODO afaict the read only inputs CIP will break this
-        -- as it relies on the fact that if the nft is on some input the validator will be called on that input
-        pguardC "no input had the magic nft" $
-          pany # plam (\i -> containsPosAmt # nftAC #$ pfield @"value" #$ pfield @"resolved" # pfromData i) # inputs
-        pure $ popaque $ pcon PUnit
-    )
-    ( do
-        PDJust configDatumHashRecord <- pmatchC $ getField @"datumHash" inputRec
-        let configDatumHash = pfield @"_0" # configDatumHashRecord
-        -- TODO
-        -- using PByteString and unsafeCoerce
-        -- is a temporary fix for PCurrencySymbol and PTokenName not having
-        -- PTryFrom PData instances
-        PJust configAsData <- pmatchC $ pparseDatum @(PBuiltinPair (PAsData PByteString) (PAsData PByteString)) # configDatumHash # datumTable
-        let config = pfromData configAsData
-        -- TODO ideally this would use ptryFromData (not punsafeCoerce) but it's not exported
-        let n = pfromData $ punsafeCoerce n'
-        let mustMintThis = pfromData $ pelemAt @PBuiltinList # n # punsafeCoerce config
-        pguardC "indexed token not minted" $ containsPosAmt # mustMintThis # minting
-        pguardC "altered config illegally" $
-          -- either the redemer is 0 which is reserved for updating config
-          (n #== 0)
-            #||
-            -- or some output carries the nft forrward at the same address and the same datumHash
-            pany
-            # plam ((#== inputResolved) . pfromData)
-            # pfromData (getField @"outputs" rec)
-        pure $ popaque $ pcon PUnit
-    )
+  PJust configInput <- pmatchC $ pfind # plam (\i -> containsPosAmt # nftAC #$ pfield @"value" #$ pfield @"resolved" # pfromData i) # inputs
+  PDJust configDatumHashRecord <- pmatchC $ pfield @"datumHash" #$ pfield @"resolved" # pfromData configInput
+  let configDatumHash = pfield @"_0" # configDatumHashRecord
+  PJust configAsData <- pmatchC $ pparseDatum @(PBuiltinPair (PAsData PByteString) (PAsData PByteString)) # configDatumHash # datumTable
+  let config = pfromData configAsData
+  -- TODO ideally this would use ptryFromData (not punsafeCoerce) but it's not exported
+  let n = pfromData $ punsafeCoerce n'
+  -- Because we use the redemer as the config index for
+  -- all inputs all the inputs (from our address) must have the same redemer of the index of the config rule
+  let mustMintThis = pfromData $ pelemAt @PBuiltinList # n # punsafeCoerce config
+  pguardC "indexed token not minted" $ containsPosAmt # mustMintThis # minting
+  pguardC "altered config illegally" $
+    -- either the redemer is 0 which is reserved for updating config
+    (n #== 0)
+      #||
+      -- or some output carries the nft forrward at the same address and the same datumHash
+      pany
+      # plam ((#== inputResolved) . pfromData)
+      # pfromData (getField @"outputs" rec)
+  pure $ popaque $ pcon PUnit
 
 containsPosAmt :: Term s (PBuiltinPair (PAsData PCurrencySymbol) (PAsData PTokenName) :--> PValue :--> PBool)
 containsPosAmt = plam $ \ac val -> unTermCont $ do
