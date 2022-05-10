@@ -673,6 +673,46 @@ DEXes through executing big transactions, e.g. sandwich attacks.)
 
 \section{Tests}
 
+\subsection{Price module}
+Off-chain:
+\begin{itemize}
+  \item Emulator trace tests:
+    \begin{itemize}
+      \item Create a price module from a non-admin address, ensure it fails
+      \item Create a price module from an admin address, ensure it succeeds
+      \item From admin wallet write to an empty price module, then read from it, 
+        ensure same price is returned
+      \item From admin wallet write to an empty price module, then read from 
+        non-admin wallet address ensure same price is returned
+      \item From admin wallet write some entries to price module, read from many 
+        wallet addresses. all the reads result must be the same.
+      \item From admin wallet write to a none empty price module, read to check 
+        the latest price is correctly updated
+      \item From admin wallet write to the price module n times in less than 48 
+        hours, read from the price module to make sure all the entries have the
+        correct value and timestamp.
+      \item From admin wallet write to the price module wait for 48 hours, write 
+        again, make sure that the entries prior to 48 hours are deleted.
+      \item From a non-admin wallet write to the module ,transaction must fail. 
+        read again to make sure data has not changed
+    \end{itemize}
+  \item PAB E2E tests:
+  Most tests are exactly the same the ones for the emulator tests, except that
+  since cannot control chain code behavior, those tests relating to time are 
+  removed.
+    \begin{itemize}
+      \item Create a price module from a non-admin address, ensure it fails
+      \item Create a price module from an admin address, ensure it succeeds
+      \item From admin wallet write to an empty price module, then read from it, 
+        ensure same price is returned
+      \item From admin wallet write to an empty price module, then read from 
+        non-admin wallet address ensure same price is returned
+      \item From admin wallet write some entries to price module, read from many 
+        wallet addresses. all the reads result must be the same.
+      \item From admin wallet write to a none empty price module, read to check 
+        the latest price is correctly updated
+    \end{itemize}
+\end{itemize}
 
 % \section{Remarks}
 % 
