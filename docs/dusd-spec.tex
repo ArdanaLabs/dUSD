@@ -718,6 +718,17 @@ The tests must check that the validator
   - only validates if the Configuration UTXO is present at some input
   - only validates if the Referenced Minting Policy is invoked
 
+\subsubsection{Simple Vault Authorization Minting Policy}
+This policy is parameterised by a PubKey. The user will create the policy as an access control to their vault.
+
+More complex policies may be designed such as multi-party signature checks but this will likely be the common case.
+
+This minting policy can be used in a Vault Datum to manage vault access.
+
+The tests must check that the minting policy
+  - only validates if the Tx is signed by the Key
+
+
 \subsubsection{Vault Close Minting Policy}
 Vaults can be opened without invoking any protocol logic. The user simply creates an empty vault datum and sends this to the main script address.
 
