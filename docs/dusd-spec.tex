@@ -718,6 +718,21 @@ The tests must check that the validator
   - only validates if the Configuration UTXO is present at some input
   - only validates if the Referenced Minting Policy is invoked
 
+\subsubsection{Vault Close Minting Policy}
+Vaults can be opened without invoking any protocol logic. The user simply creates an empty vault datum and sends this to the main script address.
+
+Closing a vault is done by invoking the Vault Close Minting Policy indexed via the Configuration.
+
+This allows a Vault UTXO to be spent without returning to the Protocol address.
+
+The tests must check that the minting policy
+  - only validates if the Tx is authorised to manipulate the vault
+    - the Vault contains a reference to a user defined minting policy that controls access to the vault
+    - this minting policy must mint exactly one of its authorisation token
+  - only validates if the vault is in a position to be closed
+    - i.e. it has no outstanding debt
+  - only validates if the vault does not return to the protocol address
+    - i.e. the user can retrieve the funds in the vault and send them to any address
 
 % \section{Remarks}
 % 
