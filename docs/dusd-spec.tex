@@ -673,6 +673,18 @@ DEXes through executing big transactions, e.g. sandwich attacks.)
 
 \section{Tests}
 
+\subsection{Contracts}
+
+\subsubsection{NFT minting policy}
+This policy will be responsible for minting NFTs that identify the Configuration, Price Oracle, and Buffer UTXOs.
+
+It is parameterised by a TXOutRef and only allows minting of its token when that TxOut is spent.
+
+The tests must check that the policy
+  - only validates if the TxOut it expects is being spent.
+  - only mints a single token.
+  - the output is otherwise unconstrained.
+
 
 % \section{Remarks}
 % 
