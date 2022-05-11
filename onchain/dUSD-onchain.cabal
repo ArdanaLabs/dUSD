@@ -110,6 +110,7 @@ test-suite tests
     Apropos.Plutus.Auction
     Apropos.Plutus.Hello
     Apropos.Plutus.Integer
+    Apropos.Plutus.NFT
     Apropos.Plutus.SingletonValue
     Apropos.Plutus.Value
     Apropos.Plutus.Vault
