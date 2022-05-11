@@ -685,6 +685,27 @@ The tests must check that the policy
   - only mints a single token.
   - the output is otherwise unconstrained.
 
+\subsubsection{Configuration Management Minting Policy}
+Initially the Configuration will be managed by the owner of a private key.
+
+This minting policy will check that the owner of the private key has signed the transaction and if so allow modification of the Configuration UTXO.
+
+type Configuration = [CurrencySymbol]
+
+The Configuration Datum is a list of CurrencySymbols.
+
+The Main Script Redeemer is an index into this list and ensures that exactly one of the referenced token (CurrencySymbol,"") is minted.
+
+The Configuration Management Minting Policy will always be at index 0.
+
+This allows for Configuration Management Minting Policy itself to be swapped for a different policy.
+
+The tests must check that the policy
+  - only validates if the Tx is signed by the correct key.
+  - only validates if the Configuration UTXO is present in the input and is returned to the Main Script address in the output.
+  - mints exactly one token if these conditions are met.
+
+
 
 % \section{Remarks}
 % 
