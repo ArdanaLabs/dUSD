@@ -19,8 +19,8 @@ type HelloModel = (Integer, Integer)
 data HelloProp
   = IsValid
   | IsInvalid
-  deriving stock (Show, Eq, Ord,Generic)
-  deriving anyclass (Hashable,Enumerable)
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (Hashable, Enumerable)
 
 instance LogicalModel HelloProp where
   logic = ExactlyOne [Var IsValid, Var IsInvalid]
@@ -32,12 +32,12 @@ instance HasLogicalModel HelloProp HelloModel where
 instance HasPermutationGenerator HelloProp HelloModel where
   sources =
     [ Source
-      { sourceName = "any"
-      , covers = Yes
-      , gen = let
-          genInt = fromIntegral <$> int (linear (-1000000) 1000000)
-            in (,) <$> genInt <*> genInt
-      }
+        { sourceName = "any"
+        , covers = Yes
+        , gen =
+            let genInt = fromIntegral <$> int (linear (-1000000) 1000000)
+             in (,) <$> genInt <*> genInt
+        }
     ]
   generators =
     [ Morphism
@@ -58,10 +58,11 @@ instance HasParameterisedGenerator HelloProp HelloModel where
   parameterisedGenerator = buildGen
 
 validRunner :: PureRunner HelloProp HelloModel
-validRunner = PureRunner
-  { expect = Var IsValid
-  , script = uncurry helloLogic'
-  }
+validRunner =
+  PureRunner
+    { expect = Var IsValid
+    , script = uncurry helloLogic'
+    }
 
 helloLogic' :: Integer -> Integer -> Bool
 helloLogic' i j = evaledScript == Right compiledUnit
@@ -73,10 +74,12 @@ helloLogic' i j = evaledScript == Right compiledUnit
 spec :: Spec
 spec = do
   describe "helloGenSelfTest" $
-    mapM_ fromHedgehogGroup
+    mapM_
+      fromHedgehogGroup
       [ runGeneratorTestsWhere @HelloProp "Hello Generator" Yes
       ]
   describe "helloPureTests" $
-    mapM_ fromHedgehogGroup
+    mapM_
+      fromHedgehogGroup
       [ runPureTestsWhere validRunner "AcceptsValid" Yes
       ]

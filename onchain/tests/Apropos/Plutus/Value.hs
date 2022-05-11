@@ -29,7 +29,7 @@ data MultiValueProp
   | HasSomeDana
   | HasSomeJunk
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (Enumerable,Hashable)
+  deriving anyclass (Enumerable, Hashable)
 
 instance LogicalModel MultiValueProp where
   logic = Yes
@@ -50,10 +50,10 @@ instance HasLogicalModel MultiValueProp MultiValue where
 instance HasPermutationGenerator MultiValueProp MultiValue where
   sources =
     [ Source
-      { sourceName = "empty"
-      , covers = None [ Var p | p <- enumerated ]
-      , gen = pure []
-      }
+        { sourceName = "empty"
+        , covers = None [Var p | p <- enumerated]
+        , gen = pure []
+        }
     ]
   generators =
     [ Morphism

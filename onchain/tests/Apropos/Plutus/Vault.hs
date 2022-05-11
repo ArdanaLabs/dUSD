@@ -44,7 +44,7 @@ data VaultProp
   = DebtProp SingletonValueProp
   | CollateralProp SingletonValueProp
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (Enumerable,Hashable)
+  deriving anyclass (Enumerable, Hashable)
 
 instance LogicalModel VaultProp where
   logic =
@@ -62,22 +62,22 @@ instance HasLogicalModel VaultProp VaultModel where
 instance HasAbstractions VaultProp VaultModel where
   sourceAbstractions =
     [ SoAs $
-      SourceAbstraction
-        { sourceAbsName = "VaultModel"
-        , constructor = VaultModel
-        , productAbs =
-        ProductAbstraction
-          { abstractionName = "collateral"
-          , propertyAbstraction = abstractsProperties CollateralProp
-          , productModelAbstraction = lens collateral (\vm collateral' -> vm {collateral = collateral'})
-          } :&
-        ProductAbstraction
-          { abstractionName = "debt"
-          , propertyAbstraction = abstractsProperties DebtProp
-          , productModelAbstraction = lens debt (\vm debt' -> vm {debt = debt'})
-          } :& Nil
-
-        }
+        SourceAbstraction
+          { sourceAbsName = "VaultModel"
+          , constructor = VaultModel
+          , productAbs =
+              ProductAbstraction
+                { abstractionName = "collateral"
+                , propertyAbstraction = abstractsProperties CollateralProp
+                , productModelAbstraction = lens collateral (\vm collateral' -> vm {collateral = collateral'})
+                }
+                :& ProductAbstraction
+                  { abstractionName = "debt"
+                  , propertyAbstraction = abstractsProperties DebtProp
+                  , productModelAbstraction = lens debt (\vm debt' -> vm {debt = debt'})
+                  }
+                :& Nil
+          }
     ]
 
 instance HasPermutationGenerator VaultProp VaultModel where

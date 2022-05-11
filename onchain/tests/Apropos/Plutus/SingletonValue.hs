@@ -19,7 +19,7 @@ data SingletonValueProp
   = AC AssetClassProp
   | Amt IntegerProp
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (Enumerable,Hashable)
+  deriving anyclass (Enumerable, Hashable)
 
 instance LogicalModel SingletonValueProp where
   logic = abstractionLogic @SingletonValue
@@ -30,23 +30,23 @@ instance HasLogicalModel SingletonValueProp SingletonValue where
 
 instance HasAbstractions SingletonValueProp SingletonValue where
   sourceAbstractions =
-    [ SoAs
-       $ SourceAbstraction
-         { sourceAbsName = "(,)"
-         , constructor = (,)
-         , productAbs =
-          ProductAbstraction
-            { abstractionName = "assetClass"
-            , propertyAbstraction = abstractsProperties AC
-            , productModelAbstraction = _1
-            } :&
-          ProductAbstraction
-            { abstractionName = "amt"
-            , propertyAbstraction = abstractsProperties Amt
-            , productModelAbstraction = _2
-            } :& Nil
-
-         }
+    [ SoAs $
+        SourceAbstraction
+          { sourceAbsName = "(,)"
+          , constructor = (,)
+          , productAbs =
+              ProductAbstraction
+                { abstractionName = "assetClass"
+                , propertyAbstraction = abstractsProperties AC
+                , productModelAbstraction = _1
+                }
+                :& ProductAbstraction
+                  { abstractionName = "amt"
+                  , propertyAbstraction = abstractsProperties Amt
+                  , productModelAbstraction = _2
+                  }
+                :& Nil
+          }
     ]
 
 instance HasPermutationGenerator SingletonValueProp SingletonValue where

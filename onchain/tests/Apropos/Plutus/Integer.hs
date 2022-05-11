@@ -15,7 +15,7 @@ data IntegerProp
   | IsLarge
   | IsSmall
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (Enumerable,Hashable)
+  deriving anyclass (Enumerable, Hashable)
 
 instance LogicalModel IntegerProp where
   logic =
@@ -33,20 +33,20 @@ instance HasLogicalModel IntegerProp Integer where
 instance HasPermutationGenerator IntegerProp Integer where
   sources =
     [ Source
-      { sourceName = "Zero"
-      , covers = Var IsZero
-      , gen = pure 0
-      }
+        { sourceName = "Zero"
+        , covers = Var IsZero
+        , gen = pure 0
+        }
     , Source
-      { sourceName = "Large"
-      , covers = Var IsPositive :&&: Var IsLarge
-      , gen = fromIntegral <$> int (linear 11 maxBound)
-      }
+        { sourceName = "Large"
+        , covers = Var IsPositive :&&: Var IsLarge
+        , gen = fromIntegral <$> int (linear 11 maxBound)
+        }
     , Source
-      { sourceName = "Small"
-      , covers = Var IsPositive :&&: Var IsSmall
-      , gen = fromIntegral <$> int (linear 1 10)
-      }
+        { sourceName = "Small"
+        , covers = Var IsPositive :&&: Var IsSmall
+        , gen = fromIntegral <$> int (linear 1 10)
+        }
     ]
   generators =
     [ Morphism

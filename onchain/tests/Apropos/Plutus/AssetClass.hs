@@ -22,7 +22,7 @@ data AssetClassProp
   | IsLiquidity
   | IsOther
   deriving stock (Eq, Ord, Enum, Show, Bounded, Generic)
-  deriving anyclass (Enumerable,Hashable)
+  deriving anyclass (Enumerable, Hashable)
 
 specialAC :: AssetClassProp -> Maybe AssetClass
 specialAC IsAda = Just ada
@@ -64,13 +64,13 @@ instance HasPermutationGenerator AssetClassProp AssetClass where
       }
     | p <- enumerated
     , Just ac <- pure $ specialAC p
-    ] ++
-    [ Source
-      { sourceName = "Other"
-      , covers = Var IsOther
-      , gen = genFilter (`notElem` specialTokens) baseGen
-      }
     ]
+      ++ [ Source
+            { sourceName = "Other"
+            , covers = Var IsOther
+            , gen = genFilter (`notElem` specialTokens) baseGen
+            }
+         ]
 
 baseGen :: Gen AssetClass
 baseGen =
