@@ -19,10 +19,8 @@ type HelloModel = (Integer, Integer)
 data HelloProp
   = IsValid
   | IsInvalid
-  deriving stock (Show, Eq, Ord, Enum, Bounded)
-
-instance Enumerable HelloProp where
-  enumerated = [minBound .. maxBound]
+  deriving stock (Show, Eq, Ord,Generic)
+  deriving anyclass (Hashable,Enumerable)
 
 instance LogicalModel HelloProp where
   logic = ExactlyOne [Var IsValid, Var IsInvalid]
@@ -32,6 +30,15 @@ instance HasLogicalModel HelloProp HelloModel where
   satisfiesProperty IsInvalid p = not $ satisfiesProperty IsValid p
 
 instance HasPermutationGenerator HelloProp HelloModel where
+  sources =
+    [ Source
+      { sourceName = "any"
+      , covers = Yes
+      , gen = let
+          genInt = fromIntegral <$> int (linear (-1000000) 1000000)
+            in (,) <$> genInt <*> genInt
+      }
+    ]
   generators =
     [ Morphism
         { name = "MakeValid"
@@ -48,15 +55,13 @@ instance HasPermutationGenerator HelloProp HelloModel where
     ]
 
 instance HasParameterisedGenerator HelloProp HelloModel where
-  parameterisedGenerator =
-    buildGen $
-      (,)
-        <$> (fromIntegral <$> int (linear (-10) 10))
-        <*> (fromIntegral <$> int (linear (-10) 10))
+  parameterisedGenerator = buildGen
 
-instance HasPureRunner HelloProp HelloModel where
-  expect _ = Var IsValid
-  script _ (i, j) = helloLogic' i j
+validRunner :: PureRunner HelloProp HelloModel
+validRunner = PureRunner
+  { expect = Var IsValid
+  , script = uncurry helloLogic'
+  }
 
 helloLogic' :: Integer -> Integer -> Bool
 helloLogic' i j = evaledScript == Right compiledUnit
@@ -68,10 +73,10 @@ helloLogic' i j = evaledScript == Right compiledUnit
 spec :: Spec
 spec = do
   describe "helloGenSelfTest" $
-    mapM_ fromHedgehogGroup $
-      [ runGeneratorTestsWhere (Apropos :: HelloModel :+ HelloProp) "Hello Generator" Yes
+    mapM_ fromHedgehogGroup
+      [ runGeneratorTestsWhere @HelloProp "Hello Generator" Yes
       ]
   describe "helloPureTests" $
-    mapM_ fromHedgehogGroup $
-      [ runPureTestsWhere (Apropos :: HelloModel :+ HelloProp) "AcceptsValid" Yes
+    mapM_ fromHedgehogGroup
+      [ runPureTestsWhere validRunner "AcceptsValid" Yes
       ]
