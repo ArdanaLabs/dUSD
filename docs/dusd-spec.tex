@@ -956,6 +956,18 @@ The tests must check that the policy
   - only validates if at most one of the surplus/debt sale triggers is not Nothing
   - mints exactly one token if these conditions are met.
 
+\subsubsection{dUSD Minting Policy}
+The dUSD Minting Policy must have a fixed definition since we do not want the CurrencySymbol for dUSD to ever change.
+
+This means that the policy must defer its validation to a policy referenced by the Configuration.
+
+The tests must check that the policy
+  - only validates if the Configuration UTXO is present along with the Configuration NFT
+  - only validates when a policy at a specific index also validates
+    - we might choose to have special indexes with reserved purposes
+    - e.g. index 0 is for Configuration Management, index 1 is for dUSD minting logic delegation
+  - dUSD can only be minted when the referenced policy mints 1 token
+  - the amount of dUSD minted must be legitimate according to system parameters and vault state
 
 
 
