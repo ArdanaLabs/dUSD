@@ -718,6 +718,20 @@ The tests must check that the validator
   - only validates if the Configuration UTXO is present at some input
   - only validates if the Referenced Minting Policy is invoked
 
+\subsubsection{Price Module Management Minting Policy}
+The price module UTXO will carry an NFT which identifies the UTXO as valid.
+
+This will be minted with the same NFT minting policy as for the Config but using a different unique TxOut.
+
+Updating the Price Module will be done via a Minting Policy referenced by the Config. This allows its behaviour to be changed.
+
+Initially this Minting Policy will simply check that the Tx is signed by an authorised key.
+
+The tests must check that the policy
+  - only validates if the Tx is signed by the correct key.
+  - only validates if the Price Module UTXO is present in the input and is returned to the Main Script address in the output.
+  - mints exactly one token if these conditions are met.
+
 \subsubsection{Simple Vault Authorization Minting Policy}
 This policy is parameterised by a PubKey. The user will create the policy as an access control to their vault.
 
@@ -744,6 +758,82 @@ The tests must check that the minting policy
     - i.e. it has no outstanding debt
   - only validates if the vault does not return to the protocol address
     - i.e. the user can retrieve the funds in the vault and send them to any address
+  - mints exactly one of the token
+
+\subsubsection{Vault Deposit ADA Minting Policy}
+Depends on the Configuration but not the Price Module UTXO.
+
+Depositing ADA into a Vault can either be done on Vault creation which requires no direct protocol interaction or into an existing vault.
+
+Depositing ADA into an existing Vault invokes the Vault Deposit Minting Policy.
+
+The tests must check that the minting policy
+  - only validates if the Tx is authorised to manipulate the vault
+    - the Vault contains a reference to a user defined minting policy that controls access to the vault
+    - this minting policy must mint exactly one of its authorisation token
+  - only validates if the amount of ADA in the vault is increased
+  - only validates if the vault returns to the protocol address with all other vault data unchanged
+    - the transaction may not change the vault access control script or the Debt associated with the vault
+  - mints exactly one of the token
+
+\subsubsection{Vault Withdraw ADA Minting Policy}
+Depends on the price module UTXO and the Configuration.
+
+The tests must check that the minting policy
+  - only validates if the Tx is authorised to manipulate the vault
+    - the Vault contains a reference to a user defined minting policy that controls access to the vault
+    - this minting policy must mint exactly one of its authorisation token
+  - only validates if the amount of ADA in the vault is decreased
+  - only validates if the new collateralization ratio is above the liquidation ratio
+  - only validates if no other vault parameters are changed
+    - the vault access script may not change
+    - the dUSD debt may not change
+  - mints exactly one of the token.
+
+\subsubsection{Vault Take dUSD Loan Minting Policy}
+Depends on the price module UTXO and the Configuration.
+
+The tests must check that the minting policy
+  - only validates if the Tx is authorised to manipulate the vault
+    - the Vault contains a reference to a user defined minting policy that controls access to the vault
+    - this minting policy must mint exactly one of its authorisation token
+  - only validates if the amount of dUSD loaned out is increased
+  - only validates if the new collateralization ratio is above the liquidation ratio
+  - only validates if no other vault parameters are changed
+    - the vault access script may not change
+    - the ADA collateral may not change
+  - mints exactly one of the token.
+
+\subsubsection{Vault Pay back dUSD Loan Minting Policy}
+Depends on the the Configuration.
+
+This does not need to check the Price Module.
+
+The tests must check that the minting policy
+  - only validates if the Tx is authorised to manipulate the vault
+    - the Vault contains a reference to a user defined minting policy that controls access to the vault
+    - this minting policy must mint exactly one of its authorisation token
+  - only validates if the amount of dUSD loaned out is decreased
+  - only validates if no other vault parameters are changed
+    - the vault access script may not change
+    - the ADA collateral may not change
+  - mints exactly one of the token.
+
+\subsubsection{Vault Liquidation}
+Depends on the price module UTXO and the Configuration.
+
+The tests must check that the minting policy
+  - only validates if the Tx is authorised to manipulate the vault
+    - the Vault contains a reference to a user defined minting policy that controls access to the vault
+    - this minting policy must mint exactly one of its authorisation token
+  - only validates if the liquidation is legitimate
+    - this must follow the strict set of rules laid out in section 2.2.7
+  - only validates if no other vault parameters are changed
+    - the vault access script may not change 
+  - mints exactly one of the token.
+
+
+
 
 % \section{Remarks}
 % 
