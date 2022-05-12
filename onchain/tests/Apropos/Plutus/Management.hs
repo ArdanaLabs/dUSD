@@ -1,25 +1,33 @@
-module Apropos.Plutus.Auction (
+module Apropos.Plutus.Management (
   -- spec,
 ) where
 
 import Apropos
 import Data.List (uncons, length, drop)
 import GHC.Generics (Generic)
-import Gen
+import Gen qualified
 import Test.Syd
 import Test.Syd.Hedgehog
 
-import Ledger.Scripts (datumHash) -- will this work?
+import Codec.Serialise (serialise)
+import Crypto.Hash (hashWith)
+import Crypto.Hash.Algorithms (Blake2b_224 (Blake2b_224), HashAlgorithm)
+import Data.ByteArray (convert)
+import Data.ByteString (ByteString)
+import Data.ByteString.Lazy qualified as Lazy
+import PlutusTx.Builtins qualified as Builtins
+
+-- import Ledger.Scripts (datumHash) -- will this work?
 
 import Plutarch (compile, (#))
 import Plutarch.Evaluate (evalScript)
 import Plutarch.Prelude qualified as PPrelude
 import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Value (AssetClass, assetClassValue, flattenValue, Value)
+import Plutus.V1.Ledger.Value (AssetClass, assetClassValue, flattenValue, Value, assetClass)
 import PlutusTx qualified
 
 -- | The model for the properties.
-type ManagementModel = ManagementModel
+data ManagementModel = ManagementModel
   { mmCurrencies :: [CurrencySymbol]  -- The currencies in the datum.
   , mmSignatures :: [PubKeyHash]      -- Signatures present in the Tx.
   , mmInDatumHash :: DatumHash
@@ -50,6 +58,60 @@ data ManagementProp
   | OwnAtInBase  -- ownCurrencySymbol is the first one in the datum.
   | OwnAtOutBase 
   deriving stock (Show, Eq, Ord, Enum, Bounded)
+
+
+instance HasPermutationGenerator ManagementProp ManagementModel where
+  sources =
+    [ Source
+        { sourceName = "Correctly Formed"
+        , covers = All 
+          [ Var BeenSigned
+          , Var InDatumHashed
+          , Var OutDatumHashed
+          , Var ConfigPresent
+          , Var ConfigReturned
+          , Var OwnAtInBase
+          , Var OwnAtOutBase
+          ]
+        , gen = do
+            valHash <- Gen.validatorHash
+            -- TODO : Make this align with the
+            -- address below.
+            cs  <- Gen.hexString @CurrencySymbol
+            -- TODO : Replace this with one that only
+            -- generates validator addresses.
+            adr <- Gen.address
+            owner <- Gen.pubKeyHash
+            numSigs <- linear 0 5
+            sigs' <- replicateM numSigs Gen.pubKeyHash
+            posSigs <- linear 0 numSigs
+            let sigs = (take posSigs) ++ [owner] ++ (drop posSigs)
+            numCurrencies <- linear 2 12
+            inCurrencies' <- replicateM numCurrencies (Gen.hexString @CurrencySymbol) 
+            let inCurrencies = owner : inCurrencies'
+                inDatHash    = datumHash $ Datum $ PlutusTx.toData $ inCurrencies
+            inNft <- Gen.hexString @CurrencySymbol
+            -- okay
+            return $ ManagementModel
+              { mmCurrencies  = inCurrencies
+              , mmSignatures  = sigs
+              , mmInDatumHash = inDatHash
+              , mmOwnCurrency = cs
+              , mmCurChoice = 0
+              , mmMinted    = assetClassValue (assetClass cs "") 1
+              , mmOwner     = owner
+              , mmInput     = [] -- TODO
+              , mmOutput    = [] -- TODO
+              , mmAddress   = adr
+              , mmOutDatum  = inCurrencies -- TEMP
+              , mmOutDatumHash = inDatHash
+              , mmInNFT = inNft
+              }
+        }
+    
+    ]
+  generators = [] -- TODO
+
 
 instance Enumerable ManagementProp where
   enumerated = [minBound .. maxBound]
@@ -114,5 +176,13 @@ checkTxOut cs n adr dhsh txo =
     && (txOutDatumHash txo == Just dhsh)
     && (n == valueOf (txOutValue txo) cs "")
 
-
+-- TODO do this with a non-hack
+-- (taken from HelloValidator)
+datumHash :: Datum -> DatumHash
+datumHash (Datum (BuiltinData d)) = (DatumHash . hashBlake2b_224 . Lazy.toStrict . serialise) d
+  where
+    _plutusHashWith :: HashAlgorithm alg => alg -> ByteString -> Builtins.BuiltinByteString
+    _plutusHashWith alg = Builtins.toBuiltin . convert @_ @ByteString . hashWith alg
+    hashBlake2b_224 :: ByteString -> Builtins.BuiltinByteString
+    hashBlake2b_224 = _plutusHashWith Blake2b_224
 

@@ -10,6 +10,7 @@ module Gen (
   rational,
   integer,
   datum,
+  hexString,
 ) where
 
 import Apropos (Gen, choice, element, int, linear, list)
