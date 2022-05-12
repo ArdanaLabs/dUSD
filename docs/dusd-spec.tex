@@ -780,6 +780,9 @@ Initially this Minting Policy will simply check that the Tx is signed by an auth
 The tests must check that the policy
   - only validates if the Tx is signed by the correct key.
   - only validates if the Price Module UTXO is present in the input and is returned to the Main Script address in the output.
+  - only validates if the price vector is treated as a bounded queue
+    - a new price can be pushed onto the leading end
+    - if the length is 48 then the tailing end must drop a price point
   - mints exactly one token if these conditions are met.
 
 \subsubsection{Simple Vault Authorization Minting Policy}
