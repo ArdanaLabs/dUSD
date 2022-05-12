@@ -813,6 +813,20 @@ The tests must check that the minting policy
     - i.e. the user can retrieve the funds in the vault and send them to any address
   - mints exactly one of the token
 
+\subsubsection{Vault Change Ownership Minting Policy}
+Vault ownership is determined by a Minting Policy referenced by the Vault UTXO.
+
+This allows ownership to be programmable by the Vault owner.
+
+The tests myst check that the minting policy
+  - only validates if the Tx is authorised to manipulate the vault
+    - the Vault contains a reference to a user defined minting policy that controls access to the vault
+    - this minting policy must mint exactly one of its authorisation token
+  - only validates if the only thing that changes about the vault is the ownership policy.
+  - only validates if the vault returns to the protocol address
+  - mints exactly one of the token
+
+
 \subsubsection{Vault Deposit ADA Minting Policy}
 Depends on the Configuration as a read only input.
 
