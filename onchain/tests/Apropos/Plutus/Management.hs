@@ -17,13 +17,16 @@ import Plutus.V1.Ledger.Value (AssetClass, assetClassValue, flattenValue, Value)
 
 -- | The model for the properties.
 type ManagementModel = ManagementModel
-  { mmCurrencies :: [CurrencySymbol]
-  , mmSignatures :: [PubKeyHash]
+  { mmCurrencies :: [CurrencySymbol]  -- The currencies in the datum.
+  , mmSignatures :: [PubKeyHash]      -- Signatures present in the Tx.
   , mmCurChoice :: Int
   , mmMinted :: Value
-  , mmOwner  :: PubKeyHash
-  , mmInput  :: [TxInInfo]
-  , mmOutput :: [TxOut]
+  , mmOwner  :: PubKeyHash -- The 'Owner' of this policy; baked into the policy.
+  , mmInput  :: [TxInInfo] -- The inputs to the minting policy
+  , mmOutput :: [TxOut]    -- The outputs of this policy.
+  -- , mmAddress :: MintingPolicyHash -- The address of this minting policy.
+  , mmAddress :: CurrencySymbol -- The address of this minting policy.
+  , mmOutDatum :: [CurrencySymbol] -- The datum to the script.
   } deriving stock (Show, Eq, Generic)
 
 data ManagementProp
