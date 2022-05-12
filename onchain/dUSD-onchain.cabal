@@ -73,6 +73,7 @@ library
   exposed-modules:
     DUSD
     Hello
+    NFT
     Plutarch.Extensions.Api
     Plutarch.Extensions.List
     Plutarch.Extensions.Monad
