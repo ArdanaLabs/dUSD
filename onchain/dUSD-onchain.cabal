@@ -22,6 +22,7 @@ common lang
     DerivingStrategies
     DerivingVia
     DoAndIfThenElse
+    DuplicateRecordFields
     EmptyCase
     EmptyDataDecls
     EmptyDataDeriving
@@ -50,6 +51,7 @@ common lang
     PostfixOperators
     QuantifiedConstraints
     RankNTypes
+    RecordWildCards
     RelaxedPolyRec
     ScopedTypeVariables
     StandaloneDeriving
@@ -96,6 +98,7 @@ executable scripts
     , base
     , bytestring
     , dUSD-onchain
+    , plutus-ledger-api
     , serialise
 
 test-suite tests
@@ -107,7 +110,7 @@ test-suite tests
   other-modules:
     Apropos.Plutus.AssetClass
     Apropos.Plutus.Auction
-    Apropos.Plutus.Hello
+    Apropos.Plutus.HelloValidator
     Apropos.Plutus.Integer
     Apropos.Plutus.Management
     Apropos.Plutus.SingletonValue
@@ -135,4 +138,5 @@ test-suite tests
     , sydtest-hedgehog
     , tasty
     , tasty-hedgehog
+    , transformers
     , with-utf8
