@@ -31,3 +31,5 @@ ci
 
 # Ignore direnv cache
 .direnv
+# Ignores direnv files
+.envrc
