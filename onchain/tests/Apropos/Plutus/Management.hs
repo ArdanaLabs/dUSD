@@ -133,6 +133,42 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
             let sigs' = (owner:sigs)
             return $ modl {mmSignatures = sigs'} 
         }
+    , Morphism
+        { name = "UnhashIn"
+        , match = Var InDatumHashed
+        , contract = remove InDatumHashed
+        , morphism = \case
+          modl@(ManagementModel {}) -> do
+            inHsh' <- Gen.datumHash
+            return $ modl {mmInDatumHash = inHsh'}
+        }
+    , Morphism
+        { name = "HashIn"
+        , match = Not $ Var InDatumHashed
+        , contract = addAll [InDatumHashed]
+        , morphism = \case
+          modl@(ManagementModel {mmCurrencies = inDatum}) -> do
+            let inHsh' = datumHash $ makeDatum inDatum
+            return $ modl {mmInDatumHash = inHsh'}
+        }
+    , Morphism
+        { name = "UnhashOut"
+        , match = Var OutDatumHashed
+        , contract = remove OutDatumHashed
+        , morphism = \case
+          modl@(ManagementModel {}) -> do
+            outHsh' <- Gen.datumHash
+            return $ modl {mmOutDatumHash = outHsh'}
+        }
+    , Morphism
+        { name = "HashOut"
+        , match = Not $ Var OutDatumHashed
+        , contract = addAll [OutDatumHashed]
+        , morphism = \case
+          modl@(ManagementModel {mmOutDatum = outDatum}) -> do
+            let outHsh' = datumHash $ makeDatum outDatum
+            return $ modl {mmOutDatumHash = outHsh'}
+        }
     ]
 
 
@@ -208,4 +244,7 @@ datumHash (Datum (BuiltinData d)) = (DatumHash . hashBlake2b_224 . Lazy.toStrict
     _plutusHashWith alg = Builtins.toBuiltin . convert @_ @ByteString . hashWith alg
     hashBlake2b_224 :: ByteString -> Builtins.BuiltinByteString
     hashBlake2b_224 = _plutusHashWith Blake2b_224
+
+makeDatum :: (PlutusTx.ToData a) => a -> Datum 
+makeDatum x = Datum $ PlutusTx.toBuiltinData $ x
 
