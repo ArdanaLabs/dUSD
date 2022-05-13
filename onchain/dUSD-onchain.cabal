@@ -51,6 +51,7 @@ common lang
     PostfixOperators
     QuantifiedConstraints
     RankNTypes
+    RecordWildCards
     RelaxedPolyRec
     ScopedTypeVariables
     StandaloneDeriving
@@ -98,6 +99,7 @@ executable scripts
     , base
     , bytestring
     , dUSD-onchain
+    , plutus-ledger-api
     , serialise
 
 test-suite tests
@@ -109,7 +111,7 @@ test-suite tests
   other-modules:
     Apropos.Plutus.AssetClass
     Apropos.Plutus.Auction
-    Apropos.Plutus.Hello
+    Apropos.Plutus.HelloValidator
     Apropos.Plutus.Integer
     Apropos.Plutus.NFT
     Apropos.Plutus.SingletonValue
@@ -122,15 +124,20 @@ test-suite tests
     , apropos
     , apropos-tx
     , base
+    , bytestring
     , containers
+    , cryptonite
     , dUSD-onchain
     , hedgehog
     , lens
+    , memory
     , plutarch
     , plutus-ledger-api
     , plutus-tx
+    , serialise
     , sydtest
     , sydtest-hedgehog
     , tasty
     , tasty-hedgehog
+    , transformers
     , with-utf8

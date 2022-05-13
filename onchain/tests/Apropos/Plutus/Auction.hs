@@ -10,8 +10,7 @@ import Test.Syd.Hedgehog (fromHedgehogGroup)
 spec :: Spec
 spec = do
   xdescribe "auction model" $ do
-    fromHedgehogGroup $
-      runGeneratorTestsWhere @AuctionProp "" Yes
+    fromHedgehogGroup $ runGeneratorTestsWhere @AuctionProp "generator" Yes
 
 data AuctionProp
   = Valid

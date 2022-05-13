@@ -3,12 +3,17 @@
 source-repository-package
   type: git
   location: https://github.com/mlabs-haskell/apropos
-  tag: 8304b8a91d38ea26d3302aee411748176c85c4bd
+  tag: 404c3f28832e5a78c9aa66a6d3e016e7c7996b00
 
 source-repository-package
   type: git
   location: https://github.com/mlabs-haskell/apropos-tx
-  tag: ecc4d6978ec8aecb7e320f208dc338dfe4d88124
+  tag: 572c53a97e67278bd29b19e355bd3e61e9597016
+
+source-repository-package
+  type: git
+  location: https://github.com/mlabs-haskell/digraph
+  tag: d4dfec22f6a6eb646dcfa9591eaca0a9be88d260
 
 source-repository-package
   type: git
@@ -67,7 +72,7 @@ constraints:
   , dependent-sum > 0.6.2.0
   -- Newer Hashable have instances for Set, which breaks beam-migrate
   -- which declares its own instances of Hashable Set
-  --, hashable < 1.3.4.0
+  -- , hashable < 1.3.4.0
 
 -- See the note on nix/pkgs/default.nix:agdaPackages for why this is here.
 -- (NOTE this will change to ieee754 in newer versions of nixpkgs).
@@ -155,8 +160,3 @@ source-repository-package
     sydtest-discover
     sydtest-hedgehog
   tag: 9c6c7678f7aabe22e075aab810a6a2e304591d24
-
-source-repository-package
-  type: git
-  location: https://github.com/mlabs-haskell/digraph
-  tag: d4dfec22f6a6eb646dcfa9591eaca0a9be88d260

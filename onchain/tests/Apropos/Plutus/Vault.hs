@@ -1,7 +1,7 @@
 module Apropos.Plutus.Vault (
   spec,
   VaultProp,
-  makeVaultDatum,
+  --makeVaultDatum,
 ) where
 
 import Apropos
@@ -10,26 +10,13 @@ import Apropos.Plutus.AssetClass (AssetClassProp (..))
 import Apropos.Plutus.Integer (IntegerProp (..))
 import Apropos.Plutus.SingletonValue (SingletonValue, SingletonValueProp (..))
 import Control.Lens (lens)
-import Plutus.V1.Ledger.Api (
-  Datum (..),
- )
-import Plutus.V1.Ledger.Value (AssetClass (..))
-
 import Test.Syd
 import Test.Syd.Hedgehog (fromHedgehogGroup)
 
-import Plutarch.Api.V1 (PDatum (PDatum))
-import Plutarch.Builtin (
-  pforgetData,
-  ppairDataBuiltin,
- )
-import Plutarch.Prelude
-
 spec :: Spec
 spec = do
-  describe "vault model" $
-    fromHedgehogGroup $
-      runGeneratorTestsWhere @VaultProp "generator" Yes
+  describe "vault model" $ do
+    fromHedgehogGroup $ runGeneratorTestsWhere @VaultProp "generator" Yes
 
 data VaultModel = VaultModel
   { collateral :: SingletonValue
@@ -80,11 +67,11 @@ instance HasAbstractions VaultProp VaultModel where
 
 instance HasPermutationGenerator VaultProp VaultModel where
   sources = abstractionSources
-  generators = abstractionMorphisms
 
 instance HasParameterisedGenerator VaultProp VaultModel where
   parameterisedGenerator = buildGen
 
+  {-
 makeVaultDatum :: VaultModel -> Datum
 makeVaultDatum VaultModel {collateral = (AssetClass (collateralCs, collateralTn), collateralAmt), debt = (AssetClass (debtCs, debtTn), debtAmt)} =
   -- TODO we may want to change the way the vault datum is encoded
@@ -105,4 +92,5 @@ makeVaultDatum VaultModel {collateral = (AssetClass (collateralCs, collateralTn)
                     # pdata (pconstant debtAmt)
                 )
 
+-}
 -- TODO makeVaultTxout
