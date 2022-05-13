@@ -71,7 +71,7 @@ instance HasPermutationGenerator VaultProp VaultModel where
 instance HasParameterisedGenerator VaultProp VaultModel where
   parameterisedGenerator = buildGen
 
-  {-
+{-
 makeVaultDatum :: VaultModel -> Datum
 makeVaultDatum VaultModel {collateral = (AssetClass (collateralCs, collateralTn), collateralAmt), debt = (AssetClass (debtCs, debtTn), debtAmt)} =
   -- TODO we may want to change the way the vault datum is encoded
