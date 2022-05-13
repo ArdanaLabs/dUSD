@@ -6,7 +6,7 @@ module Apropos.Plutus.Management (
 
 import Apropos
 import Control.Monad (replicateM)
-import Data.List (uncons, length, drop)
+import Data.List (uncons, length, drop, delete)
 import GHC.Generics (Generic)
 import Gen qualified
 import Test.Syd
@@ -113,8 +113,27 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
               }
         }
     
-    ] 
-  generators = [] -- TODO
+    ] -- should probably add more.
+  generators = 
+    [ Morphism
+        { name = "Unsign"
+        , match = Var BeenSigned
+        , contract = remove BeenSigned
+        , morphism = \case
+          modl@(ManagementModel {mmSignatures = sigs, mmOwner = owner}) -> do
+            let sigs' = (delete owner sigs)
+            return $ modl {mmSignatures = sigs'}
+        }
+    , Morphism
+        { name = "Sign"
+        , match = Not $ Var BeenSigned
+        , contract = addAll [BeenSigned]
+        , morphism = \case
+          modl@(ManagementModel {mmSignatures = sigs, mmOwner = owner}) -> do
+            let sigs' = (owner:sigs)
+            return $ modl {mmSignatures = sigs'} 
+        }
+    ]
 
 
 instance Enumerable ManagementProp where
