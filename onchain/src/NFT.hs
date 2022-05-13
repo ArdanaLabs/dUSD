@@ -9,13 +9,13 @@ import Plutarch.Api.V1 (
   mkMintingPolicy,
  )
 import Plutarch.Prelude
-import Plutus.V1.Ledger.Api (CurrencySymbol, MintingPolicy, TxId)
+import Plutus.V1.Ledger.Api (CurrencySymbol, MintingPolicy, TxOutRef)
 
-asPlutarch :: TxId -> ClosedTerm (PData :--> PScriptContext :--> POpaque)
+asPlutarch :: TxOutRef -> ClosedTerm (PData :--> PScriptContext :--> POpaque)
 asPlutarch _ = plam $ \_ _ -> popaque $ pcon PUnit
 
-asMintingPolicy :: TxId -> MintingPolicy
-asMintingPolicy txid = mkMintingPolicy $ asPlutarch txid
+asMintingPolicy :: TxOutRef -> MintingPolicy
+asMintingPolicy ref = mkMintingPolicy $ asPlutarch ref
 
-asCurrencySymbol :: TxId -> CurrencySymbol
-asCurrencySymbol txid = mintingPolicySymbol $ asMintingPolicy txid
+asCurrencySymbol :: TxOutRef -> CurrencySymbol
+asCurrencySymbol ref = mintingPolicySymbol $ asMintingPolicy ref

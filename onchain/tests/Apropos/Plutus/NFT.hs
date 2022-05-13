@@ -34,10 +34,13 @@ instance HasLogicalModel NFTProp NFTModel where
   satisfiesProperty SpendsRightInput m = any isMagicInput $ inputs m
 
 isMagicInput :: TxInInfo -> Bool
-isMagicInput (TxInInfo (TxOutRef txid _) _) = txid == inputId
+isMagicInput (TxInInfo ref _) = ref == inputRef
 
-inputId :: TxId
-inputId = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+inputRef :: TxOutRef
+inputRef =
+  TxOutRef
+    "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    0
 
 instance HasPermutationGenerator NFTProp NFTModel where
   sources =
@@ -52,13 +55,13 @@ instance HasPermutationGenerator NFTProp NFTModel where
         { name = "add right input"
         , match = Not $ Var SpendsRightInput
         , contract = add SpendsRightInput
-        , morphism = \(NFTModel is) -> pure $ NFTModel (TxInInfo (TxOutRef inputId 0) (TxOut (Address (PubKeyCredential "") Nothing) mempty Nothing) : is)
+        , morphism = \(NFTModel is) -> pure $ NFTModel (TxInInfo inputRef (TxOut (Address (PubKeyCredential "") Nothing) mempty Nothing) : is)
         }
     , Morphism
         { name = "remove right input"
         , match = Var SpendsRightInput
         , contract = remove SpendsRightInput
-        , morphism = \(NFTModel is) -> pure $ NFTModel $ filter (\(TxInInfo (TxOutRef txid _) _) -> txid /= inputId) is
+        , morphism = \(NFTModel is) -> pure $ NFTModel $ filter (\(TxInInfo ref _) -> ref /= inputRef) is
         }
     ]
 
@@ -66,7 +69,7 @@ instance HasParameterisedGenerator NFTProp NFTModel where
   parameterisedGenerator = buildGen
 
 instance ScriptModel NFTProp NFTModel where
-  script m = compile $ asPlutarch inputId # pforgetData (pdata (pconstant ())) # pconstant (scFrom m)
+  script m = compile $ asPlutarch inputRef # pforgetData (pdata (pconstant ())) # pconstant (scFrom m)
   expect = Var SpendsRightInput
 
 scFrom :: NFTModel -> ScriptContext
@@ -84,7 +87,7 @@ scFrom m =
         []
         (TxId "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
     )
-    (Minting (asCurrencySymbol inputId))
+    (Minting $ asCurrencySymbol inputRef)
 
 spec :: Spec
 spec =
