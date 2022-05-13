@@ -1,8 +1,11 @@
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
 module Apropos.Plutus.Management (
   -- spec,
 ) where
 
 import Apropos
+import Control.Monad (replicateM)
 import Data.List (uncons, length, drop)
 import GHC.Generics (Generic)
 import Gen qualified
@@ -23,7 +26,7 @@ import Plutarch (compile, (#))
 import Plutarch.Evaluate (evalScript)
 import Plutarch.Prelude qualified as PPrelude
 import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Value (AssetClass, assetClassValue, flattenValue, Value, assetClass)
+import Plutus.V1.Ledger.Value (AssetClass, assetClassValue, flattenValue, Value, assetClass, valueOf)
 import PlutusTx qualified
 
 -- | The model for the properties.
@@ -57,7 +60,8 @@ data ManagementProp
   | ConfigReturned
   | OwnAtInBase  -- ownCurrencySymbol is the first one in the datum.
   | OwnAtOutBase 
-  deriving stock (Show, Eq, Ord, Enum, Bounded)
+  deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
+  deriving anyclass (Hashable)
 
 
 instance HasPermutationGenerator ManagementProp ManagementModel where
@@ -74,7 +78,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
           , Var OwnAtOutBase
           ]
         , gen = do
-            valHash <- Gen.validatorHash
+            -- valHash <- Gen.validatorHash
             -- TODO : Make this align with the
             -- address below.
             cs  <- Gen.hexString @CurrencySymbol
@@ -82,14 +86,14 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
             -- generates validator addresses.
             adr <- Gen.address
             owner <- Gen.pubKeyHash
-            numSigs <- linear 0 5
+            numSigs <- int (linear 0 5)
             sigs' <- replicateM numSigs Gen.pubKeyHash
-            posSigs <- linear 0 numSigs
-            let sigs = (take posSigs) ++ [owner] ++ (drop posSigs)
-            numCurrencies <- linear 2 12
+            posSigs <- int (linear 0 numSigs)
+            let sigs = (take posSigs sigs') ++ [owner] ++ (drop posSigs sigs')
+            numCurrencies <- int (linear 2 12)
             inCurrencies' <- replicateM numCurrencies (Gen.hexString @CurrencySymbol) 
-            let inCurrencies = owner : inCurrencies'
-                inDatHash    = datumHash $ Datum $ PlutusTx.toData $ inCurrencies
+            let inCurrencies = cs : inCurrencies'
+                inDatHash    = datumHash $ Datum $ PlutusTx.toBuiltinData $ inCurrencies
             inNft <- Gen.hexString @CurrencySymbol
             -- okay
             return $ ManagementModel
@@ -109,7 +113,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
               }
         }
     
-    ]
+    ] 
   generators = [] -- TODO
 
 
@@ -125,10 +129,10 @@ instance LogicalModel ManagementProp where
 instance HasLogicalModel ManagementProp ManagementModel where
   satisfiesProperty BeenSigned modl = (mmOwner modl) `elem` (mmSignatures modl)
   satisfiesProperty  InDatumHashed modl
-    | dhsh <- datumHash $ Datum $ PlutusTx.toData $ mmCurrencies modl
+    | dhsh <- datumHash $ Datum $ PlutusTx.toBuiltinData $ mmCurrencies modl
     = dhsh == mmInDatumHash modl
   satisfiesProperty OutDatumHashed modl
-    | dhsh <- datumHash $ Datum $ PlutusTx.toData $ mmOutDatum modl
+    | dhsh <- datumHash $ Datum $ PlutusTx.toBuiltinData $ mmOutDatum modl
     = dhsh == mmOutDatumHash modl  
   -- These next few apparently aren't needed?
   satisfiesProperty MintsOne   modl = let val = flattenValue (mmMinted modl) in
@@ -166,7 +170,7 @@ instance HasLogicalModel ManagementProp ManagementModel where
 
 -- | Safe version of `!!`.
 indexVal :: [a] -> Int -> Maybe a
-indexVal lst n = fst <$> uncons $ drop n lst
+indexVal lst n = fst <$> uncons (drop n lst)
 
 
 
