@@ -27,6 +27,7 @@ import Plutarch.Evaluate (evalScript)
 import Plutarch.Prelude qualified as PPrelude
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Value (AssetClass, assetClassValue, flattenValue, Value, assetClass, valueOf)
+import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
 
 -- | The model for the properties.
@@ -95,7 +96,39 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
             let inCurrencies = cs : inCurrencies'
                 inDatHash    = datumHash $ Datum $ PlutusTx.toBuiltinData $ inCurrencies
             inNft <- Gen.hexString @CurrencySymbol
-            -- okay
+
+            -- Generating the Txs
+            let inputTxOut :: TxOut
+                inputTxOut = TxOut
+                  { txOutAddress = adr
+                  , txOutValue   = Value.singleton inNft "" 1 -- might need to add 2 ADA.
+                  , txOutDatumHash = Just inDatHash
+                  }
+            
+            txRefId <- Gen.txId
+            txRefIx <- fromIntegral <$> int (linear 0 3)
+
+            let inputTxRef :: TxOutRef
+                inputTxRef = TxOutRef
+                  { txOutRefId  = txRefId
+                  , txOutRefIdx = txRefIx
+                  }
+                
+                inputTxIn :: TxInInfo
+                inputTxIn = TxInInfo
+                  { txInInfoOutRef   = inputTxRef
+                  , txInInfoResolved = inputTxOut
+                  }
+
+                -- The value minted
+                outputTxOut :: TxOut
+                outputTxOut = TxOut
+                  { txOutAddress = adr -- Or should it be something else?
+                  , txOutValue = Value.singleton cs "" 1
+                  , txOutDatumHash = Nothing -- TEMP
+                  }
+           
+            -- Constructing the model
             return $ ManagementModel
               { mmCurrencies  = inCurrencies
               , mmSignatures  = sigs
@@ -104,10 +137,10 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
               , mmCurChoice = 0
               , mmMinted    = assetClassValue (assetClass cs "") 1
               , mmOwner     = owner
-              , mmInput     = [] -- TODO
-              , mmOutput    = [] -- TODO
+              , mmInput     = [inputTxIn] -- Temp?
+              , mmOutput    = [inputTxOut, outputTxOut] -- Temp?
               , mmAddress   = adr
-              , mmOutDatum  = inCurrencies -- TEMP
+              , mmOutDatum  = inCurrencies -- Temp?
               , mmOutDatumHash = inDatHash
               , mmInNFT = inNft
               }
