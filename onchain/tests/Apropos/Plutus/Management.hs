@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiWayIf #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Apropos.Plutus.Management (
@@ -6,7 +7,8 @@ module Apropos.Plutus.Management (
 
 import Apropos
 import Control.Monad (replicateM)
-import Data.List (uncons, length, drop, delete)
+import Data.List (uncons, length, drop, delete, find, findIndex, findIndices, (!!))
+import Data.Maybe (mapMaybe)
 import GHC.Generics (Generic)
 import Gen qualified
 import Test.Syd
@@ -146,7 +148,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
               }
         }
     
-    ] -- should probably add more.
+    ] -- should probably add more samples.
   generators = 
     [ Morphism
         { name = "Unsign"
@@ -201,6 +203,111 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
           modl@(ManagementModel {mmOutDatum = outDatum}) -> do
             let outHsh' = datumHash $ makeDatum outDatum
             return $ modl {mmOutDatumHash = outHsh'}
+        }
+    -- Messing with the input/output list.
+    -- (May have to add effects for ConfigPresent/ConfigReturned)
+    , Morphism
+        { name = "RemoveSelfInput"
+        , match = Var OwnAtInBase
+        , contract = removeAll [OwnAtInBase, InDatumHashed] -- since (datum changes) ==> (datum hash changes)
+        , morphism = \case
+          modl@(ManagementModel {mmCurrencies = inDatm, mmOwnCurrency = cs}) -> do
+            let inDatm' = delete cs inDatm
+            return $ modl {mmCurrencies = inDatm'}
+        }
+    , Morphism
+        { name = "AddSelfInput"
+        , match = Not $ Var OwnAtInBase
+        , contract = removeAll [InDatumHashed] >> addAll [OwnAtInBase]
+        , morphism = \case
+          modl@(ManagementModel {mmCurrencies = inDatm, mmOwnCurrency = cs}) -> do
+            let inDatm' = (cs : (delete cs inDatm)) -- since it might be later in the datum.
+            return $ modl {mmCurrencies = inDatm'}
+        }
+    , Morphism
+        { name = "RemoveSelfOutput"
+        , match = Var OwnAtOutBase
+        , contract = removeAll [OwnAtOutBase, OutDatumHashed] -- since (datum changes) ==> (datum hash changes)
+        , morphism = \case
+          modl@(ManagementModel {mmOutDatum = outDatm, mmOwnCurrency = cs}) -> do
+            let outDatm' = delete cs outDatm
+            return $ modl {mmOutDatum = outDatm'}
+        }
+    , Morphism
+        { name = "AddSelfOutput"
+        , match = Not $ Var OwnAtOutBase
+        , contract = removeAll [OutDatumHashed] >> addAll [OwnAtOutBase]
+        , morphism = \case
+          modl@(ManagementModel {mmOutDatum = outDatm, mmOwnCurrency = cs}) -> do
+            let outDatm' = (cs : (delete cs outDatm)) -- since it might be later in the datum.
+            return $ modl {mmCurrencies = outDatm'}
+        }
+    , Morphism
+        { name = "PermuteInputDatum"
+        , match = Yes
+        , contract = removeAll [OwnAtInBase, InDatumHashed]
+        , morphism = \case
+          modl@(ManagementModel {mmCurrencies = inDatm}) -> do
+            inDatm' <- shuffle inDatm
+            return $ modl {mmCurrencies = inDatm'}
+        }
+    , Morphism
+        { name = "PermuteOutputDatum"
+        , match = Yes
+        , contract = removeAll [OwnAtOutBase, OutDatumHashed]
+        , morphism = \case
+          modl@(ManagementModel {mmCurrencies = outDatm}) -> do
+            outDatm' <- shuffle outDatm
+            return $ modl {mmCurrencies = outDatm'}
+        }
+    -- The actual UTxOs / Txs.
+    , Morphism
+        { name = "FixInputDatum" -- i.e. the actual tx.
+        -- Need InDatumHashed; otherwise issues can occur.
+        , match = (Not $ Var ConfigPresent) :&&: (Var InDatumHashed) 
+        , contract = addAll [ConfigPresent]
+        , morphism = \case
+          modl@(ManagementModel {mmInput = inp, mmInDatumHash = inDatm, mmInNFT = nft}) -> do
+            let inpTx = findIndices (\(TxInInfo _ (TxOut _ val _)) -> 1 == valueOf val nft "") inp
+                inpDt = findIndices (\(TxInInfo _ (TxOut _ _ dat)) -> dat == Just inDatm) inp
+            case (inpTx, inpDt) of
+              ([n],[]) -> do
+                let inpX@(TxInInfo _ (TxOut _xadr xval _xdat)) = inp !! n
+                    adr = mmAddress modl
+                    newTxo = TxOut adr xval (Just inDatm)
+                    newTxi = inpX {txInInfoResolved = newTxo}
+                    inp' = (take n inp) ++ [newTxi] ++ (drop (n+1) inp)
+                return modl {mmInput = inp'}
+              ([],[n]) -> do
+                let inpX@(TxInInfo _ (TxOut _xadr xval xdat)) = inp !! n
+                    adr = mmAddress modl
+                    oldVal = valueOf xval nft ""
+                    newVal = xval <> (Value.singleton nft "" (1 - oldVal))
+                    newTxo = TxOut adr newVal xdat
+                    newTxi = inpX {txInInfoResolved = newTxo}
+                    inp' = (take n inp) ++ [newTxi] ++ (drop (n+1) inp)
+                return modl {mmInput = inp'}
+              -- Just replace the inputs, otherwise.
+              (_,_) -> do
+                let adr = mmAddress modl
+                    dat = mmInDatumHash modl
+                    newTxo = TxOut adr (Value.singleton nft "" 1) (Just dat)
+                
+                newTxi <- case (uncons inp) of
+                  Just (inpX, _) -> return $ inpX {txInInfoResolved = newTxo}
+                  Nothing -> do
+                    txRefId <- Gen.txId
+                    txRefIx <- fromIntegral <$> int (linear 0 3)
+
+                    let inputTxRef :: TxOutRef
+                        inputTxRef = TxOutRef
+                          { txOutRefId  = txRefId
+                          , txOutRefIdx = txRefIx
+                          }
+                    return $ TxInInfo inputTxRef newTxo
+                return modl {mmInput = [newTxi]}
+
+                
         }
     ]
 
