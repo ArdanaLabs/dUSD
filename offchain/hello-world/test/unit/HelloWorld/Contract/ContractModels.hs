@@ -1,30 +1,14 @@
-{-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DeriveAnyClass        #-}
-{-# LANGUAGE DeriveGeneric         #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE InstanceSigs          #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NumericUnderscores    #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE StandaloneDeriving    #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE TypeOperators         #-}
-module HelloWorld.Contract.ContractModels  where
+{-# LANGUAGE TemplateHaskell            #-}
+module HelloWorld.Contract.ContractModels (test) where
 
 import Control.Monad (void, forM_)
 import Control.Lens hiding (elements)
+import Data.Data 
 import Data.Map qualified as M
 import Data.Monoid (Last(..))
 import Data.Maybe (isNothing, isJust)
 import Data.String (fromString)
 import Data.Text qualified as T
-import GHC.Generics
 import Ledger (minAdaTxOut)
 import Plutus.V1.Ledger.Ada (toValue)
 import Plutus.V1.Ledger.Value (AssetClass)
@@ -32,7 +16,7 @@ import Plutus.Contract hiding (currentSlot, throwError)
 import Plutus.Contract.Test
 import Plutus.Contract.Test.ContractModel
 import Plutus.Trace (callEndpoint, throwError)
-import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorRuntimeError(..), observableState, waitUntilSlot)
+import Plutus.Trace.Emulator (EmulatorRuntimeError(..), observableState, waitUntilSlot)
 import Plutus.V1.Ledger.Api (CurrencySymbol)
 
 import Test.QuickCheck
@@ -48,7 +32,7 @@ type ReadHelloWorldSchema' = ReadHelloWorldSchema .\/ Endpoint "initialize" Curr
 read''' :: Contract (Last Integer) ReadHelloWorldSchema' T.Text ()
 read''' = awaitPromise $ endpoint @"initialize" read''
 
-newtype HelloWorldModel = HelloWorldModel { _helloWorldModel :: M.Map Wallet Integer } deriving (Eq, Ord, Show)
+newtype HelloWorldModel = HelloWorldModel { _helloWorldModel :: M.Map Wallet Integer } deriving (Eq, Data, Ord, Show)
 
 makeLenses ''HelloWorldModel
 
@@ -58,7 +42,7 @@ instance ContractModel HelloWorldModel where
       Initialize Wallet Integer
     | Increment Wallet Wallet     -- wallet2 calls increment on contract operated by wallet1
     | Read Wallet Wallet          -- wallet2 reads the current state from contract operated by wallet1
-    deriving (Eq, Show)
+    deriving (Data, Eq, Show)
 
   data ContractInstanceKey HelloWorldModel w s e p where
     InitializeKey :: Wallet -> Integer -> ContractInstanceKey HelloWorldModel (Last CurrencySymbol) InitHelloWorldSchema T.Text ()
@@ -75,7 +59,6 @@ instance ContractModel HelloWorldModel where
   instanceWallet (IncrementKey w _) = w
   instanceWallet (ReadKey w _) = w
 
-  instanceTag :: SchemaConstraints w s e => ContractInstanceKey HelloWorldModel w s e p -> ContractInstanceTag
   instanceTag key = fromString $ "instance tag for: " <> show key
 
   arbitraryAction :: ModelState HelloWorldModel -> Gen (Action HelloWorldModel)
@@ -90,8 +73,8 @@ instance ContractModel HelloWorldModel where
 
   initialInstances :: [StartContract HelloWorldModel]
   initialInstances = [ StartContract (InitializeKey w i) () | w <- wallets, i <- [-2, -1..10] ]
-                  <> [ StartContract (IncrementKey w1 w2) () | w <- wallets, w2 <- wallets ]
-                  <> [ StartContract (ReadKey w1 w2) () | w <- wallets, w2 <- wallets ]
+                  <> [ StartContract (IncrementKey wIncInstance wIncUser) () | wIncInstance <- wallets, wIncUser <- wallets ]
+                  <> [ StartContract (ReadKey wReadInstance wReadUser) () | wReadInstance <- wallets, wReadUser <- wallets ]
 
   precondition :: ModelState HelloWorldModel -> Action HelloWorldModel -> Bool
   precondition state (Initialize w _) = isNothing $ getHelloWorldModelState' state w
@@ -114,7 +97,7 @@ instance ContractModel HelloWorldModel where
     (helloWorldModel . ix wallet1) $~ (+ 1)
     withdraw wallet2 $ toValue minAdaTxOut
   -- one slot will pass, the state will be incremented, minAdaValue will be spent
-  nextState (Read wallet1 wallet2) = do
+  nextState (Read _ wallet2) = do
     wait 1
     withdraw wallet2 $ toValue minAdaTxOut
 
@@ -146,8 +129,18 @@ wallets = [w1, w2, w3]
 getHelloWorldModelState' :: ModelState HelloWorldModel -> Wallet -> Maybe Integer
 getHelloWorldModelState' state wallet = M.lookup wallet . _helloWorldModel $ state ^. contractState
 
-getHelloWorldModelState :: Wallet -> Spec HelloWorldModel (Maybe Integer)
-getHelloWorldModelState wallet = do
-  state <- getModelState
-  return $ getHelloWorldModelState' state wallet
-  
+-- getHelloWorldModelState :: Wallet -> Spec HelloWorldModel (Maybe Integer)
+-- getHelloWorldModelState wallet = do
+--   state <- getModelState
+--   return $ getHelloWorldModelState' state wallet
+
+-- propHelloWorldInitializesCorrect :: Actions HelloWorldModel -> Property
+-- propHelloWorldInitializesCorrect = withMaxSuccess . propRunActions
+--   (\state -> )
+
+propHelloWorldIncremetsOne :: Actions HelloWorldModel -> Property
+propHelloWorldIncremetsOne = withMaxSuccess 100 . propRunActions
+    (const $ pure True)
+
+test :: IO ()
+test = quickCheck propHelloWorldIncremetsOne
