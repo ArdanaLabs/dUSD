@@ -309,6 +309,46 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
 
                 
         }
+    , Morphism
+        { name = "FixOutputDatum"
+        , match = (Not $ Var ConfigReturned) :&&: (Var OutDatumHashed) 
+        , contract = addAll [ConfigReturned]
+        , morphism = \case
+          modl@(ManagementModel {mmOutput = outp, mmOutDatumHash = outDatm, mmInNFT = nft}) -> do
+            let outTx = findIndices (\(TxOut _ val _) -> 1 == valueOf val nft "") outp
+                outDt = findIndices (\(TxOut _ _ dat) -> dat == Just outDatm) outp
+            case (outTx, outDt) of
+              ([n],[]) -> do
+                let (TxOut _xadr xval _xdat) = outp !! n
+                    adr = mmAddress modl
+                    newTxo = TxOut adr xval (Just outDatm)
+                    outp' = (take n outp) ++ [newTxo] ++ (drop (n+1) outp)
+                return modl {mmOutput = outp'}
+              ([],[n]) -> do
+                let (TxOut _xadr xval xdat) = outp !! n
+                    adr = mmAddress modl
+                    oldVal = valueOf xval nft ""
+                    newVal = xval <> (Value.singleton nft "" (1 - oldVal))
+                    newTxo = TxOut adr newVal xdat
+                    outp' = (take n outp) ++ [newTxo] ++ (drop (n+1) outp)
+                return modl {mmOutput = outp'}
+              -- Just replace the inputs, otherwise.
+              (_,_) -> do
+                let adr = mmAddress modl
+                    ownCS = mmOwnCurrency modl
+                    oldOwnTx = find (\(TxOut _ val _) -> 1 == valueOf val ownCS "") outp
+                    newTxo = TxOut adr (Value.singleton nft "" 1) (Just outDatm)
+                
+                oldTxo <- case oldOwnTx of
+                  (Just txo) -> return txo
+                  Nothing -> do
+                    newAdr <- Gen.address
+                    -- Not using outDatm for the output datum, since
+                    -- I don't know what that datum should be.
+                    return $ TxOut newAdr (Value.singleton ownCS "" 1) Nothing
+
+                return modl {mmOutput = [newTxo, oldTxo]}
+        }
     ]
 
 
