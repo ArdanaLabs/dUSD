@@ -6,7 +6,9 @@ module HelloWorld.Contract (
   initialize,
   initializeHandler,
   increment,
+  increment', -- needed for ContractModel tests
   read',
+  read'', -- needed for ContractModel tests
 ) where
 
 import Control.Monad (forever)
@@ -37,7 +39,7 @@ import Plutus.Contract (
   submitUnbalancedTx,
   tell,
   utxosAt,
-  waitNSlots,
+  waitNSlots, HasEndpoint
  )
 import Plutus.Contracts.Currency (CurrencyError, OneShotCurrency, currencySymbol, mintContract)
 import PlutusTx (FromData, fromBuiltinData, toBuiltinData)
@@ -70,7 +72,10 @@ initializeHandler initialInt = do
   logInfo $ "Successfully initialized datum with value: " <> show initialInt
 
 increment :: CurrencySymbol -> Contract () IncHelloWorldSchema Text ()
-increment cs = forever $ handleError (logError @Text) $ awaitPromise $ endpoint @"increment" $ const $ incrementHandler cs
+increment = increment'
+
+increment' :: (HasEndpoint "increment" () s) => CurrencySymbol -> Contract () s Text ()
+increment' cs = forever $ handleError (logError @Text) $ awaitPromise $ endpoint @"increment" $ const $ incrementHandler cs
 
 incrementHandler :: AsContractError e => CurrencySymbol -> Contract w s e ()
 incrementHandler cs = do
@@ -97,7 +102,10 @@ incrementHandler cs = do
           logInfo $ "Successfully incremented to value " <> showText updatedHelloWorldDatum
 
 read' :: CurrencySymbol -> Contract (Last Integer) ReadHelloWorldSchema Text ()
-read' cs = forever $ handleError (logError @Text) $ awaitPromise $ endpoint @"read" $ const $ readHandler cs
+read' = read''
+
+read'' :: (HasEndpoint "read" () s) => CurrencySymbol -> Contract (Last Integer) s Text ()
+read'' cs = forever $ handleError (logError @Text) $ awaitPromise $ endpoint @"read" $ const $ readHandler cs
 
 readHandler :: AsContractError e => CurrencySymbol -> Contract (Last Integer) s e ()
 readHandler cs = do
