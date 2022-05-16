@@ -432,6 +432,8 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         }
     ]
 
+instance HasParameterisedGenerator ManagementProp ManagementModel where
+  parameterisedGenerator = buildGen
 
 instance Enumerable ManagementProp where
   enumerated = [minBound .. maxBound]
@@ -484,6 +486,19 @@ instance HasLogicalModel ManagementProp ManagementModel where
     | (Just (cur0,_)) <- uncons (mmOutDatum modl)
     = cur0 == mmOwnCurrency modl
     | otherwise = False
+  satisfiesProperty _ _ = False
+
+instance ScriptModel ManagementProp ManagementModel where
+  expect = (Var BeenSigned) 
+             :&&: (Var InDatumHashed) 
+             :&&: (Var OutDatumHashed)
+             :&&: (Var ConfigPresent)
+             :&&: (Var ConfigReturned)
+             :&&: (Var OwnAtInBase)
+  script mm = applyMintingPolicyScript (mkCtx mm) managementMintingPolicy (Redeemer (toBuiltinData ()))
+
+managementMintingPolicy :: MintingPolicy
+managementMintingPolicy = undefined -- TEMP
 
 -- | Make the context from the Model.
 mkCtx :: ManagementModel -> Context
