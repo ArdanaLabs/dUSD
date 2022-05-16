@@ -378,6 +378,58 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
                     return $ TxOut newAdr (Value.singleton ownCS "" 1) Nothing
                 return modl {mmOutput = [newTxo, oldTxo]}
         }
+    , Morphism
+        { name = "BreakInputDatum"
+        , match = (Var ConfigPresent) :&&: (Var InDatumHashed)
+        , contract = removeAll [ConfigPresent] -- maybe more?
+        , morphism = \case
+          modl@(ManagementModel {mmInput = inp, mmInDatumHash = inDatm, mmInNFT = nft}) -> do
+            let inpTx = findIndices (\(TxInInfo _ (TxOut _ val datm)) -> (1 == valueOf val nft "") && (datm == Just inDatm)) inp
+            case inpTx of
+              [n] -> do
+                let (TxInInfo xid (TxOut xadr xval xdatm)) = inp !! n
+                rndNum <- int (linear 0 3)
+                newTx <- if 
+                  | rndNum == 0 -> do
+                    zadr <- Gen.address
+                    return $ TxInInfo xid (TxOut zadr xval xdatm)
+                  | rndNum == 1 -> do
+                    -- zid <- Gen.txId
+                    let zval = xval <> (Value.singleton nft "" (-1)) -- remove the nft from input.
+                    return $ TxInInfo xid (TxOut xadr zval xdatm)
+                  | otherwise -> do
+                    zdatm <- Gen.datumHash
+                    return $ TxInInfo xid (TxOut xadr xval (Just zdatm))
+                return $ modl {mmInput = (replaceAt n newTx inp)}
+              (_:_) -> return $ modl {mmInput = []}
+              [] -> return modl -- Since it's already broken
+        }
+    , Morphism
+        { name = "BreakOutputDatum"
+        , match = (Var ConfigReturned) :&&: (Var OutDatumHashed)
+        , contract = removeAll [ConfigReturned]
+        , morphism = \case
+          modl@(ManagementModel {mmOutput = outp, mmOutDatumHash = outDatm, mmInNFT = nft}) -> do
+            -- hmm...
+            let outTx = findIndices (\(TxOut _ val datm) -> (1 == valueOf val nft "") && (datm == Just outDatm)) outp
+            case outTx of
+              [n] -> do
+                let (TxOut xadr xval xdatm) = outp !! n
+                rndNum <- int (linear 0 3)
+                newTx <- if 
+                  | rndNum == 0 -> do
+                    zadr <- Gen.address
+                    return (TxOut zadr xval xdatm)
+                  | rndNum == 1 -> do
+                    let zval = xval <> (Value.singleton nft "" (-1)) -- remove the nft from input.
+                    return (TxOut xadr zval xdatm)
+                  | otherwise -> do
+                    zdatm <- Gen.datumHash
+                    return (TxOut xadr xval (Just zdatm))
+                return $ modl {mmOutput = (replaceAt n newTx outp)}
+              (_:_) -> return $ modl {mmOutput = []}
+              [] -> return modl -- Since it's already broken
+        }
     ]
 
 
@@ -473,4 +525,16 @@ datumHash (Datum (BuiltinData d)) = (DatumHash . hashBlake2b_224 . Lazy.toStrict
 
 makeDatum :: (PlutusTx.ToData a) => a -> Datum 
 makeDatum x = Datum $ PlutusTx.toBuiltinData $ x
+
+-- | Insert an element at position n of a list.
+-- Note that if n > (length lst), the element
+-- is inserted at the end.
+insertAt :: Int -> a -> [a] -> [a]
+insertAt n x xs = let (!ys, !zs) = splitAt n xs in ys ++ [x] ++ zs
+
+-- | Replace an element at position n of a list.
+-- Note that if n > (length lst), the element
+-- is inserted at the end, and nothing is replaced.
+replaceAt :: Int -> a -> [a] -> [a]
+replaceAt n x xs = let (!ys, !zs) = splitAt n xs in ys ++ [x] ++ (drop 1 zs)
 
