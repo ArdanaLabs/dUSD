@@ -176,7 +176,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
     , Morphism
         { name = "UnhashIn"
         , match = Var InDatumHashed
-        , contract = remove InDatumHashed
+        , contract = removeAll [InDatumHashed, ConfigPresent]
         , morphism = \case
           modl@(ManagementModel {}) -> do
             inHsh' <- Gen.datumHash
@@ -194,7 +194,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
     , Morphism
         { name = "UnhashOut"
         , match = Var OutDatumHashed
-        , contract = remove OutDatumHashed
+        , contract = removeAll [OutDatumHashed, ConfigReturned]
         , morphism = \case
           modl@(ManagementModel {}) -> do
             outHsh' <- Gen.datumHash
@@ -473,9 +473,9 @@ instance HasLogicalModel ManagementProp ManagementModel where
   -- the hahs is indeed in the input utxo.
   satisfiesProperty ConfigPresent  modl
     | inps <- map txInInfoResolved (mmInput modl)
-    = any (checkTxOut (mmOwnCurrency modl) 1 (mmAddress modl) (mmInDatumHash  modl)) inps
+    = any (checkTxOut (mmInNFT modl) 1 (mmAddress modl) (mmInDatumHash  modl)) inps
   satisfiesProperty ConfigReturned modl
-    = any (checkTxOut (mmOwnCurrency modl) 1 (mmAddress modl) (mmOutDatumHash modl)) (mmOutput modl)
+    = any (checkTxOut (mmInNFT modl) 1 (mmAddress modl) (mmOutDatumHash modl)) (mmOutput modl)
   satisfiesProperty OwnAtInBase  modl
     | (Just (cur0,_)) <- uncons (mmCurrencies modl)
     = cur0 == mmOwnCurrency modl
