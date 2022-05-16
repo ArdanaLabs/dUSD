@@ -7,6 +7,7 @@ import Apropos.Plutus.Integer qualified as Integer
 import Apropos.Plutus.SingletonValue qualified as SingletonValue
 import Apropos.Plutus.Value qualified as Value
 import Apropos.Plutus.Vault qualified as Vault
+import Apropos.Plutus.MainValidator qualified as MainValidator
 
 import Test.Syd
 
@@ -22,6 +23,7 @@ main =
   --print (length $ solveAll (logic :: Formula VaultProp))
   sydTest $
     describe "plutus" $ do
+      MainValidator.spec
       AssetClass.spec
       Integer.spec
       SingletonValue.spec
