@@ -1,5 +1,6 @@
 {-# LANGUAGE MultiWayIf #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Apropos.Plutus.Management (
   -- spec,
@@ -11,7 +12,7 @@ import Data.List (uncons, length, drop, delete, find, findIndex, findIndices, (!
 import Data.Maybe (mapMaybe)
 import GHC.Generics (Generic)
 import Gen qualified
-import Test.Syd
+import Test.Syd hiding (Context)
 import Test.Syd.Hedgehog
 
 import Codec.Serialise (serialise)
@@ -28,6 +29,8 @@ import Plutarch (compile, (#))
 import Plutarch.Evaluate (evalScript)
 import Plutarch.Prelude qualified as PPrelude
 import Plutus.V1.Ledger.Api
+import Plutus.V1.Ledger.Interval (always)
+import Plutus.V1.Ledger.Scripts (Context(..))
 import Plutus.V1.Ledger.Value (AssetClass, assetClassValue, flattenValue, Value, assetClass, valueOf)
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
@@ -55,10 +58,12 @@ data ManagementProp
   = BeenSigned
   | InDatumHashed    -- mmInDatumHash modl  == datumHash (mmCurrencies modl)
   | OutDatumHashed   -- mmOutDatumHash modl == datumHash (mmOutDatum   modl)
+  {-
   | MintsOne         -- only one item is minted.
   | ValidCurChoice   -- i.e. 0 <= mmCurChoice < length mmCurrencies
   | MintsChoice      -- i.e. that it actually mints the choice.
   | MintsCorrectly   -- i.e. that the value minted matches the choice and == 1.
+  -}
   | ConfigPresent    -- Config is present in the input
   | ConfigReturned
   | OwnAtInBase  -- ownCurrencySymbol is the first one in the datum.
@@ -247,18 +252,45 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         , match = Yes
         , contract = removeAll [OwnAtInBase, InDatumHashed]
         , morphism = \case
-          modl@(ManagementModel {mmCurrencies = inDatm}) -> do
+          modl@(ManagementModel {mmCurrencies = inDatm, mmOwnCurrency = cs}) -> do
             inDatm' <- shuffle inDatm
-            return $ modl {mmCurrencies = inDatm'}
+            inDatm'' <- case inDatm' of
+              (x:rst) | x == cs -> if (null rst)
+                then do
+                  newCS <- Gen.hexString @CurrencySymbol
+                  return [newCS, cs]
+                else do
+                -- asdfzxcv
+                  n <- int (linear 1 (length rst))
+                  return $ (take n rst) ++ [cs] ++ (drop n rst)
+              [] -> do
+                newCS <- Gen.hexString @CurrencySymbol
+                return [newCS, cs]
+              _ -> return inDatm'            
+            return $ modl {mmCurrencies = inDatm''}
         }
     , Morphism
         { name = "PermuteOutputDatum"
         , match = Yes
         , contract = removeAll [OwnAtOutBase, OutDatumHashed]
         , morphism = \case
-          modl@(ManagementModel {mmCurrencies = outDatm}) -> do
+          modl@(ManagementModel {mmCurrencies = outDatm, mmOwnCurrency = cs}) -> do
             outDatm' <- shuffle outDatm
-            return $ modl {mmCurrencies = outDatm'}
+            -- Ensure that the first element isn't own currency.
+            outDatm'' <- case outDatm' of
+              (x:rst) | x == cs -> if (null rst)
+                then do
+                  newCS <- Gen.hexString @CurrencySymbol
+                  return [newCS, cs]
+                else do
+                -- asdfzxcv
+                  n <- int (linear 1 (length rst))
+                  return $ (take n rst) ++ [cs] ++ (drop n rst)
+              [] -> do
+                newCS <- Gen.hexString @CurrencySymbol
+                return [newCS, cs]
+              _ -> return outDatm'
+            return $ modl {mmCurrencies = outDatm''}
         }
     -- The actual UTxOs / Txs.
     , Morphism
@@ -306,8 +338,6 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
                           }
                     return $ TxInInfo inputTxRef newTxo
                 return modl {mmInput = [newTxi]}
-
-                
         }
     , Morphism
         { name = "FixOutputDatum"
@@ -346,7 +376,6 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
                     -- Not using outDatm for the output datum, since
                     -- I don't know what that datum should be.
                     return $ TxOut newAdr (Value.singleton ownCS "" 1) Nothing
-
                 return modl {mmOutput = [newTxo, oldTxo]}
         }
     ]
@@ -356,10 +385,10 @@ instance Enumerable ManagementProp where
   enumerated = [minBound .. maxBound]
 
 instance LogicalModel ManagementProp where
-  logic = 
-    (Var MintsCorrectly :->: Var MintsOne) 
-      :&&: (Var MintsCorrectly :->: Var MintsChoice) 
-      :&&: (Var MintsChoice    :->: Var ValidCurChoice)
+  logic = Yes
+    -- (Var MintsCorrectly :->: Var MintsOne) 
+    --   :&&: (Var MintsCorrectly :->: Var MintsChoice) 
+    --   :&&: (Var MintsChoice    :->: Var ValidCurChoice)
 
 instance HasLogicalModel ManagementProp ManagementModel where
   satisfiesProperty BeenSigned modl = (mmOwner modl) `elem` (mmSignatures modl)
@@ -370,6 +399,7 @@ instance HasLogicalModel ManagementProp ManagementModel where
     | dhsh <- datumHash $ Datum $ PlutusTx.toBuiltinData $ mmOutDatum modl
     = dhsh == mmOutDatumHash modl  
   -- These next few apparently aren't needed?
+  {-
   satisfiesProperty MintsOne   modl = let val = flattenValue (mmMinted modl) in
     case uncons val of
       (Just ((_,_,n),[])) -> n == 1
@@ -383,6 +413,7 @@ instance HasLogicalModel ManagementProp ManagementModel where
     | otherwise = False
   satisfiesProperty MintsCorrectly modl = 
     (satisfiesProperty MintsOne modl) && (satisfiesProperty MintsChoice modl)
+  -}
   -- Back to the necessary ones.
   -- Note that this doesn't check that the
   -- datum hash is indeed the hash of the 
@@ -402,12 +433,27 @@ instance HasLogicalModel ManagementProp ManagementModel where
     = cur0 == mmOwnCurrency modl
     | otherwise = False
 
+-- | Make the context from the Model.
+mkCtx :: ManagementModel -> Context
+mkCtx mm = Context $ PlutusTx.toBuiltinData scCtx
+  where
+    scCtx = ScriptContext txinf (Minting (mmOwnCurrency mm))
+    txinf = TxInfo
+      { txInfoInputs  = mmInput mm
+      , txInfoOutputs = mmOutput mm
+      , txInfoFee = mempty
+      , txInfoMint = mmMinted mm
+      , txInfoDCert = []
+      , txInfoWdrl = []
+      , txInfoValidRange = always
+      , txInfoSignatories = mmSignatures mm
+      , txInfoData = [(mmInDatumHash mm,makeDatum (mmCurrencies mm)),(mmOutDatumHash mm,makeDatum (mmOutDatum mm))]
+      , txInfoId = "" -- Temp?
+      }
 
 -- | Safe version of `!!`.
 indexVal :: [a] -> Int -> Maybe a
 indexVal lst n = fst <$> uncons (drop n lst)
-
-
 
 checkTxOut :: CurrencySymbol -> Integer -> Address -> DatumHash -> TxOut -> Bool
 checkTxOut cs n adr dhsh txo =
