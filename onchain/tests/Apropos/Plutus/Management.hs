@@ -7,6 +7,7 @@ module Apropos.Plutus.Management (
 ) where
 
 import Apropos
+import Apropos.Script (ScriptModel(..))
 import Control.Monad (replicateM)
 import Data.List (uncons, length, drop, delete, find, findIndex, findIndices, (!!))
 import Data.Maybe (mapMaybe)
@@ -30,7 +31,7 @@ import Plutarch.Evaluate (evalScript)
 import Plutarch.Prelude qualified as PPrelude
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Interval (always)
-import Plutus.V1.Ledger.Scripts (Context(..))
+import Plutus.V1.Ledger.Scripts (Context(..), applyMintingPolicyScript)
 import Plutus.V1.Ledger.Value (AssetClass, assetClassValue, flattenValue, Value, assetClass, valueOf)
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
@@ -486,7 +487,7 @@ instance HasLogicalModel ManagementProp ManagementModel where
     | (Just (cur0,_)) <- uncons (mmOutDatum modl)
     = cur0 == mmOwnCurrency modl
     | otherwise = False
-  satisfiesProperty _ _ = False
+--  satisfiesProperty _ _ = False
 
 instance ScriptModel ManagementProp ManagementModel where
   expect = (Var BeenSigned) 
