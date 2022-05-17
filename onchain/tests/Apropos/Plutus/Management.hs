@@ -167,7 +167,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
     , Morphism
         { name = "Sign"
         , match = Not $ Var BeenSigned
-        , contract = addAll [BeenSigned]
+        , contract = add BeenSigned
         , morphism = \case
           modl@(ManagementModel {mmSignatures = sigs, mmOwner = owner}) -> do
             let sigs' = (owner:sigs)
@@ -185,7 +185,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
     , Morphism
         { name = "HashIn"
         , match = Not $ Var InDatumHashed
-        , contract = addAll [InDatumHashed]
+        , contract = add InDatumHashed
         , morphism = \case
           modl@(ManagementModel {mmCurrencies = inDatum}) -> do
             let inHsh' = datumHash $ makeDatum inDatum
@@ -203,7 +203,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
     , Morphism
         { name = "HashOut"
         , match = Not $ Var OutDatumHashed
-        , contract = addAll [OutDatumHashed]
+        , contract = add OutDatumHashed
         , morphism = \case
           modl@(ManagementModel {mmOutDatum = outDatum}) -> do
             let outHsh' = datumHash $ makeDatum outDatum
@@ -223,7 +223,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
     , Morphism
         { name = "AddSelfInput"
         , match = Not $ Var OwnAtInBase
-        , contract = removeAll [InDatumHashed] >> addAll [OwnAtInBase]
+        , contract = remove InDatumHashed >> add OwnAtInBase
         , morphism = \case
           modl@(ManagementModel {mmCurrencies = inDatm, mmOwnCurrency = cs}) -> do
             let inDatm' = (cs : (delete cs inDatm)) -- since it might be later in the datum.
@@ -241,7 +241,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
     , Morphism
         { name = "AddSelfOutput"
         , match = Not $ Var OwnAtOutBase
-        , contract = removeAll [OutDatumHashed] >> addAll [OwnAtOutBase]
+        , contract = remove OutDatumHashed >> add OwnAtOutBase
         , morphism = \case
           modl@(ManagementModel {mmOutDatum = outDatm, mmOwnCurrency = cs}) -> do
             let outDatm' = (cs : (delete cs outDatm)) -- since it might be later in the datum.
@@ -297,7 +297,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         { name = "FixInputDatum" -- i.e. the actual tx.
         -- Need InDatumHashed; otherwise issues can occur.
         , match = (Not $ Var ConfigPresent) :&&: (Var InDatumHashed) 
-        , contract = addAll [ConfigPresent]
+        , contract = add ConfigPresent
         , morphism = \case
           modl@(ManagementModel {mmInput = inp, mmInDatumHash = inDatm, mmInNFT = nft}) -> do
             let inpTx = findIndices (\(TxInInfo _ (TxOut _ val _)) -> 1 == valueOf val nft "") inp
@@ -342,7 +342,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
     , Morphism
         { name = "FixOutputDatum"
         , match = (Not $ Var ConfigReturned) :&&: (Var OutDatumHashed) 
-        , contract = addAll [ConfigReturned]
+        , contract = add ConfigReturned
         , morphism = \case
           modl@(ManagementModel {mmOutput = outp, mmOutDatumHash = outDatm, mmInNFT = nft}) -> do
             let outTx = findIndices (\(TxOut _ val _) -> 1 == valueOf val nft "") outp
@@ -381,7 +381,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
     , Morphism
         { name = "BreakInputDatum"
         , match = (Var ConfigPresent) :&&: (Var InDatumHashed)
-        , contract = removeAll [ConfigPresent] -- maybe more?
+        , contract = remove ConfigPresent -- maybe more?
         , morphism = \case
           modl@(ManagementModel {mmInput = inp, mmInDatumHash = inDatm, mmInNFT = nft}) -> do
             let inpTx = findIndices (\(TxInInfo _ (TxOut _ val datm)) -> (1 == valueOf val nft "") && (datm == Just inDatm)) inp
@@ -407,7 +407,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
     , Morphism
         { name = "BreakOutputDatum"
         , match = (Var ConfigReturned) :&&: (Var OutDatumHashed)
-        , contract = removeAll [ConfigReturned]
+        , contract = remove ConfigReturned
         , morphism = \case
           modl@(ManagementModel {mmOutput = outp, mmOutDatumHash = outDatm, mmInNFT = nft}) -> do
             -- hmm...
