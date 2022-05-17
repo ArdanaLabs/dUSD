@@ -40,12 +40,12 @@ incrementHelloWorldDatum = do
   void $ waitNSlots 3
   identifier <- fromJust . getLast <$> observableState h1
   void $ waitNSlots 1
-  h2 <- activateContractWallet (knownWallet 2) (increment identifier)
+  h2 <- activateContractWallet (knownWallet 2) increment
   void $ waitNSlots 1
-  callEndpoint @"increment" h2 ()
+  callEndpoint @"increment" h2 identifier
   void $ waitNSlots 1
-  h3 <- activateContractWallet (knownWallet 3) (increment identifier)
-  callEndpoint @"increment" h3 ()
+  h3 <- activateContractWallet (knownWallet 3) increment
+  callEndpoint @"increment" h3 identifier
   void $ waitNSlots 1
 
 readHelloWorldDatum :: EmulatorTrace ()
@@ -56,12 +56,12 @@ readHelloWorldDatum = do
   void $ waitNSlots 3
   identifier <- fromJust . getLast <$> observableState h1
   void $ waitNSlots 1
-  h2 <- activateContractWallet (knownWallet 2) (increment identifier)
+  h2 <- activateContractWallet (knownWallet 2) increment
   void $ waitNSlots 1
-  callEndpoint @"increment" h2 ()
+  callEndpoint @"increment" h2 identifier
   void $ waitNSlots 1
-  h3 <- activateContractWallet (knownWallet 3) (read' identifier)
+  h3 <- activateContractWallet (knownWallet 3) read'
   void $ waitNSlots 1
-  callEndpoint @"read" h3 ()
+  callEndpoint @"read" h3 identifier
   _ <- isNothing . getLast <$> observableState h3
   void $ waitNSlots 1

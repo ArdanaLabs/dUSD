@@ -20,7 +20,7 @@ import Data.Void (Void)
 import Ledger (Datum (..), Redeemer (..))
 import Ledger.Constraints (adjustUnbalancedTx, mustPayToOtherScript, mustSpendScriptOutput, otherScript, unspentOutputs)
 import Ledger.Tx (ChainIndexTxOut (..), TxOutRef (..), getCardanoTxId)
-import Ledger.Value (CurrencySymbol, TokenName (..), singleton, valueOf)
+import Ledger.Value (AssetClass (unAssetClass), CurrencySymbol, TokenName(..), assetClass, singleton, valueOf)
 
 import Plutus.Contract (
   AsContractError,
@@ -39,7 +39,7 @@ import Plutus.Contract (
   submitUnbalancedTx,
   tell,
   utxosAt,
-  waitNSlots, HasEndpoint
+  HasEndpoint
  )
 import Plutus.Contracts.Currency (CurrencyError, OneShotCurrency, currencySymbol, mintContract)
 import PlutusTx (FromData, fromBuiltinData, toBuiltinData)
@@ -49,36 +49,36 @@ import HelloWorld.ValidatorProxy (helloValidator, helloValidatorAddress, helloVa
 
 -- | REST schema
 type InitHelloWorldSchema = Endpoint "initialize" Integer
+type IncHelloWorldSchema = Endpoint "increment" AssetClass 
+type ReadHelloWorldSchema = Endpoint "read" AssetClass
 
-type IncHelloWorldSchema = Endpoint "increment" ()
-type ReadHelloWorldSchema = Endpoint "read" ()
-
-initialize :: Contract (Last CurrencySymbol) InitHelloWorldSchema Text ()
+initialize :: Contract (Last AssetClass) InitHelloWorldSchema Text ()
 initialize = forever $ handleError (logError @Text) $ awaitPromise $ endpoint @"initialize" initializeHandler
 
-initializeHandler :: Integer -> Contract (Last CurrencySymbol) InitHelloWorldSchema Text ()
+initializeHandler :: Integer -> Contract (Last AssetClass) InitHelloWorldSchema Text ()
 initializeHandler initialInt = do
   ownPkh <- ownPaymentPubKeyHash
   -- TODO: remove waitNSlots. this was added because the e2e tests are
   -- started immediately after the network is online. there seems to be a synchr problem
-  _ <- waitNSlots 1
   cs <- currencySymbol <$> mapError (pack . show) (mintContract ownPkh [(TokenName "", 1)] :: Contract w s CurrencyError OneShotCurrency)
   let lookups = otherScript helloValidator
       tx = mustPayToOtherScript helloValidatorHash (Datum $ mkI initialInt) (singleton cs "" 1)
   adjustedTx <- adjustUnbalancedTx <$> mkTxConstraints @Void lookups tx
   ledgerTx <- submitUnbalancedTx adjustedTx
   awaitTxConfirmed $ getCardanoTxId ledgerTx
-  tell $ Last $ Just cs
+  tell $ Last $ Just $ assetClass cs ""
   logInfo $ "Successfully initialized datum with value: " <> show initialInt
 
-increment :: CurrencySymbol -> Contract () IncHelloWorldSchema Text ()
+
+increment :: Contract () IncHelloWorldSchema Text ()
 increment = increment'
 
-increment' :: (HasEndpoint "increment" () s) => CurrencySymbol -> Contract () s Text ()
-increment' cs = forever $ handleError (logError @Text) $ awaitPromise $ endpoint @"increment" $ const $ incrementHandler cs
+increment' :: (HasEndpoint "increment" AssetClass s) => Contract () s Text ()
+increment' = forever $ handleError (logError @Text) $ awaitPromise $ endpoint @"increment" incrementHandler
 
-incrementHandler :: AsContractError e => CurrencySymbol -> Contract w s e ()
-incrementHandler cs = do
+incrementHandler :: AssetClass -> Contract () s Text ()
+incrementHandler ac = do
+  let (cs, _) = unAssetClass ac
   maybeUTxO <- findUTxOWithToken cs
   case maybeUTxO of
     Nothing ->
@@ -87,7 +87,7 @@ incrementHandler cs = do
       maybeHelloWorldDatum <- getDatum' @Integer ciTxOut
       case maybeHelloWorldDatum of
         Nothing ->
-          logInfo @Text $ "No hello world datum found at the script address"
+          logInfo @Text "No hello world datum found at the script address"
         Just oldDatum -> do
           let updatedHelloWorldDatum = oldDatum + 1
               lookups =
@@ -101,14 +101,15 @@ incrementHandler cs = do
           awaitTxConfirmed $ getCardanoTxId ledgerTx
           logInfo $ "Successfully incremented to value " <> showText updatedHelloWorldDatum
 
-read' :: CurrencySymbol -> Contract (Last Integer) ReadHelloWorldSchema Text ()
+read' :: Contract (Last Integer) ReadHelloWorldSchema Text ()
 read' = read''
 
-read'' :: (HasEndpoint "read" () s) => CurrencySymbol -> Contract (Last Integer) s Text ()
-read'' cs = forever $ handleError (logError @Text) $ awaitPromise $ endpoint @"read" $ const $ readHandler cs
+read'' :: (HasEndpoint "read"AssetClass s) => Contract (Last Integer) s Text ()
+read'' = forever $ handleError (logError @Text) $ awaitPromise $ endpoint @"read" readHandler
 
-readHandler :: AsContractError e => CurrencySymbol -> Contract (Last Integer) s e ()
-readHandler cs = do
+readHandler :: AssetClass -> Contract (Last Integer) s Text ()
+readHandler ac = do
+  let (cs, _) = unAssetClass ac
   maybeUtxo <- findUTxOWithToken cs
   case maybeUtxo of
     Nothing ->
@@ -117,7 +118,7 @@ readHandler cs = do
       maybeHelloWorldDatum <- getDatum' @Integer ciTxOut
       case maybeHelloWorldDatum of
         Nothing -> do
-          logInfo @Text $ "No hello world datum found at script address"
+          logInfo @Text "No hello world datum found at script address"
           tell $ Last Nothing
         (Just datum) -> do
           let lookups =
@@ -129,7 +130,7 @@ readHandler cs = do
           adjustedTx <- adjustUnbalancedTx <$> mkTxConstraints @Void lookups tx
           ledgerTx <- submitUnbalancedTx adjustedTx
           awaitTxConfirmed $ getCardanoTxId ledgerTx
-          logInfo @Text $ "Read datum value of " <> showText datum
+          logInfo $ "Read datum value of " <> showText datum
           tell $ Last $ Just datum
 
 showText :: Show a => a -> Text

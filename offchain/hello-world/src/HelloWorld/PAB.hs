@@ -36,7 +36,6 @@ import Data.String (fromString)
 import Data.Text qualified as T
 import GHC.Generics (Generic)
 import HelloWorld.Contract (IncHelloWorldSchema, InitHelloWorldSchema, ReadHelloWorldSchema, increment, initialize, read')
-import Ledger.Value (CurrencySymbol (..))
 import Network.HTTP.Client (
   defaultManagerSettings,
   newManager,
@@ -70,8 +69,8 @@ newtype ChainIndexPort = ChainIndexPort Int
 -- Initial value passed to the PAB when starting up the HelloWorld contract.
 data HelloWorldContracts
   = Initialize
-  | Increment CurrencySymbol
-  | Read' CurrencySymbol
+  | Increment
+  | Read'
   deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (ToSchema)
 
@@ -92,16 +91,16 @@ instance Pretty HelloWorldContracts where
   pretty = viaShow
 
 instance HasDefinitions HelloWorldContracts where
-  getDefinitions = [Initialize, Increment (CurrencySymbol "cs-identifier"), Read' (CurrencySymbol "cs-identifier")]
+  getDefinitions = [Initialize, Increment, Read' ]
   getSchema = \case
     Initialize -> endpointsToSchemas @InitHelloWorldSchema
-    Increment _ -> endpointsToSchemas @IncHelloWorldSchema
-    Read' _ -> endpointsToSchemas @ReadHelloWorldSchema
+    Increment -> endpointsToSchemas @IncHelloWorldSchema
+    Read' -> endpointsToSchemas @ReadHelloWorldSchema
 
   getContract = \case
     Initialize -> SomeBuiltin $ initialize
-    Increment contractId -> SomeBuiltin $ increment contractId
-    Read' contractId -> SomeBuiltin $ read' contractId
+    Increment -> SomeBuiltin $ increment
+    Read' -> SomeBuiltin $ read'
 
 runPAB :: String -> Int -> FilePath -> CardanoNodeConn -> IO ()
 runPAB walletHost walletPort dir socketPath = do
