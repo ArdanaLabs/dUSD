@@ -10,7 +10,7 @@ import Plutus.V1.Ledger.Api
 
 
 mainValidator :: Term s PValidator
-mainValidator = undefined
+mainValidator = plam $ \_ _ _ -> popaque $ pcon PUnit
 
 mainValidatorHash :: ValidatorHash
 mainValidatorHash = validatorHash $ mkValidator mainValidator
