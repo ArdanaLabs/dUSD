@@ -433,6 +433,21 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         }
     ]
 
+-- Note: There is an issue with the Morphisms
+-- as listed; if your property set has
+-- InDatumHashed and you apply RemoveSelfInput
+-- followed by AddSelfInput, then the datum
+-- hash should be correct, and thus the new
+-- property set should include InDatumHashed.
+-- However, the way the contracts are written,
+-- InDatumHashed would be missing from the new
+-- property set. One way to fix this would be
+-- to have AddSelfInput update the datum to
+-- the correct value, and change its contract
+-- to add InDatumHashed. (Note that the same
+-- is true for OutDatumHashed/etc... )
+
+
 instance HasParameterisedGenerator ManagementProp ManagementModel where
   parameterisedGenerator = buildGen
 
