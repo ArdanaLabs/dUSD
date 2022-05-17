@@ -166,4 +166,5 @@ test-suite hello-world-unit
     , plutus-ledger-api
     , QuickCheck
     , tasty
+    , tasty-quickcheck
     , text
