@@ -224,11 +224,13 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
     , Morphism
         { name = "AddSelfInput"
         , match = Not $ Var OwnAtInBase
-        , contract = remove InDatumHashed >> add OwnAtInBase
+        -- , contract = remove InDatumHashed >> add OwnAtInBase
+        , contract = addAll [OwnAtInBase, InDatumHashed]
         , morphism = \case
           modl@(ManagementModel {mmCurrencies = inDatm, mmOwnCurrency = cs}) -> do
             let inDatm' = (cs : (delete cs inDatm)) -- since it might be later in the datum.
-            return $ modl {mmCurrencies = inDatm'}
+                inHash  = datumHash $ makeDatum inDatm'
+            return $ modl {mmCurrencies = inDatm', mmInDatumHash = inHash}
         }
     , Morphism
         { name = "RemoveSelfOutput"
@@ -242,11 +244,13 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
     , Morphism
         { name = "AddSelfOutput"
         , match = Not $ Var OwnAtOutBase
-        , contract = remove OutDatumHashed >> add OwnAtOutBase
+        -- , contract = remove OutDatumHashed >> add OwnAtOutBase
+        , contract = addAll [OwnAtOutBase, OutDatumHashed]
         , morphism = \case
           modl@(ManagementModel {mmOutDatum = outDatm, mmOwnCurrency = cs}) -> do
             let outDatm' = (cs : (delete cs outDatm)) -- since it might be later in the datum.
-            return $ modl {mmCurrencies = outDatm'}
+                outHash  = datumHash $ makeDatum outDatm'
+            return $ modl {mmCurrencies = outDatm', mmOutDatumHash = outHash}
         }
     , Morphism
         { name = "PermuteInputDatum"
