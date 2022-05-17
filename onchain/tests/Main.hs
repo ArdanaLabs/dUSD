@@ -4,10 +4,10 @@ import Apropos.Plutus.AssetClass qualified as AssetClass
 import Apropos.Plutus.Auction qualified as Auction
 import Apropos.Plutus.HelloValidator qualified as HelloValidator
 import Apropos.Plutus.Integer qualified as Integer
+import Apropos.Plutus.MainValidator qualified as MainValidator
 import Apropos.Plutus.SingletonValue qualified as SingletonValue
 import Apropos.Plutus.Value qualified as Value
 import Apropos.Plutus.Vault qualified as Vault
-import Apropos.Plutus.MainValidator qualified as MainValidator
 
 import Test.Syd
 
