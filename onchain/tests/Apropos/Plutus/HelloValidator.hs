@@ -18,14 +18,20 @@ import Plutus.V1.Ledger.Api (
  )
 import Plutus.V1.Ledger.Scripts (Context (..), Datum (..), applyValidator)
 import Plutus.V1.Ledger.Value (currencySymbol, tokenName)
-import Plutus.V2.Ledger.Api (fromList)
+import Plutus.V2.Ledger.Api (BuiltinData (..), fromList)
 
-import Hello (helloAddress, helloValidator)
+import Plutarch.Builtin
+import Plutarch.Prelude
+
+import Hello (HelloRedeemer (..), helloAddress, helloValidator)
+
+-- TODO
+-- these tests need to also cover the recently added release endpoint
 
 data HelloModel = HelloModel
   { isContinuing :: Bool
   , isMalformed :: Bool
-  , isUnitRedeemer :: Bool
+  , isHelloRedeemer :: Bool
   , inDatum :: Integer
   , outDatum :: Integer
   }
@@ -36,7 +42,7 @@ data HelloProp
   | IsInvalid
   | IsMalformed
   | IsContinuing
-  | IsUnitRedeemer
+  | IsHelloRedeemer
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
   deriving anyclass (Enumerable, Hashable)
 
@@ -48,7 +54,7 @@ instance HasLogicalModel HelloProp HelloModel where
   satisfiesProperty IsInvalid p = not $ satisfiesProperty IsValid p
   satisfiesProperty IsMalformed HelloModel {..} = isMalformed
   satisfiesProperty IsContinuing HelloModel {..} = isContinuing
-  satisfiesProperty IsUnitRedeemer HelloModel {..} = isUnitRedeemer
+  satisfiesProperty IsHelloRedeemer HelloModel {..} = isHelloRedeemer
 
 instance HasPermutationGenerator HelloProp HelloModel where
   sources =
@@ -93,8 +99,8 @@ instance HasPermutationGenerator HelloProp HelloModel where
     , Morphism
         { name = "ToggleIsUnitRedeemer"
         , match = Yes
-        , contract = toggle IsUnitRedeemer
-        , morphism = \hm@HelloModel {..} -> pure hm {isUnitRedeemer = not isUnitRedeemer}
+        , contract = toggle IsHelloRedeemer
+        , morphism = \hm@HelloModel {..} -> pure hm {isHelloRedeemer = not isHelloRedeemer}
         }
     ]
 
@@ -126,9 +132,13 @@ mkCtx HelloModel {..} =
     someAda = Value (fromList [(currencySymbol "", fromList [(tokenName "", 10)])])
 
 instance ScriptModel HelloProp HelloModel where
-  expect = Var IsValid :&&: Not (Var IsMalformed) :&&: Var IsContinuing
+  expect = Var IsValid :&&: Not (Var IsMalformed) :&&: Var IsContinuing :&&: Var IsHelloRedeemer
   script hm@HelloModel {..} =
-    let redeemer = Redeemer $ if isUnitRedeemer then toBuiltinData () else toBuiltinData (42 :: Integer)
+    let redeemer =
+          Redeemer $
+            if isHelloRedeemer
+              then BuiltinData $ plift $ pforgetData $ pdata (pcon $ Increment pdnil)
+              else toBuiltinData (42 :: Integer)
      in applyValidator (mkCtx hm) helloValidator (Datum (toBuiltinData inDatum)) redeemer
 
 spec :: Spec
