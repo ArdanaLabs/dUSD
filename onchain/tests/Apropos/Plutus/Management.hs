@@ -449,7 +449,9 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
 -- to have AddSelfInput update the datum to
 -- the correct value, and change its contract
 -- to add InDatumHashed. (Note that the same
--- is true for OutDatumHashed/etc... )
+-- is true for OutDatumHashed/etc... ).
+-- Update: Fixed issue with Morphism using 
+-- aforementioned fix.
 
 
 instance HasParameterisedGenerator ManagementProp ManagementModel where
@@ -515,6 +517,7 @@ instance ScriptModel ManagementProp ManagementModel where
              :&&: (Var ConfigPresent)
              :&&: (Var ConfigReturned)
              :&&: (Var OwnAtInBase)
+             -- :&&: (Not (Var OwnAtOutBase ) :->: ( ??? ) -- i.e. if the CS changes.
   script mm = applyMintingPolicyScript (mkCtx mm) managementMintingPolicy (Redeemer (toBuiltinData ()))
 
 managementMintingPolicy :: MintingPolicy
@@ -565,11 +568,15 @@ makeDatum x = Datum $ PlutusTx.toBuiltinData $ x
 -- Note that if n > (length lst), the element
 -- is inserted at the end.
 insertAt :: Int -> a -> [a] -> [a]
-insertAt n x xs = let (!ys, !zs) = splitAt n xs in ys ++ [x] ++ zs
+insertAt n x xs = (take n xs) ++ [x] ++ (drop n xs)
+-- insertAt n x xs = let (!ys, !zs) = splitAt n xs in ys ++ [x] ++ zs
+-- Tried various versions with Criterion;
+-- went with most efficient version.
 
 -- | Replace an element at position n of a list.
 -- Note that if n > (length lst), the element
 -- is inserted at the end, and nothing is replaced.
 replaceAt :: Int -> a -> [a] -> [a]
-replaceAt n x xs = let (!ys, !zs) = splitAt n xs in ys ++ [x] ++ (drop 1 zs)
+replaceAt n x xs = (take n xs) ++ [x] ++ (drop (n+1) xs)
+-- replaceAt n x xs = let (!ys, !zs) = splitAt n xs in ys ++ [x] ++ (drop 1 zs)
 
