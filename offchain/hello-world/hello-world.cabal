@@ -155,6 +155,7 @@ test-suite hello-world-unit
   type:           exitcode-stdio-1.0
   hs-source-dirs: test/unit
   main-is:        Main.hs
+  other-modules:
       HelloWorld.Contract.ContractModels
   build-depends:
     , base

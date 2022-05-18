@@ -76,13 +76,54 @@
   \item PAB E2E testing: The same tests will be ran as for the frontend tests,
     but using a second PAB to sign and submit transactions.
     The tests will be ran against a local testnet set up through Maeserat.
-  \item Contract Model Tests with PAB
+  \item Contract Model Tests:
+    Allow us to do QuickCheck-like property tests on contracts. This is achieved by:
+    \begin{itemize}
+      \item creating a model for the contract-state (ContractModel)
+      \item defining actions that the contract supports and how they:
+      \begin{itemize}
+        \item are executed in the blockchain emulator 
+        \item modify the modelled contract-state
+      \end{itemize}
+    \end{itemize}
+    By defining how the actions modify the contract-state we implicitly specify the properties our contract has to hold,
+    since the state of the model and the state of the emulated blockchain are compared against each other on every action execution.
+    Having a basic property test which doesn't require for any additional predicates to hold, covers the property of being "correct" i.e. it's matching the
+    expected model state specification.
+    Besides of the implicit specification of properties we can additionally check for predicates at the end of a sequence of actions using:
+    \begin{itemize}
+      \item the contract-specific state
+      \item the current slot
+      \item the wallet balances
+      \item the amount that has been minted
+    \end{itemize}
+    
   \begin{itemize}
-    \item Wallet signs and submits a transaction
-    \item Transactions are submitted by separate wallets (i.e. determine
-      atomicity constraints)
-    \item \todo{@Dan: Which tests do we want to run? `noFundsLocked'?}
-  \end{itemize}
+    \item Actions
+    \begin{itemize}
+      \item Initialize
+        \begin{itemize}
+          \item always mints a token that is used to identify the scripts UTxO
+          \item initializes the scripts UTxO datum with any given integer
+        \end{itemize}
+      \item Increment
+        \begin{itemize}
+          \item increments scripts UTxO datum by one
+        \end{itemize}
+      \item Read
+        \begin{itemize}
+          \item reads the scripts UTxO datum
+        \end{itemize}
+      \item Release
+        \begin{itemize}
+          \item releases the scripts UTxOs to the calling public key
+        \end{itemize}
+    \end{itemize}
+    \item Predicates
+      \begin{itemize}
+        \item At the end of the scripts lifecycle no funds should be locked at the script address
+      \end{itemize}
+  \end {itemize}
   \item This project will be deployed to mainnet to run manual tests
 \end{itemize}
 
