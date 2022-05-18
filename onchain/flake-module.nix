@@ -44,7 +44,14 @@
           '';
         };
       };
-      checks = haskellNixFlake.checks // { };
+      checks = haskellNixFlake.checks // {
+        end-to-end = self.inputs.maesarat.lib.${system}.end-to-end {
+          cardano-node = inputs'.cardano-node.packages.cardano-node;
+          cardano-cli = inputs'.cardano-node.packages.cardano-cli;
+          plutus-apps = self.inputs.plutus-apps;
+          e2eBinary = self'.packages."hello-world:exe:hello-world-e2e";
+        };
+      };
       devShells.onchain = haskellNixFlake.devShell // { };
     };
   flake = {

@@ -1,5 +1,6 @@
 {
   inputs = {
+    maesarat.url = "github:ArdanaLabs/maesarat";
     haskell-nix = {
       url = "github:input-output-hk/haskell.nix";
       inputs.nixpkgs.follows = "haskell-nix/nixpkgs-2105";
