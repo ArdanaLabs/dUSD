@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell            #-}
 module HelloWorld.Contract.ContractModels (tests) where
 
-import Control.Monad (void)
+import Control.Monad (void, forM_)
 import Control.Lens hiding (elements)
 import Data.Data 
 import Data.Map qualified as M
@@ -22,7 +22,7 @@ import Test.QuickCheck
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
-import HelloWorld.Contract (InitHelloWorldSchema, IncHelloWorldSchema, ReadHelloWorldSchema, initialize, increment', read'')
+import HelloWorld.Contract (InitHelloWorldSchema, IncHelloWorldSchema, ReadHelloWorldSchema, ReleaseHelloWorldSchema, initialize, increment', read'', release')
 
 data HelloWorldModel = HelloWorldModel { 
   _helloWorldModel :: M.Map Wallet Integer
@@ -37,22 +37,26 @@ instance ContractModel HelloWorldModel where
       Initialize Wallet Integer
     | Increment Wallet
     | Read Wallet
+    | Release Wallet
     deriving (Data, Eq, Show)
 
   data ContractInstanceKey HelloWorldModel w s e p where
     InitializeKey :: Wallet -> Integer -> ContractInstanceKey HelloWorldModel (Last AssetClass ) InitHelloWorldSchema T.Text ()
     IncrementKey :: Wallet -> ContractInstanceKey HelloWorldModel () IncHelloWorldSchema T.Text ()
     ReadKey :: Wallet -> ContractInstanceKey HelloWorldModel (Last Integer) ReadHelloWorldSchema T.Text ()
+    ReleaseKey :: Wallet -> ContractInstanceKey HelloWorldModel () ReleaseHelloWorldSchema T.Text ()
 
   instanceContract :: (SymToken -> AssetClass) -> ContractInstanceKey HelloWorldModel w s e p -> p -> Contract w s e ()
   instanceContract _ (InitializeKey _ _) () = initialize
   instanceContract _ (IncrementKey _ ) () = increment'
   instanceContract _ (ReadKey _ ) () = read''
+  instanceContract _ (ReleaseKey _) () = release'
 
   instanceWallet :: ContractInstanceKey HelloWorldModel w s e p -> Wallet
   instanceWallet (InitializeKey w _) = w
   instanceWallet (IncrementKey w) = w
   instanceWallet (ReadKey w) = w
+  instanceWallet (ReleaseKey w) = w
 
   instanceTag key = fromString $ "instance tag for: " <> show key
 
@@ -61,6 +65,7 @@ instance ContractModel HelloWorldModel where
                         Initialize <$> genWallet <*> pure 0
                       , Increment <$> genWallet
                       , Read <$> genWallet
+                      , Release <$> genWallet
                       ]
 
   initialState :: HelloWorldModel
@@ -71,14 +76,16 @@ instance ContractModel HelloWorldModel where
 
   precondition :: ModelState HelloWorldModel -> Action HelloWorldModel -> Bool
   precondition state (Initialize w _) = isNothing $ getHelloWorldModelState' state w
-  precondition state (Increment w ) = isJust $ getHelloWorldModelState' state w
-  precondition state (Read w ) = isJust $ getHelloWorldModelState' state w
+  precondition state (Increment w) = isJust $ getHelloWorldModelState' state w
+  precondition state (Read w) = isJust $ getHelloWorldModelState' state w
+  precondition state (Release _) = isJust (state ^. contractState . token)
 
   startInstances :: ModelState HelloWorldModel -> Action HelloWorldModel -> [StartContract HelloWorldModel]
-  startInstances _ act  = case act of
+  startInstances _ act = case act of
     Initialize w _ -> [ StartContract (InitializeKey w 0) () ]
-    Increment wi -> [ StartContract (IncrementKey wi ) () ]
-    Read wr -> [ StartContract (ReadKey wr ) () ]
+    Increment wi -> [ StartContract (IncrementKey wi) () ]
+    Read wr -> [ StartContract (ReadKey wr) () ]
+    Release wrel -> [ StartContract (ReleaseKey wrel) () ]
 
   -- Maps Actions to effects on the HelloWorldModel
   nextState :: Action HelloWorldModel -> Spec HelloWorldModel ()
@@ -93,8 +100,12 @@ instance ContractModel HelloWorldModel where
   nextState (Increment wallet1 ) = do
     (helloWorldModel . ix wallet1) $~ (+ 1)
     wait 1
-  -- three slots will pass, the state will be incremented, minAdaValue will be spent
+  -- a slot will pass
   nextState (Read _) = do
+    wait 1
+  -- a slot will pass
+  nextState (Release wallet) = do
+    deposit wallet $ adaValueOf 2
     wait 1
 
   perform :: HandleFun HelloWorldModel -> (SymToken -> AssetClass) -> ModelState HelloWorldModel -> Action HelloWorldModel -> SpecificationEmulatorTrace ()
@@ -105,8 +116,9 @@ instance ContractModel HelloWorldModel where
     maybe (throwError $ GenericError $ "starting token sale for wallet " <> show wallet <> " failed")
           (registerToken "foo")
           maybeAssetClass 
-  perform h f model (Increment wallet1 ) = let ac = f $ fromJust $ model ^. contractState . token in withWait 1 model $ callEndpoint @"increment" (h $ IncrementKey wallet1 ) ac
-  perform h f model (Read wallet1 ) = let ac = f $ fromJust $ model ^. contractState . token in withWait 1 model $ callEndpoint @"read" (h $ ReadKey wallet1 ) ac
+  perform h f model (Increment wallet) = let ac = f $ fromJust $ model ^. contractState . token in withWait 1 model $ callEndpoint @"increment" (h $ IncrementKey wallet) ac
+  perform h f model (Read wallet) = let ac = f $ fromJust $ model ^. contractState . token in withWait 1 model $ callEndpoint @"read" (h $ ReadKey wallet) ac
+  perform h f model (Release wallet) = let ac = f $ fromJust $ model ^. contractState . token in withWait 1 model $ callEndpoint @"release" (h $ ReleaseKey wallet) ac
 
 deriving instance Eq (ContractInstanceKey HelloWorldModel w s e p)
 deriving instance Show (ContractInstanceKey HelloWorldModel w s e p)
@@ -136,10 +148,21 @@ propHelloWorldIncremetsOne :: Actions HelloWorldModel -> Property
 propHelloWorldIncremetsOne = propRunActions (const $ pure True)
 
 propNoFundsLocked :: Property
-propNoFundsLocked = checkNoLockedFundsProof defaultCheckOptions $ defaultNLFP @HelloWorldModel
+propNoFundsLocked = checkNoLockedFundsProof defaultCheckOptions $ defaultNLFP {
+  nlfpMainStrategy = do x <- viewContractState token
+                        maybe (pure ())
+                              (\_ -> forM_ wallets $ \w -> action $ Release w)
+                              x
+  , nlfpWalletStrategy = \w -> do
+                            x <- viewContractState token
+                            maybe (pure ())
+                                  (\_ -> action $ Release w)
+                                  x
+ }
 
 tests :: Int -> TestTree
 tests n = testGroup
    "HelloWorld Model"
      [ testProperty "No Funds Locked Check" $ withMaxSuccess n propNoFundsLocked
-     , testProperty "No Errors Check" $ withMaxSuccess n propHelloWorldIncremetsOne]
+     , testProperty "No Errors Check" $ withMaxSuccess n propHelloWorldIncremetsOne
+     ]
