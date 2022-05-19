@@ -21,17 +21,17 @@ import Data.Text (Text, pack)
 import Data.Void (Void)
 
 import Ledger (Datum (..), Redeemer (..))
-import Ledger.Constraints (adjustUnbalancedTx, mustPayToOtherScript, mustSpendScriptOutput, otherScript, unspentOutputs, mustPayToPubKey)
+import Ledger.Constraints (adjustUnbalancedTx, mustPayToOtherScript, mustPayToPubKey, mustSpendScriptOutput, otherScript, unspentOutputs)
 import Ledger.Constraints qualified as Constraint
-import Ledger.Tx (ChainIndexTxOut (..), TxOutRef (..), getCardanoTxId)
-import Ledger.Value (AssetClass, TokenName(..), assetClass, singleton, assetClassValueOf, assetClassValue)
+import Ledger.Tx (ChainIndexTxOut (..), TxOutRef (..))
+import Ledger.Value (AssetClass, TokenName (..), assetClass, assetClassValue, assetClassValueOf, singleton)
 
 import Plutus.Contract (
   AsContractError,
   Contract,
   Endpoint,
+  HasEndpoint,
   awaitPromise,
-  awaitTxConfirmed,
   datumFromHash,
   endpoint,
   handleError,
@@ -40,20 +40,20 @@ import Plutus.Contract (
   mapError,
   mkTxConstraints,
   ownPaymentPubKeyHash,
-  submitUnbalancedTx,
+  submitTxConfirmed,
   tell,
   utxosAt,
-  HasEndpoint
  )
 import Plutus.Contracts.Currency (CurrencyError, OneShotCurrency, currencySymbol, mintContract)
 import PlutusTx (FromData, fromBuiltinData, toBuiltinData)
 import PlutusTx.Builtins (mkI)
 
-import HelloWorld.ValidatorProxy (helloValidator, helloValidatorAddress, helloValidatorHash)
+import HelloWorld.ValidatorProxy (HelloRedeemer (..), helloValidator, helloValidatorAddress, helloValidatorHash)
 
 -- | REST schema
 type InitHelloWorldSchema = Endpoint "initialize" Integer
-type IncHelloWorldSchema = Endpoint "increment" AssetClass 
+
+type IncHelloWorldSchema = Endpoint "increment" AssetClass
 type ReadHelloWorldSchema = Endpoint "read" AssetClass
 type ReleaseHelloWorldSchema = Endpoint "release" AssetClass
 
@@ -66,12 +66,9 @@ initializeHandler initialInt = do
   cs <- currencySymbol <$> mapError (pack . show) (mintContract ownPkh [(TokenName "", 1)] :: Contract w s CurrencyError OneShotCurrency)
   let lookups = otherScript helloValidator
       tx = mustPayToOtherScript helloValidatorHash (Datum $ mkI initialInt) (singleton cs "" 1)
-  adjustedTx <- adjustUnbalancedTx <$> mkTxConstraints @Void lookups tx
-  ledgerTx <- submitUnbalancedTx adjustedTx
-  awaitTxConfirmed $ getCardanoTxId ledgerTx
+  mkTxConstraints @Void lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
   tell $ Last $ Just $ assetClass cs ""
   logInfo $ "Successfully initialized datum with value: " <> show initialInt
-
 
 increment :: Contract () IncHelloWorldSchema Text ()
 increment = increment'
@@ -89,7 +86,7 @@ incrementHandler ac = do
       maybeHelloWorldDatum <- getDatum' @Integer ciTxOut
       case maybeHelloWorldDatum of
         Nothing ->
-          logInfo @Text "No hello world datum found at the script address"
+          logError @Text "No hello world datum found at the script address"
         Just oldDatum -> do
           let updatedHelloWorldDatum = oldDatum + 1
               lookups =
@@ -97,16 +94,14 @@ incrementHandler ac = do
                   <> otherScript helloValidator
               tx =
                 mustPayToOtherScript helloValidatorHash (Datum $ mkI updatedHelloWorldDatum) (assetClassValue ac 1)
-                  <> mustSpendScriptOutput txOutRef (Redeemer $ toBuiltinData ())
-          adjustedTx <- adjustUnbalancedTx <$> mkTxConstraints @Void lookups tx
-          ledgerTx <- submitUnbalancedTx adjustedTx
-          awaitTxConfirmed $ getCardanoTxId ledgerTx
+                  <> mustSpendScriptOutput txOutRef (Redeemer $ toBuiltinData Increment)
+          mkTxConstraints @Void lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
           logInfo $ "Successfully incremented to value " <> showText updatedHelloWorldDatum
 
 read' :: Contract (Last Integer) ReadHelloWorldSchema Text ()
 read' = read''
 
-read'' :: (HasEndpoint "read"AssetClass s) => Contract (Last Integer) s Text ()
+read'' :: (HasEndpoint "read" AssetClass s) => Contract (Last Integer) s Text ()
 read'' = forever $ handleError (logError @Text) $ awaitPromise $ endpoint @"read" readHandler
 
 readHandler :: AssetClass -> Contract (Last Integer) s Text ()
@@ -119,12 +114,11 @@ readHandler ac = do
       maybeHelloWorldDatum <- getDatum' @Integer ciTxOut
       case maybeHelloWorldDatum of
         Nothing -> do
-          logInfo @Text "No hello world datum found at script address"
+          logError @Text "No hello world datum found at script address"
           tell $ Last Nothing
         (Just datum) -> do
           logInfo $ "Read datum value of " <> showText datum
           tell $ Last $ Just datum
-
 
 release :: Contract () ReleaseHelloWorldSchema Text ()
 release = release'
@@ -137,19 +131,21 @@ releaseHandler :: AssetClass -> Contract w s Text ()
 releaseHandler ac = do
   ownPkh <- ownPaymentPubKeyHash
   maybeUTxO <- findUTxOWithToken ac
-  maybe (logError @Text "Couldn't find any UTxO at the script address for the given token")
-        (\(txOutRef, ciTxOut) -> do
-          let value = assetClassValue ac 1
-              lookups = otherScript helloValidator
-                     <> unspentOutputs (Map.singleton txOutRef ciTxOut)
-                     <> Constraint.ownPaymentPubKeyHash ownPkh
-              tx      = mustSpendScriptOutput txOutRef (Redeemer $ toBuiltinData ())
-                     <> mustPayToPubKey ownPkh value
-          mkTxConstraints @Void lookups tx >>=
-            submitUnbalancedTx . adjustUnbalancedTx >>=
-            awaitTxConfirmed . getCardanoTxId
-          logInfo @Text "Successfully released the scripts HelloWorld UTxO")
-        maybeUTxO
+  maybe
+    (logError @Text "Couldn't find any UTxO at the script address for the given token")
+    ( \(txOutRef, ciTxOut) -> do
+        let value = assetClassValue ac 1
+            lookups =
+              otherScript helloValidator
+                <> unspentOutputs (Map.singleton txOutRef ciTxOut)
+                <> Constraint.ownPaymentPubKeyHash ownPkh
+            tx =
+              mustSpendScriptOutput txOutRef (Redeemer $ toBuiltinData Release)
+                <> mustPayToPubKey ownPkh value
+        mkTxConstraints @Void lookups tx >>= submitTxConfirmed . adjustUnbalancedTx
+        logInfo @Text "Successfully released the scripts HelloWorld UTxO"
+    )
+    maybeUTxO
 
 showText :: Show a => a -> Text
 showText = pack . show

@@ -84,6 +84,7 @@ library
     , directory                        ^>=1.3.6.0
     , file-embed
     , filepath                         ^>=1.4.2.1
+    , generics-sop
     , http-client                      ^>=0.7.11
     , iohk-monitoring                  ^>=0.2.0.0
     , lens                             ^>=4.19.2
@@ -156,7 +157,9 @@ test-suite hello-world-unit
   hs-source-dirs: test/unit
   main-is:        Main.hs
   other-modules:
-      HelloWorld.Contract.ContractModels
+    HelloWorld.Contract.ContractModels
+    HelloWorld.Contract.EmulatorTraces
+
   build-depends:
     , base
     , containers

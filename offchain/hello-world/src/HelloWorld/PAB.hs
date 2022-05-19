@@ -91,7 +91,7 @@ instance Pretty HelloWorldContracts where
   pretty = viaShow
 
 instance HasDefinitions HelloWorldContracts where
-  getDefinitions = [Initialize, Increment, Read' ]
+  getDefinitions = [Initialize, Increment, Read']
   getSchema = \case
     Initialize -> endpointsToSchemas @InitHelloWorldSchema
     Increment -> endpointsToSchemas @IncHelloWorldSchema

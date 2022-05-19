@@ -2,15 +2,14 @@ module Main (main) where
 
 import Test.Tasty
 
--- import HelloWorld.ContractSpec qualified (testTree)
-import HelloWorld.Contract.ContractModels qualified (tests)
+import HelloWorld.Contract.ContractModels qualified (testTree)
+import HelloWorld.Contract.EmulatorTraces qualified (testTree)
 
 main :: IO ()
 main = do
   defaultMain $
-    testGroup "ContractModels" [HelloWorld.Contract.ContractModels.tests 10]
-
-    -- testGroup
-    --   "Emulator Traces"
-    --   [ HelloWorld.ContractSpec.testTree
-    --   ]
+    testGroup
+      "Tests"
+      [ testGroup "Emulator Traces" [HelloWorld.Contract.EmulatorTraces.testTree]
+      , testGroup "ContractModels" [HelloWorld.Contract.ContractModels.testTree 10]
+      ]

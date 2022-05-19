@@ -1,4 +1,4 @@
-module HelloWorld.ContractSpec (testTree, initializeHelloWorldDatum, incrementHelloWorldDatum, readHelloWorldDatum) where
+module HelloWorld.Contract.EmulatorTraces (testTree, initializeHelloWorldDatum, incrementHelloWorldDatum, readHelloWorldDatum) where
 
 import Data.Functor (void)
 import Data.Maybe (fromJust, isNothing)
@@ -9,7 +9,7 @@ import Plutus.Contract.Test
 import Plutus.Trace.Emulator
 import Plutus.V1.Ledger.Api (fromBuiltinData)
 
-import HelloWorld.Contract (increment, initialize, read')
+import HelloWorld.Contract (increment, initialize, read', release)
 import HelloWorld.ValidatorProxy (helloValidatorAddress)
 
 testTree :: TestTree
@@ -19,6 +19,7 @@ testTree =
     [ checkPredicate "should initialize correctly" (assertNoFailedTransactions .&&. assertHelloWorldDatumEquals 1) initializeHelloWorldDatum
     , checkPredicate "should increment twice" (assertNoFailedTransactions .&&. assertHelloWorldDatumEquals 3) incrementHelloWorldDatum
     , checkPredicate "should read successfully" (assertNoFailedTransactions .&&. assertHelloWorldDatumEquals 2) readHelloWorldDatum
+    , checkPredicate "should release successfully" (assertNoFailedTransactions) releaseHelloWorld
     ]
 
 assertHelloWorldDatumEquals :: Integer -> TracePredicate
@@ -64,4 +65,21 @@ readHelloWorldDatum = do
   void $ waitNSlots 1
   callEndpoint @"read" h3 identifier
   _ <- isNothing . getLast <$> observableState h3
+  void $ waitNSlots 1
+
+releaseHelloWorld :: EmulatorTrace ()
+releaseHelloWorld = do
+  h1 <- activateContractWallet (knownWallet 1) initialize
+  void $ waitNSlots 1
+  callEndpoint @"initialize" h1 1
+  void $ waitNSlots 3
+  identifier <- fromJust . getLast <$> observableState h1
+  void $ waitNSlots 1
+  h2 <- activateContractWallet (knownWallet 2) increment
+  void $ waitNSlots 1
+  callEndpoint @"increment" h2 identifier
+  void $ waitNSlots 3
+  h3 <- activateContractWallet (knownWallet 3) release
+  void $ waitNSlots 1
+  callEndpoint @"release" h3 identifier
   void $ waitNSlots 1
