@@ -40,7 +40,7 @@ import PlutusTx qualified
 data ManagementModel = ManagementModel
   { mmCurrencies :: [CurrencySymbol]  -- The currencies in the datum.
   , mmSignatures :: [PubKeyHash]      -- Signatures present in the Tx.
-  , mmInDatumHash :: DatumHash
+  -- , mmInDatumHash :: DatumHash
   , mmOwnCurrency :: CurrencySymbol
   , mmCurChoice :: Int
   , mmMinted :: Value
@@ -51,14 +51,22 @@ data ManagementModel = ManagementModel
   -- , mmAddress :: CurrencySymbol -- The address of this minting policy.
   , mmAddress :: Address
   , mmOutDatum :: [CurrencySymbol] -- The datum to the script.
-  , mmOutDatumHash :: DatumHash
+  -- , mmOutDatumHash :: DatumHash
   , mmInNFT :: CurrencySymbol -- the input NFT.
   } deriving stock (Show, Eq, Generic)
 
+mmInDatumHash :: ManagementModel -> DatumHash
+mmInDatumHash ManagementModel {mmCurrencies = datm}
+  = datumHash $ makeDatum datm
+
+mmOutDatumHash :: ManagementModel -> DatumHash
+mmOutDatumHash ManagementModel {mmOutDatum = datm}
+  = datumHash $ makeDatum datm
+
 data ManagementProp
   = BeenSigned
-  | InDatumHashed    -- mmInDatumHash modl  == datumHash (mmCurrencies modl)
-  | OutDatumHashed   -- mmOutDatumHash modl == datumHash (mmOutDatum   modl)
+  -- | InDatumHashed    -- mmInDatumHash modl  == datumHash (mmCurrencies modl)
+  -- | OutDatumHashed   -- mmOutDatumHash modl == datumHash (mmOutDatum   modl)
   {-
   | MintsOne         -- only one item is minted.
   | ValidCurChoice   -- i.e. 0 <= mmCurChoice < length mmCurrencies
@@ -79,8 +87,8 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         { sourceName = "Correctly Formed"
         , covers = All 
           [ Var BeenSigned
-          , Var InDatumHashed
-          , Var OutDatumHashed
+          -- , Var InDatumHashed
+          -- , Var OutDatumHashed
           , Var ConfigPresent
           , Var ConfigReturned
           , Var OwnAtInBase
@@ -140,7 +148,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
             return $ ManagementModel
               { mmCurrencies  = inCurrencies
               , mmSignatures  = sigs
-              , mmInDatumHash = inDatHash
+              -- , mmInDatumHash = inDatHash
               , mmOwnCurrency = cs
               , mmCurChoice = 0
               , mmMinted    = assetClassValue (assetClass cs "") 1
@@ -149,7 +157,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
               , mmOutput    = [inputTxOut, outputTxOut] -- Temp?
               , mmAddress   = adr
               , mmOutDatum  = inCurrencies -- Temp?
-              , mmOutDatumHash = inDatHash
+              -- , mmOutDatumHash = inDatHash
               , mmInNFT = inNft
               }
         }
@@ -172,8 +180,9 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         , morphism = \case
           modl@(ManagementModel {mmSignatures = sigs, mmOwner = owner}) -> do
             let sigs' = (owner:sigs)
-            return $ modl {mmSignatures = sigs'} 
+            return $ modl {mmSignatures = sigs'}
         }
+    {-
     , Morphism
         { name = "UnhashIn"
         , match = Var InDatumHashed
@@ -210,12 +219,14 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
             let outHsh' = datumHash $ makeDatum outDatum
             return $ modl {mmOutDatumHash = outHsh'}
         }
+    -}
     -- Messing with the input/output list.
     -- (May have to add effects for ConfigPresent/ConfigReturned)
     , Morphism
         { name = "RemoveSelfInput"
         , match = Var OwnAtInBase
-        , contract = removeAll [OwnAtInBase, InDatumHashed] -- since (datum changes) ==> (datum hash changes)
+        -- , contract = removeAll [OwnAtInBase, InDatumHashed] -- since (datum changes) ==> (datum hash changes)
+        , contract = remove OwnAtInBase
         , morphism = \case
           modl@(ManagementModel {mmCurrencies = inDatm, mmOwnCurrency = cs}) -> do
             let inDatm' = delete cs inDatm
@@ -225,17 +236,19 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         { name = "AddSelfInput"
         , match = Not $ Var OwnAtInBase
         -- , contract = remove InDatumHashed >> add OwnAtInBase
-        , contract = addAll [OwnAtInBase, InDatumHashed]
+        -- , contract = addAll [OwnAtInBase, InDatumHashed]
+        , contract = add OwnAtInBase
         , morphism = \case
           modl@(ManagementModel {mmCurrencies = inDatm, mmOwnCurrency = cs}) -> do
             let inDatm' = (cs : (delete cs inDatm)) -- since it might be later in the datum.
-                inHash  = datumHash $ makeDatum inDatm'
-            return $ modl {mmCurrencies = inDatm', mmInDatumHash = inHash}
+                -- inHash  = datumHash $ makeDatum inDatm'
+            return $ modl {mmCurrencies = inDatm'} -- , mmInDatumHash = inHash}
         }
     , Morphism
         { name = "RemoveSelfOutput"
         , match = Var OwnAtOutBase
-        , contract = removeAll [OwnAtOutBase, OutDatumHashed] -- since (datum changes) ==> (datum hash changes)
+        -- , contract = removeAll [OwnAtOutBase, OutDatumHashed] -- since (datum changes) ==> (datum hash changes)
+        , contract = remove OwnAtOutBase -- since (datum changes) ==> (datum hash changes)
         , morphism = \case
           modl@(ManagementModel {mmOutDatum = outDatm, mmOwnCurrency = cs}) -> do
             let outDatm' = delete cs outDatm
@@ -245,17 +258,18 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         { name = "AddSelfOutput"
         , match = Not $ Var OwnAtOutBase
         -- , contract = remove OutDatumHashed >> add OwnAtOutBase
-        , contract = addAll [OwnAtOutBase, OutDatumHashed]
+        -- , contract = addAll [OwnAtOutBase, OutDatumHashed]
+        , contract = add OwnAtOutBase
         , morphism = \case
           modl@(ManagementModel {mmOutDatum = outDatm, mmOwnCurrency = cs}) -> do
             let outDatm' = (cs : (delete cs outDatm)) -- since it might be later in the datum.
-                outHash  = datumHash $ makeDatum outDatm'
-            return $ modl {mmCurrencies = outDatm', mmOutDatumHash = outHash}
+                -- outHash  = datumHash $ makeDatum outDatm'
+            return $ modl {mmCurrencies = outDatm'} -- , mmOutDatumHash = outHash}
         }
     , Morphism
         { name = "PermuteInputDatum"
         , match = Yes
-        , contract = removeAll [OwnAtInBase, InDatumHashed]
+        , contract = removeAll [OwnAtInBase] -- , InDatumHashed]
         , morphism = \case
           modl@(ManagementModel {mmCurrencies = inDatm, mmOwnCurrency = cs}) -> do
             inDatm' <- shuffle inDatm
@@ -277,7 +291,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
     , Morphism
         { name = "PermuteOutputDatum"
         , match = Yes
-        , contract = removeAll [OwnAtOutBase, OutDatumHashed]
+        , contract = removeAll [OwnAtOutBase] -- , OutDatumHashed]
         , morphism = \case
           modl@(ManagementModel {mmCurrencies = outDatm, mmOwnCurrency = cs}) -> do
             outDatm' <- shuffle outDatm
@@ -301,11 +315,12 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
     , Morphism
         { name = "FixInputDatum" -- i.e. the actual tx.
         -- Need InDatumHashed; otherwise issues can occur.
-        , match = (Not $ Var ConfigPresent) :&&: (Var InDatumHashed) 
+        , match = (Not $ Var ConfigPresent)
         , contract = add ConfigPresent
         , morphism = \case
-          modl@(ManagementModel {mmInput = inp, mmInDatumHash = inDatm, mmInNFT = nft}) -> do
-            let inpTx = findIndices (\(TxInInfo _ (TxOut _ val _)) -> 1 == valueOf val nft "") inp
+          modl@(ManagementModel {mmInput = inp, mmInNFT = nft}) -> do
+            let inDatm = mmInDatumHash modl
+                inpTx = findIndices (\(TxInInfo _ (TxOut _ val _)) -> 1 == valueOf val nft "") inp
                 inpDt = findIndices (\(TxInInfo _ (TxOut _ _ dat)) -> dat == Just inDatm) inp
             case (inpTx, inpDt) of
               ([n],[]) -> do
@@ -346,11 +361,12 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         }
     , Morphism
         { name = "FixOutputDatum"
-        , match = (Not $ Var ConfigReturned) :&&: (Var OutDatumHashed) 
+        , match = (Not $ Var ConfigReturned)
         , contract = add ConfigReturned
         , morphism = \case
-          modl@(ManagementModel {mmOutput = outp, mmOutDatumHash = outDatm, mmInNFT = nft}) -> do
-            let outTx = findIndices (\(TxOut _ val _) -> 1 == valueOf val nft "") outp
+          modl@(ManagementModel {mmOutput = outp, mmInNFT = nft}) -> do
+            let outDatm = mmOutDatumHash modl
+                outTx = findIndices (\(TxOut _ val _) -> 1 == valueOf val nft "") outp
                 outDt = findIndices (\(TxOut _ _ dat) -> dat == Just outDatm) outp
             case (outTx, outDt) of
               ([n],[]) -> do
@@ -385,11 +401,12 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         }
     , Morphism
         { name = "BreakInputDatum"
-        , match = (Var ConfigPresent) :&&: (Var InDatumHashed)
+        , match = (Var ConfigPresent)
         , contract = remove ConfigPresent -- maybe more?
         , morphism = \case
-          modl@(ManagementModel {mmInput = inp, mmInDatumHash = inDatm, mmInNFT = nft}) -> do
-            let inpTx = findIndices (\(TxInInfo _ (TxOut _ val datm)) -> (1 == valueOf val nft "") && (datm == Just inDatm)) inp
+          modl@(ManagementModel {mmInput = inp, mmInNFT = nft}) -> do
+            let inDatm = mmInDatumHash modl
+                inpTx = findIndices (\(TxInInfo _ (TxOut _ val datm)) -> (1 == valueOf val nft "") && (datm == Just inDatm)) inp
             case inpTx of
               [n] -> do
                 let (TxInInfo xid (TxOut xadr xval xdatm)) = inp !! n
@@ -411,12 +428,13 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         }
     , Morphism
         { name = "BreakOutputDatum"
-        , match = (Var ConfigReturned) :&&: (Var OutDatumHashed)
+        , match = (Var ConfigReturned)
         , contract = remove ConfigReturned
         , morphism = \case
-          modl@(ManagementModel {mmOutput = outp, mmOutDatumHash = outDatm, mmInNFT = nft}) -> do
+          modl@(ManagementModel {mmOutput = outp, mmInNFT = nft}) -> do
             -- hmm...
-            let outTx = findIndices (\(TxOut _ val datm) -> (1 == valueOf val nft "") && (datm == Just outDatm)) outp
+            let outDatm = mmOutDatumHash modl
+                outTx = findIndices (\(TxOut _ val datm) -> (1 == valueOf val nft "") && (datm == Just outDatm)) outp
             case outTx of
               [n] -> do
                 let (TxOut xadr xval xdatm) = outp !! n
@@ -468,6 +486,7 @@ instance LogicalModel ManagementProp where
 
 instance HasLogicalModel ManagementProp ManagementModel where
   satisfiesProperty BeenSigned modl = (mmOwner modl) `elem` (mmSignatures modl)
+    {-
   satisfiesProperty  InDatumHashed modl
     | dhsh <- datumHash $ Datum $ PlutusTx.toBuiltinData $ mmCurrencies modl
     = dhsh == mmInDatumHash modl
@@ -475,7 +494,6 @@ instance HasLogicalModel ManagementProp ManagementModel where
     | dhsh <- datumHash $ Datum $ PlutusTx.toBuiltinData $ mmOutDatum modl
     = dhsh == mmOutDatumHash modl  
   -- These next few apparently aren't needed?
-  {-
   satisfiesProperty MintsOne   modl = let val = flattenValue (mmMinted modl) in
     case uncons val of
       (Just ((_,_,n),[])) -> n == 1
@@ -512,8 +530,8 @@ instance HasLogicalModel ManagementProp ManagementModel where
 
 instance ScriptModel ManagementProp ManagementModel where
   expect = (Var BeenSigned) 
-             :&&: (Var InDatumHashed) 
-             :&&: (Var OutDatumHashed)
+             -- :&&: (Var InDatumHashed) 
+             -- :&&: (Var OutDatumHashed)
              :&&: (Var ConfigPresent)
              :&&: (Var ConfigReturned)
              :&&: (Var OwnAtInBase)
