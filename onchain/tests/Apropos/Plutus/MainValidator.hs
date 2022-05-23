@@ -5,20 +5,23 @@ module Apropos.Plutus.MainValidator (
 ) where
 
 import Apropos
+import Apropos.ContextBuilder
 import Apropos.Script
 import Control.Monad
 import Data.Either (isLeft)
 import Data.Maybe
-import Data.String (IsString (fromString))
+import Gen
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Value qualified as V
 import Test.Syd (Spec)
 import Test.Syd.Hedgehog (fromHedgehogGroup)
 
-import Plutarch
-import Plutarch.Builtin (pforgetData)
-import Plutarch.Prelude
+import Plutarch.Api.V1 (mkValidator)
+import Plutus.V1.Ledger.Scripts (applyValidator)
 import Validator (mainValidator, mainValidatorHash)
+
+import Control.Monad.Identity (Identity)
+import Control.Monad.State
 
 data ValidatorProp
   = HasConfig
@@ -30,9 +33,9 @@ data ValidatorProp
 
 data ValidatorModel = ValidatorModel
   { minting :: Value
-  , inputs :: [TxInInfo]
+  , configInput :: Maybe (Address, Value, Maybe Datum)
+  , extraInputs :: [(Address, Value, Maybe Datum)]
   , redemer :: Either Int Data
-  , configDatum :: Either [CurrencySymbol] (Maybe Data)
   , spending :: TxOutRef
   }
   deriving stock (Eq, Show)
@@ -46,17 +49,19 @@ instance LogicalModel ValidatorProp where
       :&&: (Var ConfigIsValid :->: Var HasConfig)
 
 instance HasLogicalModel ValidatorProp ValidatorModel where
-  satisfiesProperty HasConfig m = any inputIsConfig . inputs $ m
+  satisfiesProperty HasConfig m = isJust . configInput $ m
   satisfiesProperty RedemerIsValid m = isLeft . redemer $ m
-  satisfiesProperty ConfigIsValid m = isLeft . configDatum $ m
+  satisfiesProperty ConfigIsValid m =
+    case m of
+      ValidatorModel {configInput = Just (_, _, Just _)} -> True
+      _ -> False
   satisfiesProperty MintsReferencedToken m = isJust $ do
     Left ind <- pure $ redemer m
-    Left conf <- pure $ configDatum m
-    guard $ length conf > ind
-    guard $ V.assetClassValueOf (minting m) (V.AssetClass (conf !! ind, "")) > 0
-
-inputIsConfig :: TxInInfo -> Bool
-inputIsConfig (TxInInfo _ (TxOut _ v _)) = V.singleton nftcs "" 1 == v
+    (_, _, maybeDatum) <- configInput m
+    Datum (BuiltinData conf) <- maybeDatum
+    cs <- fromData @[CurrencySymbol] conf
+    guard $ length cs > ind
+    guard $ V.assetClassValueOf (minting m) (V.AssetClass (cs !! ind, "")) > 0
 
 instance HasPermutationGenerator ValidatorProp ValidatorModel where
   sources =
@@ -64,40 +69,35 @@ instance HasPermutationGenerator ValidatorProp ValidatorModel where
         { sourceName = "Valid"
         , covers = All $ Var <$> [HasConfig, ConfigIsValid, RedemerIsValid, MintsReferencedToken]
         , gen = do
-            mintedCS <- genHexString @CurrencySymbol
-            extra <- genVal :: Gen Value
+            mintedCS <- hexString @CurrencySymbol
+            extra <- value
             redemerInd <- int (linear 0 10) :: Gen Int
             extraConfLen <- int (linear 0 10) :: Gen Int
             -- TODO random input for this
             let spendingInput = TxOutRef (TxId "aa") 0
             config <- do
-              pre <- replicateM redemerInd $ genHexString @CurrencySymbol
-              post <- replicateM extraConfLen $ genHexString @CurrencySymbol
+              pre <- replicateM redemerInd $ hexString @CurrencySymbol
+              post <- replicateM extraConfLen $ hexString @CurrencySymbol
               pure $ pre ++ [mintedCS] ++ post
             pure $
               ValidatorModel
                 (V.singleton mintedCS "" 1 <> extra)
                 -- TODO generate random outref and more inputs
-                [ TxInInfo
-                    (TxOutRef (TxId "a") 0)
-                    ( TxOut
-                        (Address (ScriptCredential "") Nothing)
-                        (V.singleton nftcs "" 1)
-                        -- TODO should be hash of config datum
-                        Nothing
+                ( Just
+                    ( Address (ScriptCredential "") Nothing
+                    , V.singleton nftcs "" 1
+                    , Just $ Datum $ BuiltinData $ toData config
                     )
-                , TxInInfo
-                    spendingInput
-                    ( TxOut
-                        (Address (ScriptCredential mainValidatorHash) Nothing)
-                        -- TODO this should be a random value
-                        mempty
-                        -- TODO maybe this should be a hash of a random datum
-                        Nothing
-                    )
+                )
+                [
+                  ( Address (ScriptCredential mainValidatorHash) Nothing
+                  , -- TODO this should be a random value
+                    mempty
+                  , -- TODO maybe this should be random data?
+                    Nothing
+                  )
                 ]
                 (Left redemerInd)
-                (Left config)
                 spendingInput
         }
     ]
@@ -116,8 +116,7 @@ instance HasPermutationGenerator ValidatorProp ValidatorModel where
         , match = Var HasConfig
         , contract = remove HasConfig
         , morphism = \m -> do
-            let inputs' = filter (not . inputIsConfig) (inputs m)
-            pure $ m {configDatum = Right Nothing, inputs = inputs'}
+            pure $ m {configInput = Nothing}
         }
     , Morphism
         { name = "invalidate config"
@@ -125,14 +124,21 @@ instance HasPermutationGenerator ValidatorProp ValidatorModel where
         , contract = remove ConfigIsValid
         , morphism = \m -> do
             randomData <- genData
-            pure $ m {configDatum = Right $ Just randomData}
+            case configInput m of
+              Nothing -> failWithFootnote "model error config was not valid"
+              Just (adr, val, _) -> do
+                pure $
+                  m
+                    { configInput =
+                        Just (adr, val, Just $ Datum $ BuiltinData randomData)
+                    }
         }
     , Morphism
         { name = "don't mint referenced token"
         , match = Var MintsReferencedToken
         , contract = remove MintsReferencedToken
         , morphism = \m -> do
-            newMintVal <- genVal
+            newMintVal <- value
             -- TODO it might be better to filter out the minted value
             pure $ m {minting = newMintVal}
         }
@@ -142,54 +148,55 @@ instance HasParameterisedGenerator ValidatorProp ValidatorModel where
   parameterisedGenerator = buildGen
 
 instance ScriptModel ValidatorProp ValidatorModel where
-  expect = Yes
-
   -- TODO for real validator the expect logic should be this:
   -- All $ Var <$> [HasConfig,ConfigIsValid,RedemerIsValid,MintsReferencedToken]
+  expect = Yes
+
   script m =
-    compile $
-      mainValidator
-        # pforgetData (pdata (pconstant ()))
-        # ( case redemer m of
-              Left n -> pforgetData $ pdata $ fromIntegral @Int @(Term _ PInteger) n
-              Right da -> pconstant da
+    let ctx =
+          buildContext $ do
+            -- TODO this should be reworked in apropos-tx so the type hint is shorter
+            withTxInfoBuilder @(StateT ScriptContext) @Identity @(StateT TxInfo) $ do
+              addInput undefined undefined undefined undefined
+            undefined m
+     in applyValidator
+          ctx
+          (mkValidator mainValidator)
+          ( Datum $
+              BuiltinData $
+                case redemer m of
+                  Left n -> toData $ fromIntegral @Int @Integer n
+                  Right da -> da
           )
-        # pconstant
-          ( -- TODO use fraser's thing for this and deal with the other fields
-            ScriptContext
-              ( TxInfo
-                  -- TODO most of these memptys are wrong
-                  (inputs m)
-                  [] -- TODO should there be outputs?
-                  mempty
-                  (minting m)
-                  []
-                  []
-                  (Interval (LowerBound NegInf False) (UpperBound PosInf False))
-                  []
-                  [] -- TODO we need the datum table
-                  (TxId "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-              )
-              (Spending $ spending m)
+          (Redeemer $ BuiltinData $ toData ())
+
+{-
+compile $
+  mainValidator
+    # pforgetData (pdata (pconstant ()))
+    # ( case redemer m of
+          Left n -> pforgetData $ pdata $ fromIntegral @Int @(Term _ PInteger) n
+          Right da -> pconstant da
+      )
+    # pconstant
+      ( -- TODO use fraser's thing for this and deal with the other fields
+        ScriptContext
+          ( TxInfo
+              -- TODO most of these memptys are wrong
+              (inputs m)
+              [] -- TODO should there be outputs?
+              mempty
+              (minting m)
+              []
+              []
+              (Interval (LowerBound NegInf False) (UpperBound PosInf False))
+              []
+              [] -- TODO we need the datum table
+              (TxId "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
           )
-
-genData :: Gen Data
-genData =
-  choice
-    -- TODO this could stand some more choices
-    -- also these should be in a seperate module
-    [ toData <$> list (linear 0 10) (fromIntegral @Int @Integer <$> int (linear 0 10))
-    , toData <$> Just <$> fromIntegral @Int @Integer <$> int (linear 0 10)
-    ]
-
-genHexString :: IsString s => Gen s
-genHexString = fromString <$> replicateM 64 (element "0123456789abcdef")
-
-genVal :: Gen Value
-genVal = mconcat <$> list (linear 0 20) genSingleton
-
-genSingleton :: Gen Value
-genSingleton = V.singleton <$> genHexString @CurrencySymbol <*> genHexString @TokenName <*> (fromIntegral <$> int (linear (-1000) 1000))
+          (Spending $ spending m)
+      )
+      -}
 
 spec :: Spec
 spec = do
