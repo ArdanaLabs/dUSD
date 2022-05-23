@@ -54,6 +54,7 @@ in order to discover the last $48$ hours of price information, one price point
 per hour.
 
 % The V2 version is left here in comments, for now.
+%
 % \subsection{Discover market prices (V2)}
 % 
 % A price oracle is a timeline of UTXOs\footnote{
@@ -215,6 +216,7 @@ surplus and debt auctions. \\
 Let's start by going through some general information on how the surplus and
 debt auctions will work.
 % V2: This purpose will be realized when the Peg Stabilization Module (PPM) is implemented
+%
 % First of all, the purpose of surplus and debt auctions is to keep the peg in the
 % short-term.
 The purpose of surplus and debt auctions is to manage cross-protocol collaterization. The stability fee is corrected to ensure the buffer's
@@ -223,6 +225,7 @@ dUSD on the market. \\
 
 Now onto the structure of the auctions.
 % V2: Minting dUSD in the buffer will be part of the PSM
+%
 % The way to keep the peg, is by allowing anyone to trigger surplus/debt auctions
 % whenever certain conditions are reached.
 % Here, a surplus auction is one where the buffer mints dUSD and sells it for ADA,
@@ -242,6 +245,7 @@ This mechanism is still under development. \\
 Only admin can trigger a dUSD $\leftrightarrow$ ADA surplus auction.
 
 % V2: Automated price-corrective action will be support in the PSM
+%
 % Anyone can trigger a dUSD $\leftrightarrow$ ADA surplus auction when certain
 % conditions are met.
 % Proposal: The conditions are that the dUSD price module claims the dUSD price
@@ -252,6 +256,7 @@ Only admin can trigger a dUSD $\leftrightarrow$ ADA surplus auction.
 Only admin can trigger a dUSD $\leftrightarrow$ ADA debt auction.
 
 % V2: Automated price-corrective action will be support in the PSM
+%
 % Anyone can trigger a dUSD $\leftrightarrow$ ADA debt auction when certain
 % conditions are met.
 % Proposal: The conditions are that the dUSD price module claims the dUSD price
@@ -292,6 +297,7 @@ The admin user can set the debt floor (in dUSD), through running a `curl'
 command on the Ardana Tenant.
 
 % V2: For usage in algorithmic price stabilization
+%
 % \subsection{Peg Price Module (PPM)}
 
 % The PPM is an oracle that provides the dUSD price in USD as well as it's supply 
@@ -310,6 +316,7 @@ command on the Ardana Tenant.
 % per hour.
 
 % V2: For performing algorithmic price stabilization
+% 
 % \subsection{Peg Stabilization Module (PSM)}
 
 % The PSM is an off-chain admin owned process which detects when dUSD is off-peg via 
@@ -458,6 +465,7 @@ Acceptance criteria:
 
 \begin{itemize}
   % V2: Part of the Peg stabilization module
+  %
   % \item Proposal: Anyone can trigger a surplus or debt auction when the dUSD
   %   price deviates from USD by more than $1\%$
   % \item When auctions can be triggered, they are triggered within minutes.
@@ -469,6 +477,7 @@ Acceptance criteria:
     in the validator to add more later on. \\
     The stability fee will have a strong influence on this.}
   % V2: Part of the Peg stabilization module
+  % 
   % \item The auctions are sized such that the dUSD price is controlled, i.e. it
   %   is eventually consistent with USD.
   %   This means that given any real world change in supply and demand, the dUSD
@@ -489,6 +498,7 @@ Acceptance criteria:
 \end{itemize}  
 
 % V2: For usage in algorithmic price stabilization
+% 
 % \subsection{Peg Price Module (PPM)}
 
 % Off-chain and on-chain criteria:
@@ -525,6 +535,7 @@ Acceptance criteria:
 % \end{itemize}
 
 % V2: For algorithmic price stabilization
+% 
 % Peg Stabilization Bot
 % \begin{itemize}
 %   \item The process will run at the rate set by the stabilization interval, with
@@ -784,7 +795,8 @@ The protocol parameters module will be a UTXO that includes in its datum the fol
 
 \section{Tests}
 
-% V2: Will be implemented for testing algorithmic price stabilization 
+% V2: Will be implemented for testing algorithmic price stabilization
+%
 % \subsection{Auction Sizing}
 
 % \subsubsection{Basic Testing}
