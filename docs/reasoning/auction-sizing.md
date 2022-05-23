@@ -42,7 +42,7 @@ quantity = escalationScalar * liquidityFactor * supply * (price - 1)
 ```
 Where `escalationScalar` is a number that is used to escalate supply expansion when the peg has drifted significantly. It is calculated with the following logic:
 ```
-If the current price and the previous price are both outside of the peg bounds and the current price has deviated further than the previous price, calculate the percentage at which it deviated, and 1 to it, and use that number to set the escalationScalar.
+If the current price and the previous price are both outside of the peg bounds and the current price has deviated further than the previous price, calculate the percentage at which it deviated, and add 1 to it, and use that number to set the escalationScalar.
 
 Else, set escalationScalar to 1.
 ```

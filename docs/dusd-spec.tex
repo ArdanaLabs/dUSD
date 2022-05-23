@@ -214,52 +214,57 @@ surplus and debt auctions. \\
 
 Let's start by going through some general information on how the surplus and
 debt auctions will work.
-First of all, the purpose of surplus and debt auctions is to keep the peg in the
-short-term.
-More mid- to long-term, the stability fee is corrected to ensure the buffer's
+% V2: This purpose will be realized when the Peg Stabilization Module (PPM) is implemented
+% First of all, the purpose of surplus and debt auctions is to keep the peg in the
+% short-term.
+The purpose of surplus and debt auctions is to manage cross-protocol collaterization. The stability fee is corrected to ensure the buffer's
 reserves aren't endangered, and there is plenty of buying and selling power for
 dUSD on the market. \\
 
 Now onto the structure of the auctions.
-The way to keep the peg, is by allowing anyone to trigger surplus/debt auctions
-whenever certain conditions are reached.
-Here, a surplus auction is one where the buffer mints dUSD and sells it for ADA,
-and a debt auction is one where the buffer sells ADA from its reserves to buy
-and burn dUSD.
-As mentioned before, the stability fee is used to set the peg in the mid- to
-long-term, and to ensure the buffer's reserves statistically increase rather
+% V2: Minting dUSD in the buffer will be part of the PSM
+% The way to keep the peg, is by allowing anyone to trigger surplus/debt auctions
+% whenever certain conditions are reached.
+% Here, a surplus auction is one where the buffer mints dUSD and sells it for ADA,
+% and a debt auction is one where the buffer sells ADA from its reserves to buy
+% and burn dUSD.
+Here, a surplus auction is one where the buffer sells dUSD accumulated from stability fees for ADA
+and a debt auction is one where the buffer sells ADA from its reserves to buy and burn dUSD.
+As mentioned before, the stability fee is used to ensure the buffer's reserves statistically increase rather
 than decrease. \\
 
 As ADA is accumulated in the buffer, admin (and later: governance) can decide to
 share the value with the stakeholders (i.e. DANA token holders).
 This mechanism is still under development. \\
 
-Proposal: The conditions mentioned above under which one can trigger a `regular'
-surplus/debt auction (trading dUSD for ADA), are that dUSD diverges from the peg
-by more than $1\%$.
-
 \subsubsection{Trigger surplus auction}
 
-Anyone can trigger a dUSD $\leftrightarrow$ ADA surplus auction when certain
-conditions are met.
-Proposal: The conditions are that the dUSD price module claims the dUSD price
-lies above $1.01$ USD.
+Only admin can trigger a dUSD $\leftrightarrow$ ADA surplus auction.
+
+% V2: Automated price-corrective action will be support in the PSM
+% Anyone can trigger a dUSD $\leftrightarrow$ ADA surplus auction when certain
+% conditions are met.
+% Proposal: The conditions are that the dUSD price module claims the dUSD price
+% lies above $1.01$ USD.
 
 \subsubsection{Trigger debt auction}
 
-Anyone can trigger a dUSD $\leftrightarrow$ ADA debt auction when certain
-conditions are met.
-Proposal: The conditions are that the dUSD price module claims the dUSD price
-lies below $0.99$ USD.
+Only admin can trigger a dUSD $\leftrightarrow$ ADA debt auction.
+
+% V2: Automated price-corrective action will be support in the PSM
+% Anyone can trigger a dUSD $\leftrightarrow$ ADA debt auction when certain
+% conditions are met.
+% Proposal: The conditions are that the dUSD price module claims the dUSD price
+% lies below $0.99$ USD.
 
 \subsubsection{Trigger ADA sale auction}
 
-Admin can trigger an ADA $\leftrightarrow$ DANA sale auction of a given size
+Only admin can trigger an ADA $\leftrightarrow$ DANA sale auction of a given size
 i.e. a given amount of ADA from the buffer's reserves is sold for DANA.
 
 \subsubsection{Trigger DANA sale auction}
 
-Admin can trigger a DANA $\leftrightarrow$ ADA sale auction of a given size,
+Only admin can trigger a DANA $\leftrightarrow$ ADA sale auction of a given size,
 i.e. a given amount of DANA from the buffer's reserves is sold for ADA.
 
 \subsection{Protocol Parameters Module}
@@ -452,23 +457,24 @@ Acceptance criteria:
 \subsection{Buffer}
 
 \begin{itemize}
-  \item Proposal: Anyone can trigger a surplus or debt auction when the dUSD
-    price deviates from USD by more than $1\%$
+  % V2: Part of the Peg stabilization module
+  % \item Proposal: Anyone can trigger a surplus or debt auction when the dUSD
+  %   price deviates from USD by more than $1\%$
   \item When auctions can be triggered, they are triggered within minutes.
     Auctions cannot be triggered more than once per hour, to give the auction
     sizing algorithm time to adjust.
-  \item The starting amount of ADA in the buffer is enough to sustain the
-    protocol through hardships with high probability
+  \item The starting amount of ADA in the buffer is enough to sustain the protocol through hardships with high probability
     \todo{What does this mean in practice? \\
     Proposal: Put in a decent amount at initialization, and set up an endpoint
     in the validator to add more later on. \\
     The stability fee will have a strong influence on this.}
-  \item The auctions are sized such that the dUSD price is controlled, i.e. it
-    is eventually consistent with USD.
-    This means that given any real world change in supply and demand, the dUSD
-    price eventually converges back to within $1\%$ of USD.
-    \todo{Phrase this criterium properly.
-    How can we test if the auction sizes are chosen appropriately?}
+  % V2: Part of the Peg stabilization module
+  % \item The auctions are sized such that the dUSD price is controlled, i.e. it
+  %   is eventually consistent with USD.
+  %   This means that given any real world change in supply and demand, the dUSD
+  %   price eventually converges back to within $1\%$ of USD.
+  %   \todo{Phrase this criterium properly.
+  %   How can we test if the auction sizes are chosen appropriately?}
   \item Admin and only admin can trigger ADA and DANA sale auctions
 \end{itemize}
 
@@ -513,22 +519,23 @@ Acceptance criteria:
 %   \item Only admin can set lower peg bound
 %   \item Only admin can set upper peg bound
 %   \item Only admin can set deviation time threshold
-%   \item Only admin can set stabiliziation interval
+%   \item Only admin can set stabilization interval
+%   \item Only admin can set liquidityFactor
+%   \item Only admin can set orderLogSize
 % \end{itemize}
 
 % V2: For algorithmic price stabilization
 % Peg Stabilization Bot
 % \begin{itemize}
-%   \item The process will run at the rate set by the stablization interval, with
+%   \item The process will run at the rate set by the stabilization interval, with
 %    the default value of 1 hour.
-%   \item The process will snapshot the state of all existing orders from the previous run
-%     \todo{determine to what effect this should have on supply adjustment calculations}.
-%   \item The process will close all existing orders from the previous run.
+%   \item The process will close any existing order from the previous run.
+%   \item The process will push the previous order's quantity, status, and the dUSD price and circulating supply at time it was created to the log.
 %   \item The process will continue if the average price from the dUSD prices
 %    that occurred within the deviation time threshold is above the upper peg
 %    bound or below the lower peg bound. If not, it will exit.
 %   \item The process will calculate the quantity of dUSD needed to bring the price
-%    back to peg. The quantity should equal the following: supply * (price - 1)
+%    back to peg. The quantity should equal the following: escalationScalar * liquidityFactor * supply * (price - 1) where escalationScalar is calculated with the following logic: if the current price and the previous price are both outside of the peg bounds and the current price has deviated further than the previous price, calculate the percentage at which it deviated, and add 1 to it, and use that number to set the escalationScalar. Else, escalationScalar is 1.
 %   \item If the quantity is positive, submit a UTXO that sells that quantity of dUSD
 %    in exchange for it's USD value of ADA.
 %   \item If the quantity is negative, submit a UTXO that buys dUSD in exchange for
@@ -698,9 +705,6 @@ stored in the admin wallet and used for protocol development.
 The buffer's script address will be dependent on the same three admin public
 keys as the price module. \\
 
-Note: However we implement the auctions, we might want to prevent them from
-updating the buffer's UTXO, to avoid resource contention? \\
-
 `Regular` surplus/debt auctions (dUSD $\leftrightarrow$ ADA) are implemented
 using an orderbook-style auction based on the price modules.
 They can be triggered by anyone whenever the necessary conditions are met.
@@ -709,11 +713,13 @@ dUSD/ADA is sold.
 That amount is put into a separate UTXO, which allows anyone to buy the tokens
 at a price determined by the ADA price module, where we act as if dUSD = USD in
 value.
-In doing so, whenever dUSD is trading above peg, we are selling dUSD at a
-discount, and whenever dUSD is trading below peg, we are selling ADA at a
-discount.
-This methodology also prevents us from overcorrecting by launching auctions
-which are too big. \\
+
+% V2: Peg Correction be implemented in the PSM 
+% In doing so, whenever dUSD is trading above peg, we are selling dUSD at a
+% discount, and whenever dUSD is trading below peg, we are selling ADA at a
+% discount.
+% This methodology also prevents us from overcorrecting by launching auctions
+% which are too big. \\
 
 The ADA/DANA sales follow a similar model, using the ADA and DANA price modules,
 while giving a pre-set discount on the sale.
