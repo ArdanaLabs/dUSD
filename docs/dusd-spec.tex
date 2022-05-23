@@ -286,42 +286,43 @@ running a `curl' command on the Ardana Tenant.
 The admin user can set the debt floor (in dUSD), through running a `curl'
 command on the Ardana Tenant.
 
+% V2: For usage in algorithmic price stabilization
+% \subsection{Peg Price Module (PPM)}
 
-\subsection{Peg Price Module (PPM)}
+% The PPM is an oracle that provides the dUSD price in USD as well as it's supply 
+% for usage by the Peg Stabilization Module.
 
-The PPM is an oracle that provides the dUSD price in USD as well as it's supply 
-for usage by the Peg Stabilization Module.
+% \subsubsection{Write}
 
-\subsubsection{Write}
+% Admin can update the dUSD price and supply in the PPM's datum by adding one more
+% price point.
+% When doing so, any price points older than $48$ hours are removed.
 
-Admin can update the dUSD price and supply in the PPM's datum by adding one more
-price point.
-When doing so, any price points older than $48$ hours are removed.
+% \subsubsection{Read}
 
-\subsubsection{Read}
+% Anyone can use the PPM as a read-only input UTXO to their transactions
+% in order to discover the last $48$ hours of price information, one price point
+% per hour.
 
-Anyone can use the PPM as a read-only input UTXO to their transactions
-in order to discover the last $48$ hours of price information, one price point
-per hour.
+% V2: For performing algorithmic price stabilization
+% \subsection{Peg Stabilization Module (PSM)}
 
-\subsection{Peg Stabilization Module (PSM)}
+% The PSM is an off-chain admin owned process which detects when dUSD is off-peg via 
+% the PPM and executes the stabilization algorithm which creates and destroys buy and 
+% sell orders between dUSD and ADA.
 
-The PSM is an off-chain admin owned process which detects when dUSD is off-peg via 
-the PPM and executes the stabilization algorithm which creates and destroys buy and 
-sell orders between dUSD and ADA.
+% \subsubsection{Start}
 
-\subsubsection{Start}
+% Starts the stabilization loop.
 
-Starts the stabilization loop.
+% \subsubsection{Stop}
 
-\subsubsection{Stop}
+% Stops the stabilization loop.
 
-Stops the stabilization loop.
+% \subsubsection{Configure}
 
-\subsubsection{Configure}
-
-Supports overriding default values for lower peg bound, upper peg bound, deviation 
-time threshold, and stabilization interval.
+% Supports overriding default values for lower peg bound, upper peg bound, deviation 
+% time threshold, and stabilization interval.
 
 \subsection{Update mechanism for the protocol (TBD)}
 
@@ -481,56 +482,58 @@ Acceptance criteria:
     % Comment for Version 2: Add debt ceiling to the protocol-wide parameters
 \end{itemize}  
 
-\subsection{Peg Price Module (PPM)}
+% V2: For usage in algorithmic price stabilization
+% \subsection{Peg Price Module (PPM)}
 
-Off-chain and on-chain criteria:
-\begin{itemize}
-  \item Price data should be the current USD price of dUSD and it's current
-   circulating supply.
-  \item Only admin can create a peg price module
-  \item Only admin can write to the oracle
-  \item Writing a price value removes price values older than 48 hours from the
-    datum
-%   \item Writing the price value cannot be done more than once per hour
-  \item Reading the price data after writing a new price point successfully,
-    works
-  \item Anyone can read the price data
-\end{itemize}
+% Off-chain and on-chain criteria:
+% \begin{itemize}
+%   \item Price data should be the current USD price of dUSD and it's current
+%    circulating supply.
+%   \item Only admin can create a peg price module
+%   \item Only admin can write to the oracle
+%   \item Writing a price value removes price values older than 48 hours from the
+%     datum
+% %   \item Writing the price value cannot be done more than once per hour
+%   \item Reading the price data after writing a new price point successfully,
+%     works
+%   \item Anyone can read the price data
+% \end{itemize}
 
-Peg Price feed bot:
-\begin{itemize}
-  \item Always collects information from at least three sources successfully
-  \item Running the systemd service makes the UTXO get updated by at least three
-    sources at least once every two hours
-\end{itemize}
+% Peg Price feed bot:
+% \begin{itemize}
+%   \item Always collects information from at least three sources successfully
+%   \item Running the systemd service makes the UTXO get updated by at least three
+%     sources at least once every two hours
+% \end{itemize}
 
-\subsection{Peg Stability Module (PSM)}
+% \subsection{Peg Stability Module (PSM)}
 
-Configuration
-\begin{itemize}
-  \item Only admin can set lower peg bound
-  \item Only admin can set upper peg bound
-  \item Only admin can set deviation time threshold
-  \item Only admin can set stabiliziation interval
-\end{itemize}
+% Configuration
+% \begin{itemize}
+%   \item Only admin can set lower peg bound
+%   \item Only admin can set upper peg bound
+%   \item Only admin can set deviation time threshold
+%   \item Only admin can set stabiliziation interval
+% \end{itemize}
 
-Peg Stabilization Bot
-\begin{itemize}
-  \item The process will run at the rate set by the stablization interval, with
-   the default value of 1 hour.
-  \item The process will snapshot the state of all existing orders from the previous run
-    \todo{determine to what effect this should have on supply adjustment calculations}.
-  \item The process will close all existing orders from the previous run.
-  \item The process will continue if the average price from the dUSD prices
-   that occurred within the deviation time threshold is above the upper peg
-   bound or below the lower peg bound. If not, it will exit.
-  \item The process will calculate the quantity of dUSD needed to bring the price
-   back to peg. The quantity should equal the following: supply * (price - 1)
-  \item If the quantity is positive, submit a UTXO that sells that quantity of dUSD
-   in exchange for it's USD value of ADA.
-  \item If the quantity is negative, submit a UTXO that buys dUSD in exchange for
-   its USD value in ADA.
-\end{itemize}
+% V2: For algorithmic price stabilization
+% Peg Stabilization Bot
+% \begin{itemize}
+%   \item The process will run at the rate set by the stablization interval, with
+%    the default value of 1 hour.
+%   \item The process will snapshot the state of all existing orders from the previous run
+%     \todo{determine to what effect this should have on supply adjustment calculations}.
+%   \item The process will close all existing orders from the previous run.
+%   \item The process will continue if the average price from the dUSD prices
+%    that occurred within the deviation time threshold is above the upper peg
+%    bound or below the lower peg bound. If not, it will exit.
+%   \item The process will calculate the quantity of dUSD needed to bring the price
+%    back to peg. The quantity should equal the following: supply * (price - 1)
+%   \item If the quantity is positive, submit a UTXO that sells that quantity of dUSD
+%    in exchange for it's USD value of ADA.
+%   \item If the quantity is negative, submit a UTXO that buys dUSD in exchange for
+%    its USD value in ADA.
+% \end{itemize}
 
 \subsection{Update mechanism for the protocol (TBD)}
 
@@ -771,26 +774,27 @@ The protocol parameters module will be a UTXO that includes in its datum the fol
 
 \section{Tests}
 
-\subsection{Auction Sizing}
+% V2: Will be implemented for testing algorithmic price stabilization 
+% \subsection{Auction Sizing}
 
-\subsubsection{Basic Testing}
+% \subsubsection{Basic Testing}
 
-Basic testing can be performed with limited inputs. Below are some things we can test:
+% Basic testing can be performed with limited inputs. Below are some things we can test:
 
-Given the price in the auction UTXO and the price for the same quantities on a CEX, we can test
-that there is an arbitrage opportunity significant enough to incentivize spending the UTXOs
-sized by the alogrithm.
+% Given the price in the auction UTXO and the price for the same quantities on a CEX, we can test
+% that there is an arbitrage opportunity significant enough to incentivize spending the UTXOs
+% sized by the alogrithm.
 
-Given the current circulating supply of stablecoin, it's current price, and the size we 
-want to test, if the (supply + size) * price == supply then we know our adjustment
-isn't over or under correcting.
+% Given the current circulating supply of stablecoin, it's current price, and the size we 
+% want to test, if the (supply + size) * price == supply then we know our adjustment
+% isn't over or under correcting.
 
-\subsubsection{Full Simulation}
+% \subsubsection{Full Simulation}
 
-Given a Cardano network, a CEX where orders exchanging dUSD and USD are submitted, a set of
-arbitrage bots, and a USD price of dUSD deviating from the peg, a test can be run which
-verifies that the auctions are sized safely, that they're interesting for arbitrage, and they
-result in the price returning to peg.
+% Given a Cardano network, a CEX where orders exchanging dUSD and USD are submitted, a set of
+% arbitrage bots, and a USD price of dUSD deviating from the peg, a test can be run which
+% verifies that the auctions are sized safely, that they're interesting for arbitrage, and they
+% result in the price returning to peg.
 
 % \section{Remarks}
 % 
