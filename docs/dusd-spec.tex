@@ -460,9 +460,9 @@ Acceptance criteria:
   % V2: Part of the Peg stabilization module
   % \item Proposal: Anyone can trigger a surplus or debt auction when the dUSD
   %   price deviates from USD by more than $1\%$
-  \item When auctions can be triggered, they are triggered within minutes.
-    Auctions cannot be triggered more than once per hour, to give the auction
-    sizing algorithm time to adjust.
+  % \item When auctions can be triggered, they are triggered within minutes.
+  %   Auctions cannot be triggered more than once per hour, to give the auction
+  %   sizing algorithm time to adjust.
   \item The starting amount of ADA in the buffer is enough to sustain the protocol through hardships with high probability
     \todo{What does this mean in practice? \\
     Proposal: Put in a decent amount at initialization, and set up an endpoint
@@ -707,18 +707,22 @@ keys as the price module. \\
 
 `Regular` surplus/debt auctions (dUSD $\leftrightarrow$ ADA) are implemented
 using an orderbook-style auction based on the price modules.
-They can be triggered by anyone whenever the necessary conditions are met.
-When they are triggered, the auction sizing algorithm determines how much
-dUSD/ADA is sold.
-That amount is put into a separate UTXO, which allows anyone to buy the tokens
-at a price determined by the ADA price module, where we act as if dUSD = USD in
-value.
+They can be triggered by admin. That amount is set by the admin and is put 
+into a separate UTXO, which allows anyone to buy the tokens at a price 
+determined by the ADA price module, where we act as if dUSD = USD in value.
 
-% V2: Peg Correction be implemented in the PSM 
-% In doing so, whenever dUSD is trading above peg, we are selling dUSD at a
+% V2: Auction sizing algorithm will be implemented in PSM
+%
+% When auctions are triggered, the auction sizing algorithm determines how much
+% dUSD/ADA is sold.
+
+
+% V2: Reactive price correction will be implemented in the PSM 
+% 
+% Whenever dUSD is trading above peg, we are selling dUSD at a
 % discount, and whenever dUSD is trading below peg, we are selling ADA at a
 % discount.
-% This methodology also prevents us from overcorrecting by launching auctions
+% This methodology also prevents us from over-correcting by launching auctions
 % which are too big. \\
 
 The ADA/DANA sales follow a similar model, using the ADA and DANA price modules,
