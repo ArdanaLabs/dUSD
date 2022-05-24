@@ -33,8 +33,8 @@ data ValidatorProp
 
 data ValidatorModel = ValidatorModel
   { minting :: Value
-  , configInput :: Maybe (Address, Value, Maybe Datum)
-  , extraInputs :: [(Address, Value, Maybe Datum)]
+  , configInput :: Maybe (TxOutRef, Address, Value, Either [CurrencySymbol] (Maybe Datum))
+  , extraInputs :: [(TxOutRef, Address, Value, Maybe Datum)]
   , redemer :: Either Int Data
   , spending :: TxOutRef
   }
@@ -53,15 +53,13 @@ instance HasLogicalModel ValidatorProp ValidatorModel where
   satisfiesProperty RedemerIsValid m = isLeft . redemer $ m
   satisfiesProperty ConfigIsValid m =
     case m of
-      ValidatorModel {configInput = Just (_, _, Just _)} -> True
+      ValidatorModel {configInput = Just (_, _, _, Left _)} -> True
       _ -> False
   satisfiesProperty MintsReferencedToken m = isJust $ do
     Left ind <- pure $ redemer m
-    (_, _, maybeDatum) <- configInput m
-    Datum (BuiltinData conf) <- maybeDatum
-    cs <- fromData @[CurrencySymbol] conf
-    guard $ length cs > ind
-    guard $ V.assetClassValueOf (minting m) (V.AssetClass (cs !! ind, "")) > 0
+    (_, _, _, Left conf) <- configInput m
+    guard $ length conf > ind
+    guard $ V.assetClassValueOf (minting m) (V.AssetClass (conf !! ind, "")) > 0
 
 instance HasPermutationGenerator ValidatorProp ValidatorModel where
   sources =
@@ -73,6 +71,8 @@ instance HasPermutationGenerator ValidatorProp ValidatorModel where
             extra <- value
             redemerInd <- int (linear 0 10) :: Gen Int
             extraConfLen <- int (linear 0 10) :: Gen Int
+            val <- value
+            mDatum <- maybeOf datum
             -- TODO random input for this
             let spendingInput = TxOutRef (TxId "aa") 0
             config <- do
@@ -82,19 +82,19 @@ instance HasPermutationGenerator ValidatorProp ValidatorModel where
             pure $
               ValidatorModel
                 (V.singleton mintedCS "" 1 <> extra)
-                -- TODO generate random outref and more inputs
+                -- TODO generate random outrefs and junk inputs
                 ( Just
-                    ( Address (ScriptCredential "") Nothing
+                    ( TxOutRef "" 0
+                    , Address (ScriptCredential "") Nothing
                     , V.singleton nftcs "" 1
-                    , Just $ Datum $ BuiltinData $ toData config
+                    , Left config
                     )
                 )
                 [
-                  ( Address (ScriptCredential mainValidatorHash) Nothing
-                  , -- TODO this should be a random value
-                    mempty
-                  , -- TODO maybe this should be random data?
-                    Nothing
+                  ( TxOutRef "" 0
+                  , Address (ScriptCredential mainValidatorHash) Nothing
+                  , val
+                  , mDatum
                   )
                 ]
                 (Left redemerInd)
@@ -126,11 +126,11 @@ instance HasPermutationGenerator ValidatorProp ValidatorModel where
             randomData <- genData
             case configInput m of
               Nothing -> failWithFootnote "model error config was not valid"
-              Just (adr, val, _) -> do
+              Just (ref, adr, val, _) -> do
                 pure $
                   m
                     { configInput =
-                        Just (adr, val, Just $ Datum $ BuiltinData randomData)
+                        Just (ref, adr, val, Right $ Just $ Datum $ BuiltinData randomData)
                     }
         }
     , Morphism
@@ -139,7 +139,6 @@ instance HasPermutationGenerator ValidatorProp ValidatorModel where
         , contract = remove MintsReferencedToken
         , morphism = \m -> do
             newMintVal <- value
-            -- TODO it might be better to filter out the minted value
             pure $ m {minting = newMintVal}
         }
     ]
@@ -157,8 +156,12 @@ instance ScriptModel ValidatorProp ValidatorModel where
           buildContext $ do
             -- TODO this should be reworked in apropos-tx so the type hint is shorter
             withTxInfoBuilder @(StateT ScriptContext) @Identity @(StateT TxInfo) $ do
-              addInput undefined undefined undefined undefined
-            undefined m
+              case configInput m of
+                Nothing -> pure ()
+                Just (ref, adr, val, Right maybeDatum) ->
+                  addInput ref adr val maybeDatum
+                Just (ref, adr, val, Left config) ->
+                  addInput ref adr val (Just $ Datum $ BuiltinData $ toData config)
      in applyValidator
           ctx
           (mkValidator mainValidator)
@@ -169,34 +172,6 @@ instance ScriptModel ValidatorProp ValidatorModel where
                   Right da -> da
           )
           (Redeemer $ BuiltinData $ toData ())
-
-{-
-compile $
-  mainValidator
-    # pforgetData (pdata (pconstant ()))
-    # ( case redemer m of
-          Left n -> pforgetData $ pdata $ fromIntegral @Int @(Term _ PInteger) n
-          Right da -> pconstant da
-      )
-    # pconstant
-      ( -- TODO use fraser's thing for this and deal with the other fields
-        ScriptContext
-          ( TxInfo
-              -- TODO most of these memptys are wrong
-              (inputs m)
-              [] -- TODO should there be outputs?
-              mempty
-              (minting m)
-              []
-              []
-              (Interval (LowerBound NegInf False) (UpperBound PosInf False))
-              []
-              [] -- TODO we need the datum table
-              (TxId "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-          )
-          (Spending $ spending m)
-      )
-      -}
 
 spec :: Spec
 spec = do
