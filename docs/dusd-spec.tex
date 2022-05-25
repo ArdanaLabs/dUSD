@@ -1,8 +1,11 @@
 \documentclass{article} % Use the custom invoice class (invoice.cls)
 \usepackage{hyperref}
 \usepackage{todonotes}
+\usepackage{listings}
 \setuptodonotes{inline}
 \setlength{\parindent}{0em}
+
+\lstset{basicstyle=\footnotesize\ttfamily,breaklines=true}
 
 \title{dUSD specification}
 \begin{document}
@@ -700,6 +703,7 @@ The protocol parameters module will be a UTXO that includes in its datum the fol
 \subsubsection{Data Definitions}
 Pseudo-code for Protocol Data Layouts. TODO keep up to date.
 
+\begin{lstlisting}[language=Haskell]
 type Configuration = [CurrencySymbol]
 
 type PricePoint = (Time,ADA/USD,DUSD/ADA)
@@ -724,6 +728,7 @@ data Buffer =
   , stabilityFee :: Integer
   , debtFloor :: Integer
   }
+\end{lstlisting}
 
 \subsubsection{NFT minting policy}
 This policy will be responsible for minting NFTs that identify the Configuration, Price Oracle, and Buffer UTXOs.
@@ -742,7 +747,9 @@ Initially the Configuration will be managed by the owner of a private key.
 
 This minting policy will check that the owner of the private key has signed the transaction and if so allow modification of the Configuration UTXO.
 
+\begin{lstlisting}[language=Haskell]
 type Configuration = [CurrencySymbol]
+\end{lstlisting}
 
 The Configuration Datum is a list of CurrencySymbols.
 
