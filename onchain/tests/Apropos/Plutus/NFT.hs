@@ -5,20 +5,20 @@ module Apropos.Plutus.NFT (
 ) where
 
 import Apropos
+import Apropos.ContextBuilder
 import Apropos.Script
-import Control.Monad (replicateM)
-import Data.String (IsString (fromString))
-import NFT (asCurrencySymbol, asPlutarch)
-import Plutarch
-import Plutarch.Builtin (pforgetData)
-import Plutarch.Prelude
+import Control.Monad.Identity (Identity)
+import Control.Monad.State (StateT)
+import Gen
+import NFT (nftMintingPolicy)
 import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Value qualified as V
+import Plutus.V1.Ledger.Scripts (applyMintingPolicyScript)
 import Test.Syd
 import Test.Syd.Hedgehog (fromHedgehogGroup)
 
 newtype NFTModel = NFTModel
-  { inputs :: [TxInInfo]
+  -- TODO I think we should have data structures for these inlined datum types
+  { inputs :: [(TxOutRef, Address, Value, Maybe Datum)]
   }
   deriving stock (Show)
 
@@ -33,8 +33,8 @@ instance LogicalModel NFTProp where
 instance HasLogicalModel NFTProp NFTModel where
   satisfiesProperty SpendsRightInput m = any isMagicInput $ inputs m
 
-isMagicInput :: TxInInfo -> Bool
-isMagicInput (TxInInfo ref _) = ref == inputRef
+isMagicInput :: (TxOutRef, a, b, c) -> Bool
+isMagicInput (ref, _, _, _) = ref == inputRef
 
 inputRef :: TxOutRef
 inputRef =
@@ -47,7 +47,14 @@ instance HasPermutationGenerator NFTProp NFTModel where
     [ Source
         { sourceName = "junk"
         , covers = Yes
-        , gen = NFTModel <$> list (linear 0 100) genTxinfo
+        , gen =
+            (NFTModel <$>) $
+              list (linear 0 100) $
+                (,,,)
+                  <$> txOutRef
+                  <*> address
+                  <*> value
+                  <*> maybeOf datum
         }
     ]
   generators =
@@ -55,13 +62,13 @@ instance HasPermutationGenerator NFTProp NFTModel where
         { name = "add right input"
         , match = Not $ Var SpendsRightInput
         , contract = add SpendsRightInput
-        , morphism = \(NFTModel is) -> pure $ NFTModel (TxInInfo inputRef (TxOut (Address (PubKeyCredential "") Nothing) mempty Nothing) : is)
+        , morphism = \(NFTModel is) -> pure $ NFTModel $ (inputRef, Address (PubKeyCredential "") Nothing, mempty, Nothing) : is
         }
     , Morphism
         { name = "remove right input"
         , match = Var SpendsRightInput
         , contract = remove SpendsRightInput
-        , morphism = \(NFTModel is) -> pure $ NFTModel $ filter (\(TxInInfo ref _) -> ref /= inputRef) is
+        , morphism = \(NFTModel is) -> pure $ NFTModel $ filter (\(ref, _, _, _) -> ref /= inputRef) is
         }
     ]
 
@@ -69,60 +76,26 @@ instance HasParameterisedGenerator NFTProp NFTModel where
   parameterisedGenerator = buildGen
 
 instance ScriptModel NFTProp NFTModel where
-  script m = compile $ asPlutarch inputRef # pforgetData (pdata (pconstant ())) # pconstant (scFrom m)
-  expect = Var SpendsRightInput
+  expect = Yes
 
-scFrom :: NFTModel -> ScriptContext
-scFrom m =
-  ScriptContext
-    ( TxInfo
-        (inputs m)
-        []
-        mempty
-        mempty
-        []
-        []
-        (Interval (LowerBound NegInf False) (UpperBound PosInf False))
-        []
-        []
-        (TxId "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-    )
-    (Minting $ asCurrencySymbol inputRef)
+  -- TODO use real logic once validator is finished
+  -- Var SpendsRightInput
+  script m =
+    let ctx = buildContext $ do
+          withTxInfoBuilder @(StateT ScriptContext) @Identity @(StateT TxInfo) $ do
+            sequence_ [addInput ref adr val md | let NFTModel is = m, (ref, adr, val, md) <- is]
+     in applyMintingPolicyScript
+          ctx
+          (nftMintingPolicy inputRef)
+          (Redeemer $ BuiltinData $ toData ())
 
 spec :: Spec
 spec =
-  xdescribe "nft tests" $ do
-    fromHedgehogGroup $
-      runGeneratorTestsWhere @NFTProp "generator" Yes
-    fromHedgehogGroup $
-      permutationGeneratorSelfTest @NFTProp
-    xdescribe "postponed only because the nft policy isn't implemented yet" $
+  xdescribe "these pass but are pretty slow, I hope to look into this with fraser at some point" $
+    describe "nft tests" $ do
+      fromHedgehogGroup $
+        runGeneratorTestsWhere @NFTProp "generator" Yes
+      fromHedgehogGroup $
+        permutationGeneratorSelfTest @NFTProp
       fromHedgehogGroup $
         runScriptTestsWhere @NFTProp "nft script tests" Yes
-
-genTxinfo :: Gen TxInInfo
-genTxinfo =
-  TxInInfo
-    <$> (TxOutRef <$> genTxId <*> genInt)
-    <*> (TxOut <$> genAdr <*> genValue <*> pure Nothing)
-
-genInt :: Gen Integer
-genInt = fromIntegral <$> int (linear 0 1_000_000)
-
-genValue :: Gen Value
-genValue = mconcat <$> list (linear 0 10) genSingletonValue
-  where
-    genSingletonValue :: Gen Value
-    genSingletonValue = V.singleton <$> genHexString <*> genHexString <*> genInt
-
-genTxId :: Gen TxId
-genTxId = TxId <$> genHexString
-
-genAdr :: Gen Address
-genAdr = Address <$> genCredential <*> pure Nothing
-
-genCredential :: Gen Credential
-genCredential = PubKeyCredential <$> genHexString
-
-genHexString :: IsString s => Gen s
-genHexString = fromString <$> replicateM 64 (element "01234567890abcdef")

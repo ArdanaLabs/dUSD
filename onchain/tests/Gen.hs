@@ -10,6 +10,8 @@ module Gen (
   rational,
   integer,
   datum,
+  txOutRef,
+  value,
 ) where
 
 import Apropos (Gen, choice, element, int, linear, list)
@@ -23,6 +25,8 @@ import Plutus.V1.Ledger.Api (
   PubKeyHash,
   StakingCredential (..),
   TokenName,
+  TxId,
+  TxOutRef (TxOutRef),
   ValidatorHash,
   Value,
   singleton,
@@ -97,12 +101,16 @@ rational = (%) <$> integer <*> pos
 
 datum :: Gen Datum
 datum = choice [datumOf integer, datumOf value]
+
+value :: Gen Value
+value = mconcat <$> list (linear 0 64) singletonValue
   where
-    value :: Gen Value
-    value = mconcat <$> list (linear 0 64) singletonValue
     singletonValue :: Gen Value
     singletonValue =
       singleton <$> currencySymbol <*> tokenName <*> pos
 
 datumOf :: ToData a => Gen a -> Gen Datum
 datumOf g = Datum . toBuiltinData <$> g
+
+txOutRef :: Gen TxOutRef
+txOutRef = TxOutRef <$> hexString @TxId <*> pos

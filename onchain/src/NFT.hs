@@ -1,6 +1,7 @@
 module NFT (
-  asPlutarch,
-  asCurrencySymbol,
+  nftPolicyPlutarch,
+  nftMintingPolicy,
+  nftCs,
 ) where
 
 import Plutarch.Api.V1 (
@@ -11,11 +12,11 @@ import Plutarch.Api.V1 (
 import Plutarch.Prelude
 import Plutus.V1.Ledger.Api (CurrencySymbol, MintingPolicy, TxOutRef)
 
-asPlutarch :: TxOutRef -> ClosedTerm (PData :--> PScriptContext :--> POpaque)
-asPlutarch _ = plam $ \_ _ -> popaque $ pcon PUnit
+nftPolicyPlutarch :: TxOutRef -> ClosedTerm (PData :--> PScriptContext :--> POpaque)
+nftPolicyPlutarch _ = plam $ \_ _ -> popaque $ pcon PUnit
 
-asMintingPolicy :: TxOutRef -> MintingPolicy
-asMintingPolicy ref = mkMintingPolicy $ asPlutarch ref
+nftMintingPolicy :: TxOutRef -> MintingPolicy
+nftMintingPolicy ref = mkMintingPolicy $ nftPolicyPlutarch ref
 
-asCurrencySymbol :: TxOutRef -> CurrencySymbol
-asCurrencySymbol ref = mintingPolicySymbol $ asMintingPolicy ref
+nftCs :: TxOutRef -> CurrencySymbol
+nftCs ref = mintingPolicySymbol $ nftMintingPolicy ref

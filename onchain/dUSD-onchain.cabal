@@ -131,6 +131,7 @@ test-suite tests
     , hedgehog
     , lens
     , memory
+    , mtl
     , plutarch
     , plutus-ledger-api
     , plutus-tx
