@@ -286,12 +286,24 @@ running a `curl' command on the Ardana Tenant.
 The admin user can set the debt floor (in dUSD), through running a `curl'
 command on the Ardana Tenant.
 
-\subsection{Update mechanism for the protocol (TBD)}
+\subsection{Update mechanism for the protocol}
 
 One important acceptance criterium is that the protocol can be updated without
 requiring users to update their vaults or dUSD becoming a new currency.
 
 Any updates to the protocol will be decided on by admin, and later governance.
+
+This is implemented by deferring all protocol logic to minting policies.
+
+These minting policies are defined in the Config UTXO which stores a lookup table that is mutable by an authorised party.
+
+The authorisation for changing the Config is defined by a minting policy referenced by the config.
+
+This allows the mechanism for updating the protocol to itself be changed.
+
+Initially the mechanism will be to check that the Tx is signed by an admin key.
+
+The admin can in the future change this mechanism to a more decentralised mechanism of control.
 
 \section{Acceptance criteria}
 
@@ -682,6 +694,281 @@ The protocol parameters module will be a UTXO that includes in its datum the fol
 \end{itemize}
 
 \section{Tests}
+
+\subsection{Contracts}
+
+\subsubsection{Data Definitions}
+Pseudo-code for Protocol Data Layouts. TODO keep up to date.
+
+type Configuration = [CurrencySymbol]
+
+type PricePoint = (Time,ADA/USD,DUSD/ADA)
+
+type PriceModule = Vec 48 PricePoint
+
+data Vault =
+  Vault {
+    debt :: Integer
+  , authorisation :: CurrencySymbol
+  }
+
+type Size = Integer
+type Price = Integer
+
+data Buffer =
+  Buffer {
+    surplusTrigger :: Maybe (Size,Price)
+  , debtTrigger :: Maybe (Size,Price)
+  , liquidationDiscount :: Integer
+  , liquidationFee :: Integer
+  , stabilityFee :: Integer
+  , debtFloor :: Integer
+  }
+
+\subsubsection{NFT minting policy}
+This policy will be responsible for minting NFTs that identify the Configuration, Price Oracle, and Buffer UTXOs.
+
+It is parameterised by a TXOutRef and only allows minting of its token when that TxOut is spent.
+
+The tests must check that the policy
+  - only validates if the TxOut it expects is being spent.
+  - only mints a single token.
+  - the output is otherwise unconstrained.
+
+\subsubsection{Configuration Management Minting Policy}
+Initially the Configuration will be managed by the owner of a private key.
+
+This minting policy will check that the owner of the private key has signed the transaction and if so allow modification of the Configuration UTXO.
+
+type Configuration = [CurrencySymbol]
+
+The Configuration Datum is a list of CurrencySymbols.
+
+The Main Script Redeemer is an index into this list and ensures that exactly one of the referenced token (CurrencySymbol,"") is minted.
+
+The Configuration Management Minting Policy will always be at index 0.
+
+This allows for Configuration Management Minting Policy itself to be swapped for a different policy.
+
+The tests must check that the policy
+  - only validates if the Tx is signed by the correct key.
+  - only validates if the Configuration UTXO is present in the input and is returned to the Main Script address in the output.
+  - mints exactly one token if these conditions are met.
+
+\subsubsection{Main Script Validator}
+There is only one script address for the dUSD protocol. It will defer all application logic to minting policies defined by the Configuration.
+
+The Redeemer is an Integer index into the Configuration which is a list of CurrencySymbols.
+
+The Redeemer looks up the Configuration UTXO in its inputs by looking for the input that carries the Configuration NFT.
+
+It then ensures that the referenced token (CurrencySymbol,"") is minted.
+
+The tests must check that the validator
+  - only validates if the Configuration UTXO is present at some input
+  - only validates if the Referenced Minting Policy is invoked
+
+\subsubsection{Price Module Management Minting Policy}
+The price module UTXO will carry an NFT which identifies the UTXO as valid.
+
+This will be minted with the same NFT minting policy as for the Config but using a different unique TxOut.
+
+Updating the Price Module will be done via a Minting Policy referenced by the Config. This allows its behaviour to be changed.
+
+Initially this Minting Policy will simply check that the Tx is signed by an authorised key.
+
+The tests must check that the policy
+  - only validates if the Tx is signed by the correct key.
+  - only validates if the Price Module UTXO is present in the input and is returned to the Main Script address in the output.
+  - only validates if the price vector is treated as a bounded queue
+    - a new price can be pushed onto the leading end
+    - if the length is 48 then the tailing end must drop a price point
+  - mints exactly one token if these conditions are met.
+
+\subsubsection{Simple Vault Authorization Minting Policy}
+This policy is parameterised by a PubKey. The user will create the policy as an access control to their vault.
+
+More complex policies may be designed such as multi-party signature checks but this will likely be the common case.
+
+This minting policy can be used in a Vault Datum to manage vault access.
+
+The tests must check that the minting policy
+  - only validates if the Tx is signed by the Key
+
+
+\subsubsection{Vault Close Minting Policy}
+Vaults can be opened without invoking any protocol logic. The user simply creates an empty vault datum and sends this to the main script address.
+
+Closing a vault is done by invoking the Vault Close Minting Policy indexed via the Configuration.
+
+This allows a Vault UTXO to be spent without returning to the Protocol address.
+
+The tests must check that the minting policy
+  - only validates if the Tx is authorised to manipulate the vault
+    - the Vault contains a reference to a user defined minting policy that controls access to the vault
+    - this minting policy must mint exactly one of its authorisation token
+  - only validates if the vault is in a position to be closed
+    - i.e. it has no outstanding debt
+  - only validates if the vault does not return to the protocol address
+    - i.e. the user can retrieve the funds in the vault and send them to any address
+  - mints exactly one of the token
+
+\subsubsection{Vault Change Ownership Minting Policy}
+Vault ownership is determined by a Minting Policy referenced by the Vault UTXO.
+
+This allows ownership to be programmable by the Vault owner.
+
+The tests myst check that the minting policy
+  - only validates if the Tx is authorised to manipulate the vault
+    - the Vault contains a reference to a user defined minting policy that controls access to the vault
+    - this minting policy must mint exactly one of its authorisation token
+  - only validates if the only thing that changes about the vault is the ownership policy.
+  - only validates if the vault returns to the protocol address
+  - mints exactly one of the token
+
+
+\subsubsection{Vault Deposit ADA Minting Policy}
+Depends on the Configuration as a read only input.
+
+Depositing ADA into a Vault can either be done on Vault creation which requires no direct protocol interaction or into an existing vault.
+
+Depositing ADA into an existing Vault invokes the Vault Deposit Minting Policy.
+
+The tests must check that the minting policy
+  - only validates if the Tx is authorised to manipulate the vault
+    - the Vault contains a reference to a user defined minting policy that controls access to the vault
+    - this minting policy must mint exactly one of its authorisation token
+  - only validates if the amount of ADA in the vault is increased
+  - only validates if the vault returns to the protocol address with all other vault data unchanged
+    - the transaction may not change the vault access control script or the Debt associated with the vault
+  - mints exactly one of the token
+
+\subsubsection{Vault Withdraw ADA Minting Policy}
+Depends on the price module UTXO, Buffer, and the Configuration.
+These should be read only inputs.
+
+
+The tests must check that the minting policy
+  - only validates if the Tx is authorised to manipulate the vault
+    - the Vault contains a reference to a user defined minting policy that controls access to the vault
+    - this minting policy must mint exactly one of its authorisation token
+  - only validates if the amount of ADA in the vault is decreased
+  - only validates if the new collateralization ratio is above the liquidation ratio
+  - only validates if no other vault parameters are changed
+    - the vault access script may not change
+    - the dUSD debt may not change
+  - mints exactly one of the token.
+
+\subsubsection{Vault Take dUSD Loan Minting Policy}
+Depends on the price module UTXO, Buffer, and the Configuration.
+These should be read only inputs.
+
+The tests must check that the minting policy
+  - only validates if the Tx is authorised to manipulate the vault
+    - the Vault contains a reference to a user defined minting policy that controls access to the vault
+    - this minting policy must mint exactly one of its authorisation token
+  - only validates if the amount of dUSD loaned out is increased
+  - only validates if the new collateralization ratio is above the liquidation ratio
+  - only validates if no other vault parameters are changed
+    - the vault access script may not change
+    - the ADA collateral may not change
+  - mints exactly one of the token.
+
+\subsubsection{Vault Pay back dUSD Loan Minting Policy}
+Depends on the the Configuration.
+This should be a read only input.
+
+This does not need to check the Price Module.
+
+The tests must check that the minting policy
+  - only validates if the Tx is authorised to manipulate the vault
+    - the Vault contains a reference to a user defined minting policy that controls access to the vault
+    - this minting policy must mint exactly one of its authorisation token
+  - only validates if the amount of dUSD loaned out is decreased
+  - only validates if no other vault parameters are changed
+    - the vault access script may not change
+    - the ADA collateral may not change
+  - mints exactly one of the token.
+
+\subsubsection{Vault Liquidation}
+Depends on the price module UTXO, Buffer, and the Configuration.
+These should be read only inputs.
+
+The tests must check that the minting policy
+  - only validates if the Tx is authorised to manipulate the vault
+    - the Vault contains a reference to a user defined minting policy that controls access to the vault
+    - this minting policy must mint exactly one of its authorisation token
+  - only validates if the liquidation is legitimate
+    - this must follow the strict set of rules laid out in section 2.2.7
+  - only validates if no other vault parameters are changed
+    - the vault access script may not change 
+  - mints exactly one of the token.
+
+\subsubsection{Buffer Surplus Sale Minting Policy}
+Depends on the Price Module UTXO and the Configuration.
+
+The price module UTXO will carry an NFT which identifies the UTXO as valid.
+
+This will be minted with the same NFT minting policy as for the Config but using a different unique TxOut.
+
+Buffer actions are defined in minting policies referenced by the Config allowing their behaviour to be changed.
+
+The tests must check that the policy
+  - only validates if the dUSD price reported by the Price Module lies above 1.01 USD
+  - only validates if the Buffer UTXO is present in the input and is returned to the Main Script address in the output.
+  - only valdates if no other properties of the buffer are changed
+    - this policy may not alter any buffer settings
+  - only validates if the surplus sale trigger is set back to Nothing
+  - mints exactly one token if these conditions are met.
+
+
+\subsubsection{Buffer Debt Sale Minting Policy}
+Depends on the Price Module UTXO and the Configuration.
+
+The tests must check that the policy
+  - only validates if the dUSD price reported by the Price Module lies below 0.99 USD
+  - only validates if the Buffer UTXO is present in the input and is returned to the Main Script address in the output.
+  - only valdates if no other properties of the buffer are changed
+    - this policy may not alter any buffer settings
+  - only validates if the debt sale trigger is set back to Nothing
+  - mints exactly one token if these conditions are met.
+
+
+\subsubsection{Simple Buffer Configuration Authorization Minting Policy}
+Depends on the Configuration.
+
+This allows manipulation of the buffer settings by an authorized party.
+
+Initially this will done via admin key authorisation.
+
+Buffer settings include
+  - ADA sale trigger - this authorises an ADA sale at a specific size and price
+  - DANA sale trigger - this authorises a DANA sale at a specific size and price
+  - liquidation discount
+  - liquidation fee
+  - stability fee
+  - debt floor
+
+The tests must check that the policy
+  - only validates if the admin key has signed the transaction
+  - only validates if the Buffer UTXO is present in the input and is returned to the Main Script address in the output.
+  - only validates if the collateral stored in the buffer is unchanged
+  - only validates if at most one of the surplus/debt sale triggers is not Nothing
+  - mints exactly one token if these conditions are met.
+
+\subsubsection{dUSD Minting Policy}
+The dUSD Minting Policy must have a fixed definition since we do not want the CurrencySymbol for dUSD to ever change.
+
+This means that the policy must defer its validation to a policy referenced by the Configuration.
+
+The tests must check that the policy
+  - only validates if the Configuration UTXO is present along with the Configuration NFT
+  - only validates when a policy at a specific index also validates
+    - we might choose to have special indexes with reserved purposes
+    - e.g. index 0 is for Configuration Management, index 1 is for dUSD minting logic delegation
+  - dUSD can only be minted when the referenced policy mints 1 token
+  - the amount of dUSD minted must be legitimate according to system parameters and vault state
+
 
 
 % \section{Remarks}
