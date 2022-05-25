@@ -115,6 +115,7 @@ test-suite tests
     Apropos.Plutus.SingletonValue
     Apropos.Plutus.Value
     Apropos.Plutus.Vault
+    Apropos.Plutus.VaultDeposit
     Gen
     Tests
 
