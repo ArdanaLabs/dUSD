@@ -86,6 +86,10 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         , gen = do
              
             adr <- Gen.address
+            let seedPoint = PricePoint 1653506000 1 1
+            numPoints <- int (linear 30 80)
+            pricePts <- take 48 . reverse <$> iterateM numPoints genNewPricePoint seedPoint
+            
             -- Generating the Txs
             {-
             let inputTxOut :: TxOut
@@ -143,7 +147,10 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         , contract = branchIf VectorsSame (remove VectorsSame) (removeAll [VectorHandled, VectorsSame])
         , morphism = \case
           modl@(PriceModuleModel {pmPriceVectorOut = prices}) = do
-            -- newPrice <- Gen.???
+            oldPrice <- case prices of
+              (x:_) -> return x
+              []    -> return $ PricePoint 1653506000 1 1 -- around the time I wrote this line.
+            newPrice <- genNewPricePoint oldPrice
             newPrices = newPrice : (take 47 prices)
             return modl {pmPriceVectorOut = newPrices}
         }
@@ -259,3 +266,11 @@ genNewPricePoint PricePoint {ppTime = tim, ppAdaPerUsd = apu, ppUsdPerAda = upa}
 -- Maybe generate a different modifier for USD/ADA?
 
 -- note: Gen is just Hedgehog gen.
+
+-- | Monadic equivalent to @'take' n . 'iterate'@. 
+-- (Taken from monad-extras and slightly modified)
+iterateM :: Monad m => Int -> (a -> m a) -> a -> m [a]
+iterateM n _ _ | n <= 0 = []
+iterateM n f x = do
+    x' <- f x
+    (x':) `liftM` iterateM (n - 1) f x'
