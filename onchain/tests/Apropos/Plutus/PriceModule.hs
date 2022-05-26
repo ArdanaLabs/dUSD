@@ -1,4 +1,5 @@
-{-# OPTIONS_GHC -wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Apropos.Plutus.PriceModule (
 
@@ -6,7 +7,7 @@ module Apropos.Plutus.PriceModule (
 
 import Apropos
 import Apropos.Script (ScriptModel(..))
-import Control.Monad (replicateM)
+import Control.Monad (replicateM, liftM)
 import Data.List (uncons, length, drop, delete, find, findIndex, findIndices, (!!))
 import Data.Maybe (mapMaybe)
 import Data.Ratio
@@ -63,25 +64,26 @@ data PriceModuleProp
   deriving anyclass (Hashable)
 
 instance LogicalModel PriceModuleProp where
-  logic = Var VectorsSame :->: VectorHandled
+  logic = Var VectorsSame :->: Var VectorHandled
     --   :&&: (Var MintsCorrectly :->: Var MintsChoice) 
     --   :&&: (Var MintsChoice    :->: Var ValidCurChoice)
 
 
 instance HasLogicalModel PriceModuleProp PriceModuleModel where
-  satisfiesProperty BeenSigned modl = (mmOwner modl) `elem` (mmSignatures modl)
-  satisfiesProperty VectorHandled modl { pmPriceVectorIn = pv1 , pmPriceVectorOut = pv2} =
+  satisfiesProperty BeenSigned modl = (pmOwner modl) `elem` (pmSignatures modl)
+  satisfiesProperty VectorHandled PriceModuleModel { pmPriceVectorIn = pv1 , pmPriceVectorOut = pv2} =
     (pv1 == pv2) || (take 47 pv1) == (drop 1 pv2)
-  satisfiesProperty VectorsSame modl { pmPriceVectorIn = pv1 , pmPriceVectorOut = pv2} =
+  satisfiesProperty VectorsSame PriceModuleModel { pmPriceVectorIn = pv1 , pmPriceVectorOut = pv2} =
     pv1 == pv2
 
-instance HasPermutationGenerator ManagementProp ManagementModel where
+instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
   sources =
     [ Source
         { sourceName = "Correctly Formed"
         , covers = All 
           [ Var BeenSigned
-          -- insert more
+          , Var VectorHandled
+          , Var VectorsSame
           ]
         , gen = do
              
@@ -89,7 +91,17 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
             let seedPoint = PricePoint 1653506000 1 1
             numPoints <- int (linear 30 80)
             pricePts <- take 48 . reverse <$> iterateM numPoints genNewPricePoint seedPoint
-            
+
+            -- Signatures
+            ownPkh  <- Gen.pubKeyHash
+            numSigs <- int (linear 0 4)
+            sigs <- (ownPkh:) <$> replicateM numSigs Gen.pubKeyHash
+
+            -- Currencies
+            ownCS <- Gen.hexString @CurrencySymbol
+            inNFC <- Gen.hexString @CurrencySymbol
+            inNFT <- Gen.tokenName
+
             -- Generating the Txs
             {-
             let inputTxOut :: TxOut
@@ -114,11 +126,21 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
                   , txInInfoResolved = inputTxOut
                   }
 
+            -}
             -- Constructing the model
             return $ PriceModuleModel
-              { pm
+              { pmSignatures = sigs
+              , pmPriceVectorIn = pricePts
+              , pmPriceVectorOut = pricePts
+              , pmCurrency = ownCS
+              , pmMinted = mempty -- TEMP
+              , pmOwner = ownPkh
+              , pmInput  = [] -- TEMP
+              , pmOutput = [] -- TEMP
+              , pmAddress = adr
+              , pmValidNFT = assetClass inNFC inNFT
               }
-            -}
+            
         }
     
     ]
@@ -128,7 +150,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         , match = Var BeenSigned
         , contract = remove BeenSigned
         , morphism = \case
-          modl@(ManagementModel {pmSignatures = sigs, pmOwner = owner}) -> do
+          modl@(PriceModuleModel {pmSignatures = sigs, pmOwner = owner}) -> do
             let sigs' = (delete owner sigs)
             return $ modl {pmSignatures = sigs'}
         }
@@ -137,7 +159,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         , match = Not $ Var BeenSigned
         , contract = add BeenSigned
         , morphism = \case
-          modl@(ManagementModel {pmSignatures = sigs, pmOwner = owner}) -> do
+          modl@(PriceModuleModel {pmSignatures = sigs, pmOwner = owner}) -> do
             let sigs' = (owner:sigs)
             return $ modl {pmSignatures = sigs'}
         }
@@ -146,12 +168,12 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         , match = Yes
         , contract = branchIf VectorsSame (remove VectorsSame) (removeAll [VectorHandled, VectorsSame])
         , morphism = \case
-          modl@(PriceModuleModel {pmPriceVectorOut = prices}) = do
+          modl@(PriceModuleModel {pmPriceVectorOut = prices}) -> do
             oldPrice <- case prices of
               (x:_) -> return x
               []    -> return $ PricePoint 1653506000 1 1 -- around the time I wrote this line.
             newPrice <- genNewPricePoint oldPrice
-            newPrices = newPrice : (take 47 prices)
+            let newPrices = newPrice : (take 47 prices)
             return modl {pmPriceVectorOut = newPrices}
         }
     , Morphism
@@ -159,7 +181,7 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
         , match = Not $ Var VectorsSame
         , contract = addAll [VectorsSame, VectorHandled]
         , morphism = \case
-          modl@(PriceModuleModel {pmPriceVectorIn = prices}) =
+          modl@(PriceModuleModel {pmPriceVectorIn = prices}) ->
             return $ modl {pmPriceVectorOut = prices}
         }
     ]
@@ -170,44 +192,34 @@ instance HasParameterisedGenerator PriceModuleProp PriceModuleModel where
 instance Enumerable PriceModuleProp where
   enumerated = [minBound .. maxBound]
 
-instance LogicalModel PriceModuleProp where
-  logic = Var VectorsSame :->: VectorHandled
-    -- (Var MintsCorrectly :->: Var MintsOne) 
-    --   :&&: (Var MintsCorrectly :->: Var MintsChoice) 
-    --   :&&: (Var MintsChoice    :->: Var ValidCurChoice)
-
-instance ScriptModel ManagementProp ManagementModel where
+instance ScriptModel PriceModuleProp PriceModuleModel where
   expect = (Var BeenSigned) 
-             -- :&&: (Var InDatumHashed) 
+             :&&: (Var VectorHandled) 
              -- :&&: (Var OutDatumHashed)
              -- :&&: (Var ConfigPresent)
-             -- :&&: (Var ConfigReturned)
-             -- :&&: (Var OwnAtInBase)
-             -- :&&: (Not (Var OwnAtOutBase ) :->: ( ??? ) -- i.e. if the CS changes.
-  script mm = applyMintingPolicyScript (mkCtx mm) managementMintingPolicy (Redeemer (toBuiltinData ()))
+  script mm = applyMintingPolicyScript (mkCtx mm) priceModuleMintingPolicy (Redeemer (toBuiltinData ()))
 
 priceModuleMintingPolicy :: MintingPolicy
 priceModuleMintingPolicy = undefined -- TEMP
 
 -- | Make the context from the Model.
-mkCtx :: ManagementModel -> Context
+mkCtx :: PriceModuleModel -> Context
 mkCtx mm = Context $ PlutusTx.toBuiltinData scCtx
   where
-    scCtx = ScriptContext txinf (Minting (mmOwnCurrency mm))
+    scCtx = ScriptContext txinf (Minting (pmCurrency mm))
     txinf = TxInfo
-{-
-      { txInfoInputs  = mmInput mm
-      , txInfoOutputs = mmOutput mm
+      { txInfoInputs  = pmInput mm
+      , txInfoOutputs = pmOutput mm
       , txInfoFee = mempty
-      , txInfoMint = mmMinted mm
+      , txInfoMint = pmMinted mm
       , txInfoDCert = []
       , txInfoWdrl = []
       , txInfoValidRange = always
-      , txInfoSignatories = mmSignatures mm
-      , txInfoData = [(mmInDatumHash mm,makeDatum (mmCurrencies mm)),(mmOutDatumHash mm,makeDatum (mmOutDatum mm))]
+      , txInfoSignatories = pmSignatures mm
+      , txInfoData = [] -- TEMP
       , txInfoId = "" -- Temp?
       }
--}
+
 
 -- | Safe version of `!!`.
 indexVal :: [a] -> Int -> Maybe a
@@ -249,28 +261,27 @@ replaceAt n x xs = (take n xs) ++ [x] ++ (drop (n+1) xs)
 -- replaceAt n x xs = let (!ys, !zs) = splitAt n xs in ys ++ [x] ++ (drop 1 zs)
 
 genNewPricePoint :: PricePoint -> Gen PricePoint
-genNewPricePoint PricePoint {ppTime = tim, ppAdaPerUsd = apu, ppUsdPerAda = upa} = do
-  mdf <- HG.double (HR.linearFracFrom 1 0.8 1.2)
+genNewPricePoint PricePoint {ppTime = tim, ppAdaPerUsd = apu, ppUsdPerAda = _upa} = do
+  -- Convert to Double to prevent 
+  mdf <- fromRational @Double <$> Gen.rationalRange 1_000_000 0.8 1.2
   let orig = fromRational apu
       tempPrice' = orig * mdf
-      tempPrice = approxRational tempPrice' 0.0001 -- maybe change epsilon?
+      tempPrice = approxRational tempPrice' 0.000_01 -- maybe change epsilon?
   newPrice <- if (tempPrice /= 0)
       then return tempPrice
       else do
-        mdf' <- HG.double (HR.linearFracFrom 1 1 1.2)
+        mdf' <- fromRational @Double <$> Gen.rationalRange 1_000_000 1 1.2
         let tempPrice2 = orig * mdf'
-        return $ approxRational tempPrice2 0.0001
-  dfTime <- HG.realFrac_ (HR.linearFracFrom 3600 300 18_000)
+        return $ approxRational tempPrice2 0.000_01
+  dfTime <- fromIntegral <$> int (linear 300 18_000)
   let newTime = tim + dfTime
   return $ PricePoint {ppTime = newTime, ppAdaPerUsd = newPrice, ppUsdPerAda = recip newPrice}
 -- Maybe generate a different modifier for USD/ADA?
 
--- note: Gen is just Hedgehog gen.
-
 -- | Monadic equivalent to @'take' n . 'iterate'@. 
 -- (Taken from monad-extras and slightly modified)
 iterateM :: Monad m => Int -> (a -> m a) -> a -> m [a]
-iterateM n _ _ | n <= 0 = []
+iterateM n _ _ | n <= 0 = return []
 iterateM n f x = do
     x' <- f x
     (x':) `liftM` iterateM (n - 1) f x'
