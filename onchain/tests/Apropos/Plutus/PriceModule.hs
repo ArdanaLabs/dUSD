@@ -106,6 +106,8 @@ instance HasLogicalModel PriceModuleProp PriceModuleModel where
     (pv1 == pv2) || (take 47 pv1) == (drop 1 pv2)
   satisfiesProperty VectorsSame PriceModuleModel { pmPriceVectorIn = pv1 , pmPriceVectorOut = pv2} =
     pv1 == pv2
+  -- May have to change this to ensure that no other tokens are minted
+  -- by other minting policies, depending on the requirements.
   satisfiesProperty MintsToken PriceModuleModel { pmMinted = mint, pmValidNFT = nft } =
     assetClassValueOf mint nft == 1
 
@@ -136,17 +138,16 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
             inNFT <- Gen.tokenName
 
             -- Generating the Txs
-            {-
             let inputTxOut :: TxOut
                 inputTxOut = TxOut
                   { txOutAddress = adr
-                  , txOutValue   = Value.singleton inNft "" 1 -- might need to add 2 ADA.
-                  , txOutDatumHash = Nothing
+                  , txOutValue   = Value.singleton inNFC inNFT 1 -- might need to add 2 ADA.
+                  , txOutDatumHash = Just $ datumHash $ makeDatum pricePts
                   }
             
             txRefId <- Gen.txId
             txRefIx <- fromIntegral <$> int (linear 0 3)
-
+            
             let inputTxRef :: TxOutRef
                 inputTxRef = TxOutRef
                   { txOutRefId  = txRefId
@@ -159,17 +160,16 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
                   , txInInfoResolved = inputTxOut
                   }
 
-            -}
             -- Constructing the model
             return $ PriceModuleModel
               { pmSignatures = sigs
               , pmPriceVectorIn = pricePts
               , pmPriceVectorOut = pricePts
               , pmCurrency = ownCS
-              , pmMinted = mempty -- TEMP
+              , pmMinted = Value.singleton ownCS "" 1
               , pmOwner = ownPkh
-              , pmInput  = [] -- TEMP
-              , pmOutput = [] -- TEMP
+              , pmInput  = [inputTxIn]
+              , pmOutput = [inputTxOut]
               , pmAddress = adr
               , pmValidNFT = assetClass inNFC inNFT
               }

@@ -11,6 +11,7 @@ module Gen (
   integer,
   datum,
   hexString,
+  txId,
   rationalRange,
 ) where
 
@@ -25,6 +26,7 @@ import Plutus.V1.Ledger.Api (
   PubKeyHash,
   StakingCredential (..),
   TokenName,
+  TxId(TxId),
   ValidatorHash,
   Value,
   singleton,
@@ -32,10 +34,12 @@ import Plutus.V1.Ledger.Api (
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
 
 import Control.Monad (replicateM)
+import Data.ByteString qualified as BS
 import Data.Ratio
 import Data.String (IsString (..))
 import Plutus.V1.Ledger.Value (AssetClass)
 import Plutus.V1.Ledger.Value qualified as Value
+import PlutusTx.Builtins.Class (toBuiltin)
 
 -- TODO address should get it's own apropos model
 address :: Gen Address
@@ -81,6 +85,11 @@ validatorHash = hexString
 
 datumHash :: Gen DatumHash
 datumHash = hexString
+
+txId :: Gen TxId
+txId = do
+  bytes <- replicateM 32 (fromIntegral <$> int (linear 0 255))
+  return $ TxId $ toBuiltin $ BS.pack bytes
 
 hexit :: Gen Char
 hexit = element $ ['0' .. '9'] ++ ['a' .. 'f']
