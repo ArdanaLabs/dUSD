@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
@@ -32,9 +33,10 @@ import Plutarch.Prelude qualified as PPrelude
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Interval (always)
 import Plutus.V1.Ledger.Scripts (Context(..), applyMintingPolicyScript)
-import Plutus.V1.Ledger.Value (AssetClass, assetClassValue, flattenValue, Value, assetClass, valueOf)
+import Plutus.V1.Ledger.Value (AssetClass, assetClassValue, flattenValue, Value, assetClass, valueOf, assetClassValueOf)
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
+import PlutusTx.Ratio qualified as Rat
 
 data PricePoint = PricePoint
   { ppTime :: POSIXTime
@@ -42,24 +44,53 @@ data PricePoint = PricePoint
   , ppUsdPerAda :: Rational -- Maybe?
   } deriving stock (Show, Eq, Generic)
 
+data PricePoint' = PricePoint'
+  { ppTime' :: POSIXTime
+  , ppAdaPerUsd' :: Rat.Rational  -- Maybe?
+  , ppUsdPerAda' :: Rat.Rational -- Maybe?
+  } deriving stock (Show, Eq, Generic)
+
+PlutusTx.unstableMakeIsData ''PricePoint'
+
+ppToTx :: PricePoint -> PricePoint'
+ppToTx PricePoint {ppTime = tim, ppAdaPerUsd = apu, ppUsdPerAda = upa} =
+  PricePoint' (tim) (Rat.fromGHC apu) (Rat.fromGHC upa)
+
+txToPp :: PricePoint' -> PricePoint
+txToPp PricePoint' {ppTime' = tim, ppAdaPerUsd' = apu, ppUsdPerAda' = upa} =
+  PricePoint (tim) (Rat.toGHC apu) (Rat.toGHC upa)
+
+instance ToData PricePoint where
+  toBuiltinData pp = toBuiltinData (ppToTx pp)
+
+instance FromData PricePoint where
+  fromBuiltinData pp = txToPp <$> fromBuiltinData pp
+
 -- | The model for the properties.
 data PriceModuleModel = PriceModuleModel
-  { pmSignatures  :: [PubKeyHash]      -- Signatures present in the Tx.
-  , pmPriceVectorIn  :: [PricePoint] -- ?
-  , pmPriceVectorOut :: [PricePoint] -- ?
-  , pmCurrency :: CurrencySymbol -- The currency symbol of the policy.
-  , pmMinted :: Value      -- The value minted by the policy.
-  , pmOwner  :: PubKeyHash -- The 'Owner' of this policy; baked into the policy.
-  , pmInput  :: [TxInInfo] -- The inputs to the minting policy
-  , pmOutput :: [TxOut]    -- The outputs of this policy.
-  , pmAddress :: Address   -- Address the utxo is supposed to return to.
+  { pmSignatures  :: [PubKeyHash]    -- Signatures present in the Tx.
+  , pmPriceVectorIn  :: [PricePoint] -- PriceVector Input
+  , pmPriceVectorOut :: [PricePoint] -- PriceVector Output
+  , pmCurrency :: CurrencySymbol     -- The currency symbol of the policy.
+  , pmMinted :: Value        -- The value minted by the policy.
+  , pmOwner  :: PubKeyHash   -- The 'Owner' of this policy; baked into the policy.
+  , pmInput  :: [TxInInfo]   -- The inputs to the minting policy
+  , pmOutput :: [TxOut]      -- The outputs of this policy.
+  , pmAddress :: Address     -- Address the utxo is supposed to return to.
   , pmValidNFT :: AssetClass -- the NFT to show that the UTxO is correct.
   } deriving stock (Show, Eq, Generic)
+
+pmPVIHash :: PriceModuleModel -> DatumHash
+pmPVIHash = datumHash . makeDatum . pmPriceVectorIn
+
+pmPVOHash :: PriceModuleModel -> DatumHash
+pmPVOHash = datumHash . makeDatum . pmPriceVectorOut
 
 data PriceModuleProp
   = BeenSigned
   | VectorHandled -- i.e. the price vector has been handled properly
   | VectorsSame -- For more control of morphisms
+  | MintsToken  -- Mints the token.
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
   deriving anyclass (Hashable)
 
@@ -75,6 +106,8 @@ instance HasLogicalModel PriceModuleProp PriceModuleModel where
     (pv1 == pv2) || (take 47 pv1) == (drop 1 pv2)
   satisfiesProperty VectorsSame PriceModuleModel { pmPriceVectorIn = pv1 , pmPriceVectorOut = pv2} =
     pv1 == pv2
+  satisfiesProperty MintsToken PriceModuleModel { pmMinted = mint, pmValidNFT = nft } =
+    assetClassValueOf mint nft == 1
 
 instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
   sources =
@@ -216,10 +249,9 @@ mkCtx mm = Context $ PlutusTx.toBuiltinData scCtx
       , txInfoWdrl = []
       , txInfoValidRange = always
       , txInfoSignatories = pmSignatures mm
-      , txInfoData = [] -- TEMP
+      , txInfoData = [(pmPVIHash mm, makeDatum $ pmPriceVectorIn mm), (pmPVOHash mm, makeDatum $ pmPriceVectorOut mm)] 
       , txInfoId = "" -- Temp?
       }
-
 
 -- | Safe version of `!!`.
 indexVal :: [a] -> Int -> Maybe a
@@ -230,6 +262,13 @@ checkTxOut cs n adr dhsh txo =
   (txOutAddress txo == adr)
     && (txOutDatumHash txo == Just dhsh)
     && (n == valueOf (txOutValue txo) cs "")
+
+checkTxOutAC :: AssetClass -> Integer -> Address -> DatumHash -> TxOut -> Bool
+checkTxOutAC ac n adr dhsh txo =
+  (txOutAddress txo == adr)
+    && (txOutDatumHash txo == Just dhsh)
+    && (n == assetClassValueOf (txOutValue txo) ac)
+
 
 -- TODO do this with a non-hack
 -- (taken from HelloValidator)
