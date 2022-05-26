@@ -10,6 +10,8 @@ module Gen (
   rational,
   integer,
   datum,
+  value,
+  pos,
 ) where
 
 import Apropos (Gen, choice, element, int, linear, list)
@@ -97,12 +99,13 @@ rational = (%) <$> integer <*> pos
 
 datum :: Gen Datum
 datum = choice [datumOf integer, datumOf value]
-  where
-    value :: Gen Value
-    value = mconcat <$> list (linear 0 64) singletonValue
-    singletonValue :: Gen Value
-    singletonValue =
-      singleton <$> currencySymbol <*> tokenName <*> pos
+
+value :: Gen Value
+value = mconcat <$> list (linear 0 64) singletonValue
+
+singletonValue :: Gen Value
+singletonValue =
+  singleton <$> currencySymbol <*> tokenName <*> pos
 
 datumOf :: ToData a => Gen a -> Gen Datum
 datumOf g = Datum . toBuiltinData <$> g
