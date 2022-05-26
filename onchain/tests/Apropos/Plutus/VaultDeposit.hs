@@ -6,15 +6,22 @@ module Apropos.Plutus.VaultDeposit (
 
 import Apropos
 import Apropos.Plutus.AssetClass (ada)
+import Apropos.Script
 
 import Gen
+import VaultDeposit
 
 import Plutus.V1.Ledger.Api
+import Plutus.V1.Ledger.Scripts (applyMintingPolicyScript)
 import Plutus.V1.Ledger.Value (assetClassValueOf)
 import Plutus.V1.Ledger.Value qualified as Val
 
 import Test.Syd
 import Test.Syd.Hedgehog (fromHedgehogGroup)
+
+import Apropos.ContextBuilder
+import Control.Monad.Identity (Identity)
+import Control.Monad.State
 
 data VaultDepProp
   = AdaDecreased
@@ -73,7 +80,28 @@ instance HasPermutationGenerator VaultDepProp VaultDepModel where
 instance HasParameterisedGenerator VaultDepProp VaultDepModel where
   parameterisedGenerator = buildGen
 
+instance ScriptModel VaultDepProp VaultDepModel where
+  expect = Yes
+
+  -- Not (Var AdaDecreased) :&&: Not (Var DatumChanged)
+  -- TODO use commented correct logic
+  script m =
+    let ctx = buildContext $ do
+          withTxInfoBuilder @(StateT ScriptContext) @Identity @(StateT TxInfo) $ do
+            uncurry (addInput (TxOutRef "" 0) mainAdr) $ input m
+            uncurry (addOutput mainAdr) $ output m
+     in applyMintingPolicyScript
+          ctx
+          vaultDepositPolicy
+          (Redeemer $ BuiltinData $ toData ())
+
+mainAdr :: Address
+mainAdr = Address (ScriptCredential "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") Nothing
+
+-- TODO this should have the hash of the real validator
+
 spec :: Spec
 spec = do
   describe "vault deposit" $ do
-    fromHedgehogGroup $ runGeneratorTestsWhere @VaultDepProp "vaultDep" Yes
+    fromHedgehogGroup $ runGeneratorTestsWhere @VaultDepProp "gen" Yes
+    fromHedgehogGroup $ runScriptTestsWhere @VaultDepProp "script" Yes
