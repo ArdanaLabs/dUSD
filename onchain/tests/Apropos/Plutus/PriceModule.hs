@@ -355,7 +355,7 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
                   inpTxs = findIndices (\(TxInInfo _ (TxOut tadr _ _)) -> tadr == adr) inp
               -- asdf
               case inpTxs of
-                [n] -> do
+                (n:_) -> do
                   -- should only be one, but this captures more.
                   -- hmm...
                   let inTx@(TxInInfo _ref (TxOut _xadr xval _xdat)) = inp !! n
@@ -435,7 +435,7 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
                   outpTxs = findIndices (\(TxOut tadr _ _) -> tadr == adr) outp
               -- asdf
               case outpTxs of
-                [n] -> do
+                (n:_) -> do
                   -- should only be one, but this captures more.
                   -- hmm...
                   let (TxOut _xadr xval _xdat) = outp !! n
@@ -444,7 +444,7 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
                       newTxo = TxOut adr newVal (Just dhsh)
                       outp' = replaceAt n newTxo outp
                   return $ modl {pmOutput = outp'}
-                _ -> undefined -- should be unreachable
+                _ -> undefined -- should be unreachable?
         }
     ]
 
