@@ -257,6 +257,116 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
             modl@(PriceModuleModel {pmPriceVectorIn = prices}) ->
               return $ modl {pmPriceVectorOut = prices}
         }
+    , Morphism
+        { name = "RemoveAllInput"
+        , match = Yes
+        , contract = removeAll [InputHasAdr, InputHasHash, InputHasNFT, InputHasAll]
+        , morphism = \modl -> return $ modl {pmInput = []}
+        }
+    , Morphism
+        { name = "RemoveAllOutput"
+        , match = Yes
+        , contract = removeAll [OutputHasAdr, OutputHasHash, OutputHasNFT, OutputHasAll]
+        , morphism = \modl -> return $ modl {pmOutput = []}
+        }
+    , Morphism
+        { name = "FixInputFromNull"
+        , match = Not (Var InputHasAdr :||: Var InputHasHash :||: Var InputHasNFT)
+        , contract = addAll [InputHasAdr, InputHasHash, InputHasNFT, InputHasAll]
+        , morphism = \case
+            modl@(PriceModuleModel {pmInput = _inp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVIHash modl
+                  inputTxOut :: TxOut
+                  inputTxOut =
+                    TxOut
+                      { txOutAddress = adr
+                      , txOutValue = assetClassValue nft 1
+                      , txOutDatumHash = Just dhsh
+                      }
+              -- More definition of Txs
+              txRefId <- Gen.txId
+              txRefIx <- fromIntegral <$> int (linear 0 3)
+
+              let inputTxRef :: TxOutRef
+                  inputTxRef =
+                    TxOutRef
+                      { txOutRefId = txRefId
+                      , txOutRefIdx = txRefIx
+                      }
+
+                  inputTxIn :: TxInInfo
+                  inputTxIn =
+                    TxInInfo
+                      { txInInfoOutRef = inputTxRef
+                      , txInInfoResolved = inputTxOut
+                      }
+              -- Back to the generation
+              return modl {pmInput = [inputTxIn]}
+        }
+    , Morphism
+        { name = "FixInputFromHash"
+        , match = (Var InputHasHash) :&&: (Not (Var InputHasAdr :||: Var InputHasNFT))
+        , contract = addAll [InputHasAdr, InputHasNFT, InputHasAll]
+        , morphism = \case
+            modl@(PriceModuleModel {pmInput = inp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVIHash modl
+                  inpTxs = findIndices (\(TxInInfo _ (TxOut _ _ mhsh)) -> mhsh == (Just dhsh)) inp
+              -- asdf
+              case inpTxs of
+                (n : _) -> do
+                  -- should only be one, but this captures more.
+                  -- hmm...
+                  let inTx@(TxInInfo _ref (TxOut _xadr xval _xdat)) = inp !! n
+                      oldVal = assetClassValueOf xval nft
+                      newVal = xval <> (assetClassValue nft (1 - oldVal))
+                      newTxo = TxOut adr newVal (Just dhsh)
+                      newTxi = inTx {txInInfoResolved = newTxo}
+                      inp' = replaceAt n newTxi inp
+                  return $ modl {pmInput = inp'}
+                [] -> undefined -- should be unreachable
+        }
+    , Morphism
+        { name = "FixInputFromNFT"
+        , match = (Var InputHasNFT) :&&: (Not (Var InputHasAdr :||: Var InputHasHash))
+        , contract = addAll [InputHasAdr, InputHasHash, InputHasAll]
+        , morphism = \case
+            modl@(PriceModuleModel {pmInput = inp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVIHash modl
+                  inpTxs = findIndices (\(TxInInfo _ (TxOut _ val _)) -> assetClassValueOf val nft == 1) inp
+              -- asdf
+              case inpTxs of
+                (n : _) -> do
+                  -- should only be one, but this captures more.
+                  -- hmm...
+                  let inTx@(TxInInfo _ref (TxOut _xadr xval _xdat)) = inp !! n
+                      newTxo = TxOut adr xval (Just dhsh)
+                      newTxi = inTx {txInInfoResolved = newTxo}
+                      inp' = replaceAt n newTxi inp
+                  return $ modl {pmInput = inp'}
+                [] -> undefined -- should be unreachable
+        }
+    , Morphism
+        { name = "FixInputFromAddress"
+        , match = (Var InputHasAdr) :&&: (Not (Var InputHasHash :||: Var InputHasNFT))
+        , contract = addAll [InputHasHash, InputHasNFT, InputHasAll]
+        , morphism = \case
+            modl@(PriceModuleModel {pmInput = inp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVIHash modl
+                  inpTxs = findIndices (\(TxInInfo _ (TxOut tadr _ _)) -> tadr == adr) inp
+              -- asdf
+              case inpTxs of
+                [n] -> do
+                  -- should only be one, but this captures more.
+                  -- hmm...
+                  let inTx@(TxInInfo _ref (TxOut _xadr xval _xdat)) = inp !! n
+                      oldVal = assetClassValueOf xval nft
+                      newVal = xval <> (assetClassValue nft (1 - oldVal))
+                      newTxo = TxOut adr newVal (Just dhsh)
+                      newTxi = inTx {txInInfoResolved = newTxo}
+                      inp' = replaceAt n newTxi inp
+                  return $ modl {pmInput = inp'}
+                _ -> undefined -- should be unreachable
+        }
     ]
 
 instance HasParameterisedGenerator PriceModuleProp PriceModuleModel where
