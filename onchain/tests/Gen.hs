@@ -26,7 +26,7 @@ import Plutus.V1.Ledger.Api (
   PubKeyHash,
   StakingCredential (..),
   TokenName,
-  TxId(TxId),
+  TxId (TxId),
   ValidatorHash,
   Value,
   singleton,
@@ -111,7 +111,7 @@ rationalRange :: Integer -> Rational -> Rational -> Gen Rational
 rationalRange prec lo hi = do
   let prec' = fromIntegral prec
       iLo = fromInteger $ ceiling $ lo * prec'
-      iHi = fromInteger $ floor   $ hi * prec'
+      iHi = fromInteger $ floor $ hi * prec'
   val <- fromIntegral <$> int (linear iLo iHi)
   return $ val / prec'
 
