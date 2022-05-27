@@ -91,6 +91,8 @@ data PriceModuleProp
   | VectorHandled -- i.e. the price vector has been handled properly
   | VectorsSame -- For more control of morphisms
   | MintsToken  -- Mints the token.
+  | InputHasHash  -- Input  has the hash of pmPriceVectorIn
+  | OutputHasHash -- Output has the hash of pmPriceVectorOut
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
   deriving anyclass (Hashable)
 
@@ -98,7 +100,6 @@ instance LogicalModel PriceModuleProp where
   logic = Var VectorsSame :->: Var VectorHandled
     --   :&&: (Var MintsCorrectly :->: Var MintsChoice) 
     --   :&&: (Var MintsChoice    :->: Var ValidCurChoice)
-
 
 instance HasLogicalModel PriceModuleProp PriceModuleModel where
   satisfiesProperty BeenSigned modl = (pmOwner modl) `elem` (pmSignatures modl)
@@ -110,7 +111,13 @@ instance HasLogicalModel PriceModuleProp PriceModuleModel where
   -- by other minting policies, depending on the requirements.
   satisfiesProperty MintsToken PriceModuleModel { pmMinted = mint, pmValidNFT = nft } =
     assetClassValueOf mint nft == 1
-
+  satisfiesProperty InputHasHash  modl@(PriceModuleModel { pmInput  = inp  }) =
+    let dhsh = pmPVIHash modl
+    in  any (checkTxOutHash dhsh) (map txInInfoResolved inp)
+  satisfiesProperty OutputHasHash modl@(PriceModuleModel { pmOutput = outp }) =
+    let dhsh = pmPVOHash modl
+    in  any (checkTxOutHash dhsh) outp
+    
 instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
   sources =
     [ Source
@@ -119,6 +126,8 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
           [ Var BeenSigned
           , Var VectorHandled
           , Var VectorsSame
+          , Var InputHasHash
+          , Var OutputHasHash
           ]
         , gen = do
              
@@ -172,8 +181,7 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
               , pmOutput = [inputTxOut]
               , pmAddress = adr
               , pmValidNFT = assetClass inNFC inNFT
-              }
-            
+              }      
         }
     
     ]
@@ -199,7 +207,7 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
     , Morphism
         { name = "AddPrice"
         , match = Yes
-        , contract = branchIf VectorsSame (remove VectorsSame) (removeAll [VectorHandled, VectorsSame])
+        , contract = (branchIf VectorsSame (remove VectorsSame) (removeAll [VectorHandled, VectorsSame])) >> remove OutputHasHash
         , morphism = \case
           modl@(PriceModuleModel {pmPriceVectorOut = prices}) -> do
             oldPrice <- case prices of
@@ -212,7 +220,7 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
     , Morphism
         { name = "ResetPrices"
         , match = Not $ Var VectorsSame
-        , contract = addAll [VectorsSame, VectorHandled]
+        , contract = addAll [VectorsSame, VectorHandled] >> remove OutputHasHash
         , morphism = \case
           modl@(PriceModuleModel {pmPriceVectorIn = prices}) ->
             return $ modl {pmPriceVectorOut = prices}
@@ -226,8 +234,10 @@ instance Enumerable PriceModuleProp where
   enumerated = [minBound .. maxBound]
 
 instance ScriptModel PriceModuleProp PriceModuleModel where
-  expect = (Var BeenSigned) 
-             :&&: (Var VectorHandled) 
+  expect = (Var BeenSigned)
+             :&&: (Var VectorHandled)
+             :&&: (Var InputHasHash)
+             :&&: (Var OutputHasHash)
              -- :&&: (Var OutDatumHashed)
              -- :&&: (Var ConfigPresent)
   script mm = applyMintingPolicyScript (mkCtx mm) priceModuleMintingPolicy (Redeemer (toBuiltinData ()))
@@ -269,6 +279,9 @@ checkTxOutAC ac n adr dhsh txo =
     && (txOutDatumHash txo == Just dhsh)
     && (n == assetClassValueOf (txOutValue txo) ac)
 
+checkTxOutHash :: DatumHash -> TxOut -> Bool
+checkTxOutHash dhsh txo =
+  txOutDatumHash txo == Just dhsh
 
 -- TODO do this with a non-hack
 -- (taken from HelloValidator)
@@ -299,9 +312,12 @@ replaceAt :: Int -> a -> [a] -> [a]
 replaceAt n x xs = (take n xs) ++ [x] ++ (drop (n+1) xs)
 -- replaceAt n x xs = let (!ys, !zs) = splitAt n xs in ys ++ [x] ++ (drop 1 zs)
 
+-- | Create a new price point by slightly
+-- modifying an existing price point.
 genNewPricePoint :: PricePoint -> Gen PricePoint
 genNewPricePoint PricePoint {ppTime = tim, ppAdaPerUsd = apu, ppUsdPerAda = _upa} = do
-  -- Convert to Double to prevent 
+  -- Convert to Double and back; otherwise the size 
+  -- of the rational could grow out of hand.
   mdf <- fromRational @Double <$> Gen.rationalRange 1_000_000 0.8 1.2
   let orig = fromRational apu
       tempPrice' = orig * mdf
@@ -322,5 +338,5 @@ genNewPricePoint PricePoint {ppTime = tim, ppAdaPerUsd = apu, ppUsdPerAda = _upa
 iterateM :: Monad m => Int -> (a -> m a) -> a -> m [a]
 iterateM n _ _ | n <= 0 = return []
 iterateM n f x = do
-    x' <- f x
-    (x':) `liftM` iterateM (n - 1) f x'
+  x' <- f x
+  (x':) `liftM` iterateM (n - 1) f x'
