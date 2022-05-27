@@ -367,6 +367,85 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
                   return $ modl {pmInput = inp'}
                 _ -> undefined -- should be unreachable
         }
+    , Morphism
+        { name = "FixOutputFromNull"
+        , match = Not (Var OutputHasAdr :||: Var OutputHasHash :||: Var OutputHasNFT)
+        , contract = addAll [OutputHasAdr, OutputHasHash, OutputHasNFT, OutputHasAll]
+        , morphism = \case
+            modl@(PriceModuleModel {pmOutput = _outp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVOHash modl
+                  outputTxOut :: TxOut
+                  outputTxOut =
+                    TxOut
+                      { txOutAddress = adr
+                      , txOutValue = assetClassValue nft 1
+                      , txOutDatumHash = Just dhsh
+                      }
+
+              -- Back to the generation
+              return modl {pmOutput = [outputTxOut]}
+        }
+    , Morphism
+        { name = "FixOutputFromHash"
+        , match = (Var OutputHasHash) :&&: (Not (Var OutputHasAdr :||: Var OutputHasNFT))
+        , contract = addAll [OutputHasAdr, OutputHasNFT, OutputHasAll]
+        , morphism = \case
+            modl@(PriceModuleModel {pmOutput = outp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVOHash modl
+                  outpTxs = findIndices (\(TxOut _ _ mhsh) -> mhsh == (Just dhsh)) outp
+              -- asdf
+              case outpTxs of
+                (n : _) -> do
+                  -- should only be one, but this captures more.
+                  -- hmm...
+                  let (TxOut _xadr xval _xdat) = outp !! n
+                      oldVal = assetClassValueOf xval nft
+                      newVal = xval <> (assetClassValue nft (1 - oldVal))
+                      newTxo = TxOut adr newVal (Just dhsh)
+                      outp' = replaceAt n newTxo outp
+                  return $ modl {pmOutput = outp'}
+                [] -> undefined -- should be unreachable
+        }
+    , Morphism
+        { name = "FixOutputFromNFT"
+        , match = (Var OutputHasNFT) :&&: (Not (Var OutputHasAdr :||: Var OutputHasHash))
+        , contract = addAll [OutputHasAdr, OutputHasHash, OutputHasAll]
+        , morphism = \case
+            modl@(PriceModuleModel {pmOutput = outp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVOHash modl
+                  outpTxs = findIndices (\(TxOut _ val _) -> assetClassValueOf val nft == 1) outp
+              -- asdf
+              case outpTxs of
+                (n : _) -> do
+                  -- should only be one, but this captures more.
+                  -- hmm...
+                  let (TxOut _xadr xval _xdat) = outp !! n
+                      newTxo = TxOut adr xval (Just dhsh)
+                      outp' = replaceAt n newTxo outp
+                  return $ modl {pmOutput = outp'}
+                [] -> undefined -- should be unreachable
+        }
+    , Morphism
+        { name = "FixOutputFromAddress"
+        , match = (Var OutputHasAdr) :&&: (Not (Var OutputHasHash :||: Var OutputHasNFT))
+        , contract = addAll [OutputHasHash, OutputHasNFT, OutputHasAll]
+        , morphism = \case
+            modl@(PriceModuleModel {pmOutput = outp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVOHash modl
+                  outpTxs = findIndices (\(TxOut tadr _ _) -> tadr == adr) outp
+              -- asdf
+              case outpTxs of
+                [n] -> do
+                  -- should only be one, but this captures more.
+                  -- hmm...
+                  let (TxOut _xadr xval _xdat) = outp !! n
+                      oldVal = assetClassValueOf xval nft
+                      newVal = xval <> (assetClassValue nft (1 - oldVal))
+                      newTxo = TxOut adr newVal (Just dhsh)
+                      outp' = replaceAt n newTxo outp
+                  return $ modl {pmOutput = outp'}
+                _ -> undefined -- should be unreachable
+        }
     ]
 
 instance HasParameterisedGenerator PriceModuleProp PriceModuleModel where
