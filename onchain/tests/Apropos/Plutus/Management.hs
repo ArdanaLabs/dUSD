@@ -3,13 +3,14 @@
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Apropos.Plutus.Management (
-  -- spec,
-) where
+  ) where
+
+-- spec,
 
 import Apropos
-import Apropos.Script (ScriptModel(..))
+import Apropos.Script (ScriptModel (..))
 import Control.Monad (replicateM)
-import Data.List (uncons, length, drop, delete, find, findIndex, findIndices, (!!))
+import Data.List (delete, drop, find, findIndex, findIndices, length, uncons, (!!))
 import Data.Maybe (mapMaybe)
 import GHC.Generics (Generic)
 import Gen qualified
@@ -31,74 +32,76 @@ import Plutarch.Evaluate (evalScript)
 import Plutarch.Prelude qualified as PPrelude
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Interval (always)
-import Plutus.V1.Ledger.Scripts (Context(..), applyMintingPolicyScript)
-import Plutus.V1.Ledger.Value (AssetClass, assetClassValue, flattenValue, Value, assetClass, valueOf)
+import Plutus.V1.Ledger.Scripts (Context (..), applyMintingPolicyScript)
+import Plutus.V1.Ledger.Value (AssetClass, Value, assetClass, assetClassValue, flattenValue, valueOf)
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
 
 -- | The model for the properties.
 data ManagementModel = ManagementModel
-  { mmCurrencies :: [CurrencySymbol]  -- The currencies in the datum.
-  , mmSignatures :: [PubKeyHash]      -- Signatures present in the Tx.
+  { mmCurrencies :: [CurrencySymbol] -- The currencies in the datum.
+  , mmSignatures :: [PubKeyHash] -- Signatures present in the Tx.
   -- , mmInDatumHash :: DatumHash
   , mmOwnCurrency :: CurrencySymbol
   , mmCurChoice :: Int
   , mmMinted :: Value
-  , mmOwner  :: PubKeyHash -- The 'Owner' of this policy; baked into the policy.
-  , mmInput  :: [TxInInfo] -- The inputs to the minting policy
-  , mmOutput :: [TxOut]    -- The outputs of this policy.
+  , mmOwner :: PubKeyHash -- The 'Owner' of this policy; baked into the policy.
+  , mmInput :: [TxInInfo] -- The inputs to the minting policy
+  , mmOutput :: [TxOut] -- The outputs of this policy.
   -- , mmAddress :: MintingPolicyHash -- The address of this minting policy.
   -- , mmAddress :: CurrencySymbol -- The address of this minting policy.
   , mmAddress :: Address
   , mmOutDatum :: [CurrencySymbol] -- The datum to the script.
   -- , mmOutDatumHash :: DatumHash
   , mmInNFT :: CurrencySymbol -- the input NFT.
-  } deriving stock (Show, Eq, Generic)
+  }
+  deriving stock (Show, Eq, Generic)
 
 mmInDatumHash :: ManagementModel -> DatumHash
-mmInDatumHash ManagementModel {mmCurrencies = datm}
-  = datumHash $ makeDatum datm
+mmInDatumHash ManagementModel {mmCurrencies = datm} =
+  datumHash $ makeDatum datm
 
 mmOutDatumHash :: ManagementModel -> DatumHash
-mmOutDatumHash ManagementModel {mmOutDatum = datm}
-  = datumHash $ makeDatum datm
+mmOutDatumHash ManagementModel {mmOutDatum = datm} =
+  datumHash $ makeDatum datm
 
 data ManagementProp
   = BeenSigned
-  -- | InDatumHashed    -- mmInDatumHash modl  == datumHash (mmCurrencies modl)
-  -- | OutDatumHashed   -- mmOutDatumHash modl == datumHash (mmOutDatum   modl)
-  {-
-  | MintsOne         -- only one item is minted.
-  | ValidCurChoice   -- i.e. 0 <= mmCurChoice < length mmCurrencies
-  | MintsChoice      -- i.e. that it actually mints the choice.
-  | MintsCorrectly   -- i.e. that the value minted matches the choice and == 1.
-  -}
-  | ConfigPresent    -- Config is present in the input
+  | {-
+    | MintsOne         -- only one item is minted.
+    | ValidCurChoice   -- i.e. 0 <= mmCurChoice < length mmCurrencies
+    | MintsChoice      -- i.e. that it actually mints the choice.
+    | MintsCorrectly   -- i.e. that the value minted matches the choice and == 1.
+    -}
+
+    -- | InDatumHashed    -- mmInDatumHash modl  == datumHash (mmCurrencies modl)
+    -- | OutDatumHashed   -- mmOutDatumHash modl == datumHash (mmOutDatum   modl)
+    ConfigPresent -- Config is present in the input
   | ConfigReturned
-  | OwnAtInBase  -- ownCurrencySymbol is the first one in the datum.
-  | OwnAtOutBase 
+  | OwnAtInBase -- ownCurrencySymbol is the first one in the datum.
+  | OwnAtOutBase
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
   deriving anyclass (Hashable)
-
 
 instance HasPermutationGenerator ManagementProp ManagementModel where
   sources =
     [ Source
         { sourceName = "Correctly Formed"
-        , covers = All 
-          [ Var BeenSigned
-          -- , Var InDatumHashed
-          -- , Var OutDatumHashed
-          , Var ConfigPresent
-          , Var ConfigReturned
-          , Var OwnAtInBase
-          , Var OwnAtOutBase
-          ]
+        , covers =
+            All
+              [ Var BeenSigned
+              , -- , Var InDatumHashed
+                -- , Var OutDatumHashed
+                Var ConfigPresent
+              , Var ConfigReturned
+              , Var OwnAtInBase
+              , Var OwnAtOutBase
+              ]
         , gen = do
             -- valHash <- Gen.validatorHash
             -- TODO : Make this align with the
             -- address below.
-            cs  <- Gen.hexString @CurrencySymbol
+            cs <- Gen.hexString @CurrencySymbol
             -- TODO : Replace this with one that only
             -- generates validator addresses.
             adr <- Gen.address
@@ -108,350 +111,361 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
             posSigs <- int (linear 0 numSigs)
             let sigs = (take posSigs sigs') ++ [owner] ++ (drop posSigs sigs')
             numCurrencies <- int (linear 2 12)
-            inCurrencies' <- replicateM numCurrencies (Gen.hexString @CurrencySymbol) 
+            inCurrencies' <- replicateM numCurrencies (Gen.hexString @CurrencySymbol)
             let inCurrencies = cs : inCurrencies'
-                inDatHash    = datumHash $ Datum $ PlutusTx.toBuiltinData $ inCurrencies
+                inDatHash = datumHash $ Datum $ PlutusTx.toBuiltinData $ inCurrencies
             inNft <- Gen.hexString @CurrencySymbol
 
             -- Generating the Txs
             let inputTxOut :: TxOut
-                inputTxOut = TxOut
-                  { txOutAddress = adr
-                  , txOutValue   = Value.singleton inNft "" 1 -- might need to add 2 ADA.
-                  , txOutDatumHash = Just inDatHash
-                  }
-            
+                inputTxOut =
+                  TxOut
+                    { txOutAddress = adr
+                    , txOutValue = Value.singleton inNft "" 1 -- might need to add 2 ADA.
+                    , txOutDatumHash = Just inDatHash
+                    }
+
             txRefId <- Gen.txId
             txRefIx <- fromIntegral <$> int (linear 0 3)
 
             let inputTxRef :: TxOutRef
-                inputTxRef = TxOutRef
-                  { txOutRefId  = txRefId
-                  , txOutRefIdx = txRefIx
-                  }
-                
+                inputTxRef =
+                  TxOutRef
+                    { txOutRefId = txRefId
+                    , txOutRefIdx = txRefIx
+                    }
+
                 inputTxIn :: TxInInfo
-                inputTxIn = TxInInfo
-                  { txInInfoOutRef   = inputTxRef
-                  , txInInfoResolved = inputTxOut
-                  }
+                inputTxIn =
+                  TxInInfo
+                    { txInInfoOutRef = inputTxRef
+                    , txInInfoResolved = inputTxOut
+                    }
 
                 -- The value minted
                 outputTxOut :: TxOut
-                outputTxOut = TxOut
-                  { txOutAddress = adr -- Or should it be something else?
-                  , txOutValue = Value.singleton cs "" 1
-                  , txOutDatumHash = Nothing -- TEMP
-                  }
-           
+                outputTxOut =
+                  TxOut
+                    { txOutAddress = adr -- Or should it be something else?
+                    , txOutValue = Value.singleton cs "" 1
+                    , txOutDatumHash = Nothing -- TEMP
+                    }
+
             -- Constructing the model
-            return $ ManagementModel
-              { mmCurrencies  = inCurrencies
-              , mmSignatures  = sigs
-              -- , mmInDatumHash = inDatHash
-              , mmOwnCurrency = cs
-              , mmCurChoice = 0
-              , mmMinted    = assetClassValue (assetClass cs "") 1
-              , mmOwner     = owner
-              , mmInput     = [inputTxIn] -- Temp?
-              , mmOutput    = [inputTxOut, outputTxOut] -- Temp?
-              , mmAddress   = adr
-              , mmOutDatum  = inCurrencies -- Temp?
-              -- , mmOutDatumHash = inDatHash
-              , mmInNFT = inNft
-              }
+            return $
+              ManagementModel
+                { mmCurrencies = inCurrencies
+                , mmSignatures = sigs
+                , -- , mmInDatumHash = inDatHash
+                  mmOwnCurrency = cs
+                , mmCurChoice = 0
+                , mmMinted = assetClassValue (assetClass cs "") 1
+                , mmOwner = owner
+                , mmInput = [inputTxIn] -- Temp?
+                , mmOutput = [inputTxOut, outputTxOut] -- Temp?
+                , mmAddress = adr
+                , mmOutDatum = inCurrencies -- Temp?
+                -- , mmOutDatumHash = inDatHash
+                , mmInNFT = inNft
+                }
         }
-    
     ] -- should probably add more samples.
-  generators = 
+  generators =
     [ Morphism
         { name = "Unsign"
         , match = Var BeenSigned
         , contract = remove BeenSigned
         , morphism = \case
-          modl@(ManagementModel {mmSignatures = sigs, mmOwner = owner}) -> do
-            let sigs' = (delete owner sigs)
-            return $ modl {mmSignatures = sigs'}
+            modl@(ManagementModel {mmSignatures = sigs, mmOwner = owner}) -> do
+              let sigs' = (delete owner sigs)
+              return $ modl {mmSignatures = sigs'}
         }
     , Morphism
         { name = "Sign"
         , match = Not $ Var BeenSigned
         , contract = add BeenSigned
         , morphism = \case
-          modl@(ManagementModel {mmSignatures = sigs, mmOwner = owner}) -> do
-            let sigs' = (owner:sigs)
-            return $ modl {mmSignatures = sigs'}
+            modl@(ManagementModel {mmSignatures = sigs, mmOwner = owner}) -> do
+              let sigs' = (owner : sigs)
+              return $ modl {mmSignatures = sigs'}
         }
-    {-
-    , Morphism
-        { name = "UnhashIn"
-        , match = Var InDatumHashed
-        , contract = removeAll [InDatumHashed, ConfigPresent]
-        , morphism = \case
-          modl@(ManagementModel {}) -> do
-            inHsh' <- Gen.datumHash
-            return $ modl {mmInDatumHash = inHsh'}
-        }
-    , Morphism
-        { name = "HashIn"
-        , match = Not $ Var InDatumHashed
-        , contract = add InDatumHashed
-        , morphism = \case
-          modl@(ManagementModel {mmCurrencies = inDatum}) -> do
-            let inHsh' = datumHash $ makeDatum inDatum
-            return $ modl {mmInDatumHash = inHsh'}
-        }
-    , Morphism
-        { name = "UnhashOut"
-        , match = Var OutDatumHashed
-        , contract = removeAll [OutDatumHashed, ConfigReturned]
-        , morphism = \case
-          modl@(ManagementModel {}) -> do
-            outHsh' <- Gen.datumHash
-            return $ modl {mmOutDatumHash = outHsh'}
-        }
-    , Morphism
-        { name = "HashOut"
-        , match = Not $ Var OutDatumHashed
-        , contract = add OutDatumHashed
-        , morphism = \case
-          modl@(ManagementModel {mmOutDatum = outDatum}) -> do
-            let outHsh' = datumHash $ makeDatum outDatum
-            return $ modl {mmOutDatumHash = outHsh'}
-        }
-    -}
-    -- Messing with the input/output list.
-    -- (May have to add effects for ConfigPresent/ConfigReturned)
-    , Morphism
+    , {-
+      , Morphism
+          { name = "UnhashIn"
+          , match = Var InDatumHashed
+          , contract = removeAll [InDatumHashed, ConfigPresent]
+          , morphism = \case
+            modl@(ManagementModel {}) -> do
+              inHsh' <- Gen.datumHash
+              return $ modl {mmInDatumHash = inHsh'}
+          }
+      , Morphism
+          { name = "HashIn"
+          , match = Not $ Var InDatumHashed
+          , contract = add InDatumHashed
+          , morphism = \case
+            modl@(ManagementModel {mmCurrencies = inDatum}) -> do
+              let inHsh' = datumHash $ makeDatum inDatum
+              return $ modl {mmInDatumHash = inHsh'}
+          }
+      , Morphism
+          { name = "UnhashOut"
+          , match = Var OutDatumHashed
+          , contract = removeAll [OutDatumHashed, ConfigReturned]
+          , morphism = \case
+            modl@(ManagementModel {}) -> do
+              outHsh' <- Gen.datumHash
+              return $ modl {mmOutDatumHash = outHsh'}
+          }
+      , Morphism
+          { name = "HashOut"
+          , match = Not $ Var OutDatumHashed
+          , contract = add OutDatumHashed
+          , morphism = \case
+            modl@(ManagementModel {mmOutDatum = outDatum}) -> do
+              let outHsh' = datumHash $ makeDatum outDatum
+              return $ modl {mmOutDatumHash = outHsh'}
+          }
+      -}
+      -- Messing with the input/output list.
+      -- (May have to add effects for ConfigPresent/ConfigReturned)
+      Morphism
         { name = "RemoveSelfInput"
         , match = Var OwnAtInBase
-        -- , contract = removeAll [OwnAtInBase, InDatumHashed] -- since (datum changes) ==> (datum hash changes)
-        , contract = remove OwnAtInBase
+        , -- , contract = removeAll [OwnAtInBase, InDatumHashed] -- since (datum changes) ==> (datum hash changes)
+          contract = remove OwnAtInBase
         , morphism = \case
-          modl@(ManagementModel {mmCurrencies = inDatm, mmOwnCurrency = cs}) -> do
-            let inDatm' = delete cs inDatm
-            return $ modl {mmCurrencies = inDatm'}
+            modl@(ManagementModel {mmCurrencies = inDatm, mmOwnCurrency = cs}) -> do
+              let inDatm' = delete cs inDatm
+              return $ modl {mmCurrencies = inDatm'}
         }
     , Morphism
         { name = "AddSelfInput"
         , match = Not $ Var OwnAtInBase
-        -- , contract = remove InDatumHashed >> add OwnAtInBase
-        -- , contract = addAll [OwnAtInBase, InDatumHashed]
-        , contract = add OwnAtInBase
+        , -- , contract = remove InDatumHashed >> add OwnAtInBase
+          -- , contract = addAll [OwnAtInBase, InDatumHashed]
+          contract = add OwnAtInBase
         , morphism = \case
-          modl@(ManagementModel {mmCurrencies = inDatm, mmOwnCurrency = cs}) -> do
-            let inDatm' = (cs : (delete cs inDatm)) -- since it might be later in the datum.
-                -- inHash  = datumHash $ makeDatum inDatm'
-            return $ modl {mmCurrencies = inDatm'} -- , mmInDatumHash = inHash}
+            modl@(ManagementModel {mmCurrencies = inDatm, mmOwnCurrency = cs}) -> do
+              let inDatm' = (cs : (delete cs inDatm)) -- since it might be later in the datum.
+              -- inHash  = datumHash $ makeDatum inDatm'
+              return $ modl {mmCurrencies = inDatm'} -- , mmInDatumHash = inHash}
         }
     , Morphism
         { name = "RemoveSelfOutput"
         , match = Var OwnAtOutBase
-        -- , contract = removeAll [OwnAtOutBase, OutDatumHashed] -- since (datum changes) ==> (datum hash changes)
-        , contract = remove OwnAtOutBase -- since (datum changes) ==> (datum hash changes)
+        , -- , contract = removeAll [OwnAtOutBase, OutDatumHashed] -- since (datum changes) ==> (datum hash changes)
+          contract = remove OwnAtOutBase -- since (datum changes) ==> (datum hash changes)
         , morphism = \case
-          modl@(ManagementModel {mmOutDatum = outDatm, mmOwnCurrency = cs}) -> do
-            let outDatm' = delete cs outDatm
-            return $ modl {mmOutDatum = outDatm'}
+            modl@(ManagementModel {mmOutDatum = outDatm, mmOwnCurrency = cs}) -> do
+              let outDatm' = delete cs outDatm
+              return $ modl {mmOutDatum = outDatm'}
         }
     , Morphism
         { name = "AddSelfOutput"
         , match = Not $ Var OwnAtOutBase
-        -- , contract = remove OutDatumHashed >> add OwnAtOutBase
-        -- , contract = addAll [OwnAtOutBase, OutDatumHashed]
-        , contract = add OwnAtOutBase
+        , -- , contract = remove OutDatumHashed >> add OwnAtOutBase
+          -- , contract = addAll [OwnAtOutBase, OutDatumHashed]
+          contract = add OwnAtOutBase
         , morphism = \case
-          modl@(ManagementModel {mmOutDatum = outDatm, mmOwnCurrency = cs}) -> do
-            let outDatm' = (cs : (delete cs outDatm)) -- since it might be later in the datum.
-                -- outHash  = datumHash $ makeDatum outDatm'
-            return $ modl {mmCurrencies = outDatm'} -- , mmOutDatumHash = outHash}
+            modl@(ManagementModel {mmOutDatum = outDatm, mmOwnCurrency = cs}) -> do
+              let outDatm' = (cs : (delete cs outDatm)) -- since it might be later in the datum.
+              -- outHash  = datumHash $ makeDatum outDatm'
+              return $ modl {mmCurrencies = outDatm'} -- , mmOutDatumHash = outHash}
         }
     , Morphism
         { name = "PermuteInputDatum"
         , match = Yes
         , contract = removeAll [OwnAtInBase] -- , InDatumHashed]
         , morphism = \case
-          modl@(ManagementModel {mmCurrencies = inDatm, mmOwnCurrency = cs}) -> do
-            inDatm' <- shuffle inDatm
-            inDatm'' <- case inDatm' of
-              (x:rst) | x == cs -> if (null rst)
-                then do
+            modl@(ManagementModel {mmCurrencies = inDatm, mmOwnCurrency = cs}) -> do
+              inDatm' <- shuffle inDatm
+              inDatm'' <- case inDatm' of
+                (x : rst)
+                  | x == cs ->
+                    if (null rst)
+                      then do
+                        newCS <- Gen.hexString @CurrencySymbol
+                        return [newCS, cs]
+                      else do
+                        -- asdfzxcv
+                        n <- int (linear 1 (length rst))
+                        return $ (take n rst) ++ [cs] ++ (drop n rst)
+                [] -> do
                   newCS <- Gen.hexString @CurrencySymbol
                   return [newCS, cs]
-                else do
-                -- asdfzxcv
-                  n <- int (linear 1 (length rst))
-                  return $ (take n rst) ++ [cs] ++ (drop n rst)
-              [] -> do
-                newCS <- Gen.hexString @CurrencySymbol
-                return [newCS, cs]
-              _ -> return inDatm'            
-            return $ modl {mmCurrencies = inDatm''}
+                _ -> return inDatm'
+              return $ modl {mmCurrencies = inDatm''}
         }
     , Morphism
         { name = "PermuteOutputDatum"
         , match = Yes
         , contract = removeAll [OwnAtOutBase] -- , OutDatumHashed]
         , morphism = \case
-          modl@(ManagementModel {mmCurrencies = outDatm, mmOwnCurrency = cs}) -> do
-            outDatm' <- shuffle outDatm
-            -- Ensure that the first element isn't own currency.
-            outDatm'' <- case outDatm' of
-              (x:rst) | x == cs -> if (null rst)
-                then do
+            modl@(ManagementModel {mmCurrencies = outDatm, mmOwnCurrency = cs}) -> do
+              outDatm' <- shuffle outDatm
+              -- Ensure that the first element isn't own currency.
+              outDatm'' <- case outDatm' of
+                (x : rst)
+                  | x == cs ->
+                    if (null rst)
+                      then do
+                        newCS <- Gen.hexString @CurrencySymbol
+                        return [newCS, cs]
+                      else do
+                        -- asdfzxcv
+                        n <- int (linear 1 (length rst))
+                        return $ (take n rst) ++ [cs] ++ (drop n rst)
+                [] -> do
                   newCS <- Gen.hexString @CurrencySymbol
                   return [newCS, cs]
-                else do
-                -- asdfzxcv
-                  n <- int (linear 1 (length rst))
-                  return $ (take n rst) ++ [cs] ++ (drop n rst)
-              [] -> do
-                newCS <- Gen.hexString @CurrencySymbol
-                return [newCS, cs]
-              _ -> return outDatm'
-            return $ modl {mmCurrencies = outDatm''}
+                _ -> return outDatm'
+              return $ modl {mmCurrencies = outDatm''}
         }
-    -- The actual UTxOs / Txs.
-    , Morphism
+    , -- The actual UTxOs / Txs.
+      Morphism
         { name = "FixInputDatum" -- i.e. the actual tx.
         -- Need InDatumHashed; otherwise issues can occur.
         , match = (Not $ Var ConfigPresent)
         , contract = add ConfigPresent
         , morphism = \case
-          modl@(ManagementModel {mmInput = inp, mmInNFT = nft}) -> do
-            let inDatm = mmInDatumHash modl
-                inpTx = findIndices (\(TxInInfo _ (TxOut _ val _)) -> 1 == valueOf val nft "") inp
-                inpDt = findIndices (\(TxInInfo _ (TxOut _ _ dat)) -> dat == Just inDatm) inp
-            case (inpTx, inpDt) of
-              ([n],[]) -> do
-                let inpX@(TxInInfo _ (TxOut _xadr xval _xdat)) = inp !! n
-                    adr = mmAddress modl
-                    newTxo = TxOut adr xval (Just inDatm)
-                    newTxi = inpX {txInInfoResolved = newTxo}
-                    inp' = (take n inp) ++ [newTxi] ++ (drop (n+1) inp)
-                return modl {mmInput = inp'}
-              ([],[n]) -> do
-                let inpX@(TxInInfo _ (TxOut _xadr xval xdat)) = inp !! n
-                    adr = mmAddress modl
-                    oldVal = valueOf xval nft ""
-                    newVal = xval <> (Value.singleton nft "" (1 - oldVal))
-                    newTxo = TxOut adr newVal xdat
-                    newTxi = inpX {txInInfoResolved = newTxo}
-                    inp' = (take n inp) ++ [newTxi] ++ (drop (n+1) inp)
-                return modl {mmInput = inp'}
-              -- Just replace the inputs, otherwise.
-              (_,_) -> do
-                let adr = mmAddress modl
-                    dat = mmInDatumHash modl
-                    newTxo = TxOut adr (Value.singleton nft "" 1) (Just dat)
-                
-                newTxi <- case (uncons inp) of
-                  Just (inpX, _) -> return $ inpX {txInInfoResolved = newTxo}
-                  Nothing -> do
-                    txRefId <- Gen.txId
-                    txRefIx <- fromIntegral <$> int (linear 0 3)
+            modl@(ManagementModel {mmInput = inp, mmInNFT = nft}) -> do
+              let inDatm = mmInDatumHash modl
+                  inpTx = findIndices (\(TxInInfo _ (TxOut _ val _)) -> 1 == valueOf val nft "") inp
+                  inpDt = findIndices (\(TxInInfo _ (TxOut _ _ dat)) -> dat == Just inDatm) inp
+              case (inpTx, inpDt) of
+                ([n], []) -> do
+                  let inpX@(TxInInfo _ (TxOut _xadr xval _xdat)) = inp !! n
+                      adr = mmAddress modl
+                      newTxo = TxOut adr xval (Just inDatm)
+                      newTxi = inpX {txInInfoResolved = newTxo}
+                      inp' = (take n inp) ++ [newTxi] ++ (drop (n + 1) inp)
+                  return modl {mmInput = inp'}
+                ([], [n]) -> do
+                  let inpX@(TxInInfo _ (TxOut _xadr xval xdat)) = inp !! n
+                      adr = mmAddress modl
+                      oldVal = valueOf xval nft ""
+                      newVal = xval <> (Value.singleton nft "" (1 - oldVal))
+                      newTxo = TxOut adr newVal xdat
+                      newTxi = inpX {txInInfoResolved = newTxo}
+                      inp' = (take n inp) ++ [newTxi] ++ (drop (n + 1) inp)
+                  return modl {mmInput = inp'}
+                -- Just replace the inputs, otherwise.
+                (_, _) -> do
+                  let adr = mmAddress modl
+                      dat = mmInDatumHash modl
+                      newTxo = TxOut adr (Value.singleton nft "" 1) (Just dat)
 
-                    let inputTxRef :: TxOutRef
-                        inputTxRef = TxOutRef
-                          { txOutRefId  = txRefId
-                          , txOutRefIdx = txRefIx
-                          }
-                    return $ TxInInfo inputTxRef newTxo
-                return modl {mmInput = [newTxi]}
+                  newTxi <- case (uncons inp) of
+                    Just (inpX, _) -> return $ inpX {txInInfoResolved = newTxo}
+                    Nothing -> do
+                      txRefId <- Gen.txId
+                      txRefIx <- fromIntegral <$> int (linear 0 3)
+
+                      let inputTxRef :: TxOutRef
+                          inputTxRef =
+                            TxOutRef
+                              { txOutRefId = txRefId
+                              , txOutRefIdx = txRefIx
+                              }
+                      return $ TxInInfo inputTxRef newTxo
+                  return modl {mmInput = [newTxi]}
         }
     , Morphism
         { name = "FixOutputDatum"
         , match = (Not $ Var ConfigReturned)
         , contract = add ConfigReturned
         , morphism = \case
-          modl@(ManagementModel {mmOutput = outp, mmInNFT = nft}) -> do
-            let outDatm = mmOutDatumHash modl
-                outTx = findIndices (\(TxOut _ val _) -> 1 == valueOf val nft "") outp
-                outDt = findIndices (\(TxOut _ _ dat) -> dat == Just outDatm) outp
-            case (outTx, outDt) of
-              ([n],[]) -> do
-                let (TxOut _xadr xval _xdat) = outp !! n
-                    adr = mmAddress modl
-                    newTxo = TxOut adr xval (Just outDatm)
-                    outp' = (take n outp) ++ [newTxo] ++ (drop (n+1) outp)
-                return modl {mmOutput = outp'}
-              ([],[n]) -> do
-                let (TxOut _xadr xval xdat) = outp !! n
-                    adr = mmAddress modl
-                    oldVal = valueOf xval nft ""
-                    newVal = xval <> (Value.singleton nft "" (1 - oldVal))
-                    newTxo = TxOut adr newVal xdat
-                    outp' = (take n outp) ++ [newTxo] ++ (drop (n+1) outp)
-                return modl {mmOutput = outp'}
-              -- Just replace the inputs, otherwise.
-              (_,_) -> do
-                let adr = mmAddress modl
-                    ownCS = mmOwnCurrency modl
-                    oldOwnTx = find (\(TxOut _ val _) -> 1 == valueOf val ownCS "") outp
-                    newTxo = TxOut adr (Value.singleton nft "" 1) (Just outDatm)
-                
-                oldTxo <- case oldOwnTx of
-                  (Just txo) -> return txo
-                  Nothing -> do
-                    newAdr <- Gen.address
-                    -- Not using outDatm for the output datum, since
-                    -- I don't know what that datum should be.
-                    return $ TxOut newAdr (Value.singleton ownCS "" 1) Nothing
-                return modl {mmOutput = [newTxo, oldTxo]}
+            modl@(ManagementModel {mmOutput = outp, mmInNFT = nft}) -> do
+              let outDatm = mmOutDatumHash modl
+                  outTx = findIndices (\(TxOut _ val _) -> 1 == valueOf val nft "") outp
+                  outDt = findIndices (\(TxOut _ _ dat) -> dat == Just outDatm) outp
+              case (outTx, outDt) of
+                ([n], []) -> do
+                  let (TxOut _xadr xval _xdat) = outp !! n
+                      adr = mmAddress modl
+                      newTxo = TxOut adr xval (Just outDatm)
+                      outp' = (take n outp) ++ [newTxo] ++ (drop (n + 1) outp)
+                  return modl {mmOutput = outp'}
+                ([], [n]) -> do
+                  let (TxOut _xadr xval xdat) = outp !! n
+                      adr = mmAddress modl
+                      oldVal = valueOf xval nft ""
+                      newVal = xval <> (Value.singleton nft "" (1 - oldVal))
+                      newTxo = TxOut adr newVal xdat
+                      outp' = (take n outp) ++ [newTxo] ++ (drop (n + 1) outp)
+                  return modl {mmOutput = outp'}
+                -- Just replace the inputs, otherwise.
+                (_, _) -> do
+                  let adr = mmAddress modl
+                      ownCS = mmOwnCurrency modl
+                      oldOwnTx = find (\(TxOut _ val _) -> 1 == valueOf val ownCS "") outp
+                      newTxo = TxOut adr (Value.singleton nft "" 1) (Just outDatm)
+
+                  oldTxo <- case oldOwnTx of
+                    (Just txo) -> return txo
+                    Nothing -> do
+                      newAdr <- Gen.address
+                      -- Not using outDatm for the output datum, since
+                      -- I don't know what that datum should be.
+                      return $ TxOut newAdr (Value.singleton ownCS "" 1) Nothing
+                  return modl {mmOutput = [newTxo, oldTxo]}
         }
     , Morphism
         { name = "BreakInputDatum"
         , match = (Var ConfigPresent)
         , contract = remove ConfigPresent -- maybe more?
         , morphism = \case
-          modl@(ManagementModel {mmInput = inp, mmInNFT = nft}) -> do
-            let inDatm = mmInDatumHash modl
-                inpTx = findIndices (\(TxInInfo _ (TxOut _ val datm)) -> (1 == valueOf val nft "") && (datm == Just inDatm)) inp
-            case inpTx of
-              [n] -> do
-                let (TxInInfo xid (TxOut xadr xval xdatm)) = inp !! n
-                rndNum <- int (linear 0 3)
-                newTx <- if 
-                  | rndNum == 0 -> do
-                    zadr <- Gen.address
-                    return $ TxInInfo xid (TxOut zadr xval xdatm)
-                  | rndNum == 1 -> do
-                    -- zid <- Gen.txId
-                    let zval = xval <> (Value.singleton nft "" (-1)) -- remove the nft from input.
-                    return $ TxInInfo xid (TxOut xadr zval xdatm)
-                  | otherwise -> do
-                    zdatm <- Gen.datumHash
-                    return $ TxInInfo xid (TxOut xadr xval (Just zdatm))
-                return $ modl {mmInput = (replaceAt n newTx inp)}
-              (_:_) -> return $ modl {mmInput = []}
-              [] -> return modl -- Since it's already broken
+            modl@(ManagementModel {mmInput = inp, mmInNFT = nft}) -> do
+              let inDatm = mmInDatumHash modl
+                  inpTx = findIndices (\(TxInInfo _ (TxOut _ val datm)) -> (1 == valueOf val nft "") && (datm == Just inDatm)) inp
+              case inpTx of
+                [n] -> do
+                  let (TxInInfo xid (TxOut xadr xval xdatm)) = inp !! n
+                  rndNum <- int (linear 0 3)
+                  newTx <-
+                    if
+                        | rndNum == 0 -> do
+                          zadr <- Gen.address
+                          return $ TxInInfo xid (TxOut zadr xval xdatm)
+                        | rndNum == 1 -> do
+                          -- zid <- Gen.txId
+                          let zval = xval <> (Value.singleton nft "" (-1)) -- remove the nft from input.
+                          return $ TxInInfo xid (TxOut xadr zval xdatm)
+                        | otherwise -> do
+                          zdatm <- Gen.datumHash
+                          return $ TxInInfo xid (TxOut xadr xval (Just zdatm))
+                  return $ modl {mmInput = (replaceAt n newTx inp)}
+                (_ : _) -> return $ modl {mmInput = []}
+                [] -> return modl -- Since it's already broken
         }
     , Morphism
         { name = "BreakOutputDatum"
         , match = (Var ConfigReturned)
         , contract = remove ConfigReturned
         , morphism = \case
-          modl@(ManagementModel {mmOutput = outp, mmInNFT = nft}) -> do
-            -- hmm...
-            let outDatm = mmOutDatumHash modl
-                outTx = findIndices (\(TxOut _ val datm) -> (1 == valueOf val nft "") && (datm == Just outDatm)) outp
-            case outTx of
-              [n] -> do
-                let (TxOut xadr xval xdatm) = outp !! n
-                rndNum <- int (linear 0 3)
-                newTx <- if 
-                  | rndNum == 0 -> do
-                    zadr <- Gen.address
-                    return (TxOut zadr xval xdatm)
-                  | rndNum == 1 -> do
-                    let zval = xval <> (Value.singleton nft "" (-1)) -- remove the nft from input.
-                    return (TxOut xadr zval xdatm)
-                  | otherwise -> do
-                    zdatm <- Gen.datumHash
-                    return (TxOut xadr xval (Just zdatm))
-                return $ modl {mmOutput = (replaceAt n newTx outp)}
-              (_:_) -> return $ modl {mmOutput = []}
-              [] -> return modl -- Since it's already broken
+            modl@(ManagementModel {mmOutput = outp, mmInNFT = nft}) -> do
+              -- hmm...
+              let outDatm = mmOutDatumHash modl
+                  outTx = findIndices (\(TxOut _ val datm) -> (1 == valueOf val nft "") && (datm == Just outDatm)) outp
+              case outTx of
+                [n] -> do
+                  let (TxOut xadr xval xdatm) = outp !! n
+                  rndNum <- int (linear 0 3)
+                  newTx <-
+                    if
+                        | rndNum == 0 -> do
+                          zadr <- Gen.address
+                          return (TxOut zadr xval xdatm)
+                        | rndNum == 1 -> do
+                          let zval = xval <> (Value.singleton nft "" (-1)) -- remove the nft from input.
+                          return (TxOut xadr zval xdatm)
+                        | otherwise -> do
+                          zdatm <- Gen.datumHash
+                          return (TxOut xadr xval (Just zdatm))
+                  return $ modl {mmOutput = (replaceAt n newTx outp)}
+                (_ : _) -> return $ modl {mmOutput = []}
+                [] -> return modl -- Since it's already broken
         }
     ]
 
@@ -468,9 +482,8 @@ instance HasPermutationGenerator ManagementProp ManagementModel where
 -- the correct value, and change its contract
 -- to add InDatumHashed. (Note that the same
 -- is true for OutDatumHashed/etc... ).
--- Update: Fixed issue with Morphism using 
+-- Update: Fixed issue with Morphism using
 -- aforementioned fix.
-
 
 instance HasParameterisedGenerator ManagementProp ManagementModel where
   parameterisedGenerator = buildGen
@@ -480,19 +493,20 @@ instance Enumerable ManagementProp where
 
 instance LogicalModel ManagementProp where
   logic = Yes
-    -- (Var MintsCorrectly :->: Var MintsOne) 
-    --   :&&: (Var MintsCorrectly :->: Var MintsChoice) 
-    --   :&&: (Var MintsChoice    :->: Var ValidCurChoice)
+
+-- (Var MintsCorrectly :->: Var MintsOne)
+--   :&&: (Var MintsCorrectly :->: Var MintsChoice)
+--   :&&: (Var MintsChoice    :->: Var ValidCurChoice)
 
 instance HasLogicalModel ManagementProp ManagementModel where
   satisfiesProperty BeenSigned modl = (mmOwner modl) `elem` (mmSignatures modl)
-    {-
+  {-
   satisfiesProperty  InDatumHashed modl
     | dhsh <- datumHash $ Datum $ PlutusTx.toBuiltinData $ mmCurrencies modl
     = dhsh == mmInDatumHash modl
   satisfiesProperty OutDatumHashed modl
     | dhsh <- datumHash $ Datum $ PlutusTx.toBuiltinData $ mmOutDatum modl
-    = dhsh == mmOutDatumHash modl  
+    = dhsh == mmOutDatumHash modl
   -- These next few apparently aren't needed?
   satisfiesProperty MintsOne   modl = let val = flattenValue (mmMinted modl) in
     case uncons val of
@@ -503,39 +517,42 @@ instance HasLogicalModel ManagementProp ManagementModel where
   satisfiesProperty MintsChoice modl
     | (mmCurChoice modl) < 0 = False -- This guard has to be first.
     | (Just cur) <- indexVal (mmCurrencies modl) (mmCurChoice modl)
-    = 1 == valueOf (mmMinted modl) cur "" 
+    = 1 == valueOf (mmMinted modl) cur ""
     | otherwise = False
-  satisfiesProperty MintsCorrectly modl = 
+  satisfiesProperty MintsCorrectly modl =
     (satisfiesProperty MintsOne modl) && (satisfiesProperty MintsChoice modl)
   -}
   -- Back to the necessary ones.
   -- Note that this doesn't check that the
-  -- datum hash is indeed the hash of the 
+  -- datum hash is indeed the hash of the
   -- currency list; it just checks that
   -- the hahs is indeed in the input utxo.
-  satisfiesProperty ConfigPresent  modl
-    | inps <- map txInInfoResolved (mmInput modl)
-    = any (checkTxOut (mmInNFT modl) 1 (mmAddress modl) (mmInDatumHash  modl)) inps
-  satisfiesProperty ConfigReturned modl
-    = any (checkTxOut (mmInNFT modl) 1 (mmAddress modl) (mmOutDatumHash modl)) (mmOutput modl)
-  satisfiesProperty OwnAtInBase  modl
-    | (Just (cur0,_)) <- uncons (mmCurrencies modl)
-    = cur0 == mmOwnCurrency modl
+  satisfiesProperty ConfigPresent modl
+    | inps <- map txInInfoResolved (mmInput modl) =
+      any (checkTxOut (mmInNFT modl) 1 (mmAddress modl) (mmInDatumHash modl)) inps
+  satisfiesProperty ConfigReturned modl =
+    any (checkTxOut (mmInNFT modl) 1 (mmAddress modl) (mmOutDatumHash modl)) (mmOutput modl)
+  satisfiesProperty OwnAtInBase modl
+    | (Just (cur0, _)) <- uncons (mmCurrencies modl) =
+      cur0 == mmOwnCurrency modl
     | otherwise = False
   satisfiesProperty OwnAtOutBase modl
-    | (Just (cur0,_)) <- uncons (mmOutDatum modl)
-    = cur0 == mmOwnCurrency modl
+    | (Just (cur0, _)) <- uncons (mmOutDatum modl) =
+      cur0 == mmOwnCurrency modl
     | otherwise = False
+
 --  satisfiesProperty _ _ = False
 
 instance ScriptModel ManagementProp ManagementModel where
-  expect = (Var BeenSigned) 
-             -- :&&: (Var InDatumHashed) 
-             -- :&&: (Var OutDatumHashed)
-             :&&: (Var ConfigPresent)
-             :&&: (Var ConfigReturned)
-             :&&: (Var OwnAtInBase)
-             -- :&&: (Not (Var OwnAtOutBase ) :->: ( ??? ) -- i.e. if the CS changes.
+  expect =
+    (Var BeenSigned)
+      -- :&&: (Var InDatumHashed)
+      -- :&&: (Var OutDatumHashed)
+      :&&: (Var ConfigPresent)
+      :&&: (Var ConfigReturned)
+      :&&: (Var OwnAtInBase)
+
+  -- :&&: (Not (Var OwnAtOutBase ) :->: ( ??? ) -- i.e. if the CS changes.
   script mm = applyMintingPolicyScript (mkCtx mm) managementMintingPolicy (Redeemer (toBuiltinData ()))
 
 managementMintingPolicy :: MintingPolicy
@@ -546,18 +563,19 @@ mkCtx :: ManagementModel -> Context
 mkCtx mm = Context $ PlutusTx.toBuiltinData scCtx
   where
     scCtx = ScriptContext txinf (Minting (mmOwnCurrency mm))
-    txinf = TxInfo
-      { txInfoInputs  = mmInput mm
-      , txInfoOutputs = mmOutput mm
-      , txInfoFee = mempty
-      , txInfoMint = mmMinted mm
-      , txInfoDCert = []
-      , txInfoWdrl = []
-      , txInfoValidRange = always
-      , txInfoSignatories = mmSignatures mm
-      , txInfoData = [(mmInDatumHash mm,makeDatum (mmCurrencies mm)),(mmOutDatumHash mm,makeDatum (mmOutDatum mm))]
-      , txInfoId = "" -- Temp?
-      }
+    txinf =
+      TxInfo
+        { txInfoInputs = mmInput mm
+        , txInfoOutputs = mmOutput mm
+        , txInfoFee = mempty
+        , txInfoMint = mmMinted mm
+        , txInfoDCert = []
+        , txInfoWdrl = []
+        , txInfoValidRange = always
+        , txInfoSignatories = mmSignatures mm
+        , txInfoData = [(mmInDatumHash mm, makeDatum (mmCurrencies mm)), (mmOutDatumHash mm, makeDatum (mmOutDatum mm))]
+        , txInfoId = "" -- Temp?
+        }
 
 -- | Safe version of `!!`.
 indexVal :: [a] -> Int -> Maybe a
@@ -579,22 +597,25 @@ datumHash (Datum (BuiltinData d)) = (DatumHash . hashBlake2b_224 . Lazy.toStrict
     hashBlake2b_224 :: ByteString -> Builtins.BuiltinByteString
     hashBlake2b_224 = _plutusHashWith Blake2b_224
 
-makeDatum :: (PlutusTx.ToData a) => a -> Datum 
+makeDatum :: (PlutusTx.ToData a) => a -> Datum
 makeDatum x = Datum $ PlutusTx.toBuiltinData $ x
 
--- | Insert an element at position n of a list.
--- Note that if n > (length lst), the element
--- is inserted at the end.
+{- | Insert an element at position n of a list.
+ Note that if n > (length lst), the element
+ is inserted at the end.
+-}
 insertAt :: Int -> a -> [a] -> [a]
 insertAt n x xs = (take n xs) ++ [x] ++ (drop n xs)
+
 -- insertAt n x xs = let (!ys, !zs) = splitAt n xs in ys ++ [x] ++ zs
 -- Tried various versions with Criterion;
 -- went with most efficient version.
 
--- | Replace an element at position n of a list.
--- Note that if n > (length lst), the element
--- is inserted at the end, and nothing is replaced.
+{- | Replace an element at position n of a list.
+ Note that if n > (length lst), the element
+ is inserted at the end, and nothing is replaced.
+-}
 replaceAt :: Int -> a -> [a] -> [a]
-replaceAt n x xs = (take n xs) ++ [x] ++ (drop (n+1) xs)
--- replaceAt n x xs = let (!ys, !zs) = splitAt n xs in ys ++ [x] ++ (drop 1 zs)
+replaceAt n x xs = (take n xs) ++ [x] ++ (drop (n + 1) xs)
 
+-- replaceAt n x xs = let (!ys, !zs) = splitAt n xs in ys ++ [x] ++ (drop 1 zs)

@@ -25,7 +25,7 @@ import Plutus.V1.Ledger.Api (
   PubKeyHash,
   StakingCredential (..),
   TokenName,
-  TxId(TxId),
+  TxId (TxId),
   ValidatorHash,
   Value,
   singleton,
