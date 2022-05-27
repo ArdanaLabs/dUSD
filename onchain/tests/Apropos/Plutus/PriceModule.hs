@@ -95,11 +95,20 @@ data PriceModuleProp
   | MintsToken -- Mints the token.
   | InputHasHash -- Input  has the hash of pmPriceVectorIn
   | OutputHasHash -- Output has the hash of pmPriceVectorOut
+  | InputHasNFT
+  | OutputHasNFT
+  | InputHasAdr
+  | OutputHasAdr
+  | InputHasAll
+  | OutputHasAll
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
   deriving anyclass (Hashable)
 
 instance LogicalModel PriceModuleProp where
-  logic = Var VectorsSame :->: Var VectorHandled
+  logic =
+    (Var VectorsSame :->: Var VectorHandled)
+      :&&: (Var InputHasAll :->: (Var InputHasHash :&&: Var InputHasNFT :&&: Var InputHasAdr))
+      :&&: (Var OutputHasAll :->: (Var OutputHasHash :&&: Var OutputHasNFT :&&: Var OutputHasAdr))
 
 --   :&&: (Var MintsCorrectly :->: Var MintsChoice)
 --   :&&: (Var MintsChoice    :->: Var ValidCurChoice)
@@ -120,6 +129,23 @@ instance HasLogicalModel PriceModuleProp PriceModuleModel where
   satisfiesProperty OutputHasHash modl@(PriceModuleModel {pmOutput = outp}) =
     let dhsh = pmPVOHash modl
      in any (checkTxOutHash dhsh) outp
+  -- Maybe for the next few, change 'any' to 'exactly 1'.
+  satisfiesProperty InputHasNFT (PriceModuleModel {pmInput = inp, pmValidNFT = ac}) =
+    any (checkTxOutVal ac 1) (map txInInfoResolved inp)
+  satisfiesProperty OutputHasNFT (PriceModuleModel {pmOutput = outp, pmValidNFT = ac}) =
+    any (checkTxOutVal ac 1) outp
+  satisfiesProperty InputHasAdr (PriceModuleModel {pmInput = inp, pmAddress = adr}) =
+    any (checkTxOutAdr adr) (map txInInfoResolved inp)
+  satisfiesProperty OutputHasAdr (PriceModuleModel {pmOutput = outp, pmAddress = adr}) =
+    any (checkTxOutAdr adr) outp
+  satisfiesProperty InputHasAll modl@(PriceModuleModel {pmInput = inp, pmAddress = adr, pmValidNFT = ac}) =
+    let dhsh = pmPVIHash modl
+     in any (checkTxOutAC ac 1 adr dhsh) (map txInInfoResolved inp)
+  satisfiesProperty OutputHasAll modl@(PriceModuleModel {pmOutput = outp, pmAddress = adr, pmValidNFT = ac}) =
+    let dhsh = pmPVOHash modl
+     in any (checkTxOutAC ac 1 adr dhsh) outp
+
+-- checkTxOutAC ac n adr dhsh txo =
 
 instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
   sources =
@@ -291,6 +317,14 @@ checkTxOutAC ac n adr dhsh txo =
 checkTxOutHash :: DatumHash -> TxOut -> Bool
 checkTxOutHash dhsh txo =
   txOutDatumHash txo == Just dhsh
+
+checkTxOutVal :: AssetClass -> Integer -> TxOut -> Bool
+checkTxOutVal ac n txo =
+  n == assetClassValueOf (txOutValue txo) ac
+
+checkTxOutAdr :: Address -> TxOut -> Bool
+checkTxOutAdr adr txo =
+  (txOutAddress txo == adr)
 
 -- TODO do this with a non-hack
 -- (taken from HelloValidator)
