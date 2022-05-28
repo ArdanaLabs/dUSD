@@ -47,11 +47,12 @@
           program = pkgs.writeShellApplication
             {
               name = projectName;
-              runtimeInputs = [ pkgs.entr pkgs.nodePackages.http-server ];
+              runtimeInputs = [ pkgs.entr pkgs.simple-http-server ];
               text =
                 let
-                  script = pkgs.writeScript "serve.sh" ''
-                    http-server -c-1 $(nix eval .#${projectName}.outPath)
+                  script = pkgs.writeShellScript "serve.sh" ''
+                    simple-http-server --index --nocache \
+                      $(nix build --print-out-paths --no-link .#${projectName})
                   '';
                 in
                 ''
