@@ -47,7 +47,13 @@
           program = pkgs.writeShellApplication
             {
               name = projectName;
-              runtimeInputs = [ pkgs.entr pkgs.simple-http-server ];
+              runtimeInputs = with pkgs; [
+                entr
+                simple-http-server
+                # Nix unstable is required for --print-out-paths, this should
+                # be changed to stable when it is released.
+                nixVersions.unstable
+              ];
               text =
                 let
                   script = pkgs.writeShellScript "serve.sh" ''
