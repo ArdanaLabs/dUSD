@@ -62,6 +62,7 @@
                   '';
                 in
                 ''
+                  ${self'.packages."hello-world:exe:hello-world-cluster".exePath} &
                   find . -name "*.purs" | entr -r ${script}
                 '';
             } + "/bin/${projectName}";
