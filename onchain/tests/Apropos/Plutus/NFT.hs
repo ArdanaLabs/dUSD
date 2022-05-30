@@ -7,12 +7,12 @@ module Apropos.Plutus.NFT (
 import Apropos
 import Apropos.ContextBuilder
 import Apropos.Script
-import Control.Monad.Identity (Identity)
-import Control.Monad.State (StateT)
 import Gen
-import NFT (nftMintingPolicy)
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Scripts (applyMintingPolicyScript)
+
+import NFT (nftMintingPolicy)
+
 import Test.Syd
 import Test.Syd.Hedgehog (fromHedgehogGroup)
 
@@ -82,7 +82,7 @@ instance ScriptModel NFTProp NFTModel where
   -- Var SpendsRightInput
   script m =
     let ctx = buildContext $ do
-          withTxInfoBuilder @(StateT ScriptContext) @Identity @(StateT TxInfo) $ do
+          withTxInfo $ do
             sequence_ [addInput ref adr val md | let NFTModel is = m, (ref, adr, val, md) <- is]
      in applyMintingPolicyScript
           ctx
@@ -91,11 +91,11 @@ instance ScriptModel NFTProp NFTModel where
 
 spec :: Spec
 spec =
-  xdescribe "these pass but are pretty slow, I hope to look into this with fraser at some point" $
-    describe "nft tests" $ do
-      fromHedgehogGroup $
-        runGeneratorTestsWhere @NFTProp "generator" Yes
-      fromHedgehogGroup $
-        permutationGeneratorSelfTest @NFTProp
-      fromHedgehogGroup $
-        runScriptTestsWhere @NFTProp "nft script tests" Yes
+  --xdescribe "these pass but are pretty slow, I hope to look into this with fraser at some point" $
+  describe "nft tests" $ do
+    fromHedgehogGroup $
+      runGeneratorTestsWhere @NFTProp "generator" Yes
+    fromHedgehogGroup $
+      permutationGeneratorSelfTest @NFTProp
+    fromHedgehogGroup $
+      runScriptTestsWhere @NFTProp "nft script tests" Yes
