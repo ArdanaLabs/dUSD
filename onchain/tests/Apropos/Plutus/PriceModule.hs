@@ -283,23 +283,7 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
                       , txOutValue = assetClassValue nft 1
                       , txOutDatumHash = Just dhsh
                       }
-              -- More definition of Txs
-              txRefId <- Gen.txId
-              txRefIx <- fromIntegral <$> int (linear 0 3)
-
-              let inputTxRef :: TxOutRef
-                  inputTxRef =
-                    TxOutRef
-                      { txOutRefId = txRefId
-                      , txOutRefIdx = txRefIx
-                      }
-
-                  inputTxIn :: TxInInfo
-                  inputTxIn =
-                    TxInInfo
-                      { txInInfoOutRef = inputTxRef
-                      , txInInfoResolved = inputTxOut
-                      }
+              inputTxIn <- genTxInFromOut inputTxOut
               -- Back to the generation
               return modl {pmInput = [inputTxIn]}
         }
@@ -355,7 +339,7 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
                   inpTxs = findIndices (\(TxInInfo _ (TxOut tadr _ _)) -> tadr == adr) inp
               -- asdf
               case inpTxs of
-                (n:_) -> do
+                (n : _) -> do
                   -- should only be one, but this captures more.
                   -- hmm...
                   let inTx@(TxInInfo _ref (TxOut _xadr xval _xdat)) = inp !! n
@@ -435,7 +419,7 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
                   outpTxs = findIndices (\(TxOut tadr _ _) -> tadr == adr) outp
               -- asdf
               case outpTxs of
-                (n:_) -> do
+                (n : _) -> do
                   -- should only be one, but this captures more.
                   -- hmm...
                   let (TxOut _xadr xval _xdat) = outp !! n
@@ -445,6 +429,29 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
                       outp' = replaceAt n newTxo outp
                   return $ modl {pmOutput = outp'}
                 _ -> undefined -- should be unreachable?
+        }
+    , Morphism
+        { name = "FixInputHash"
+        , match = (Var InputHasAdr) :&&: (Var InputHasNFT) :&&: (Not (Var InputHasHash))
+        , contract = addAll [InputHasHash, InputHasAll]
+        , morphism = \case
+            modl@(PriceModuleModel {pmInput = inp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVIHash modl
+                  inpTxs = findIndices (\(TxInInfo _ (TxOut tadr val _)) -> tadr == adr && (assetClassValueOf val nft == 1)) inp
+              case inpTxs of
+                (n : _) -> do
+                  let inTx@(TxInInfo _ref (TxOut _xadr xval _xdat)) = inp !! n
+                      -- oldVal = assetClassValueOf xval nft
+                      -- newVal = xval <> (assetClassValue nft (1 - oldVal))
+                      newTxo = TxOut adr xval (Just dhsh)
+                      newTxi = inTx {txInInfoResolved = newTxo}
+                      inp' = replaceAt n newTxi inp
+                  return $ modl {pmInput = inp'}
+                [] -> do
+                  let newVal = assetClassValue nft 1
+                      newTxo = TxOut adr newVal (Just dhsh)
+                  txi <- genTxInFromOut newTxo
+                  return modl {pmInput = [txi]}
         }
     ]
 
@@ -547,6 +554,27 @@ replaceAt :: Int -> a -> [a] -> [a]
 replaceAt n x xs = (take n xs) ++ [x] ++ (drop (n + 1) xs)
 
 -- replaceAt n x xs = let (!ys, !zs) = splitAt n xs in ys ++ [x] ++ (drop 1 zs)
+
+genTxInFromOut :: TxOut -> Gen TxInInfo
+genTxInFromOut txo = do
+  -- More definition of Txs
+  txRefId <- Gen.txId
+  txRefIx <- fromIntegral <$> int (linear 0 3)
+
+  let inputTxRef :: TxOutRef
+      inputTxRef =
+        TxOutRef
+          { txOutRefId = txRefId
+          , txOutRefIdx = txRefIx
+          }
+
+      inputTxIn :: TxInInfo
+      inputTxIn =
+        TxInInfo
+          { txInInfoOutRef = inputTxRef
+          , txInInfoResolved = txo
+          }
+  return inputTxIn
 
 {- | Create a new price point by slightly
  modifying an existing price point.
