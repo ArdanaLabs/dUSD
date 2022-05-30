@@ -453,6 +453,27 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
                   txi <- genTxInFromOut newTxo
                   return modl {pmInput = [txi]}
         }
+    , Morphism
+        { name = "FixOutputHash"
+        , match = (Var OutputHasAdr) :&&: (Var OutputHasNFT) :&&: (Not (Var OutputHasHash))
+        , contract = addAll [OutputHasHash, OutputHasAll]
+        , morphism = \case
+            modl@(PriceModuleModel {pmOutput = outp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVOHash modl
+                  inpTxs = findIndices (\(TxOut tadr val _) -> tadr == adr && (assetClassValueOf val nft == 1)) outp
+              case inpTxs of
+                (n : _) -> do
+                  let (TxOut _xadr xval _xdat) = outp !! n
+                      -- oldVal = assetClassValueOf xval nft
+                      -- newVal = xval <> (assetClassValue nft (1 - oldVal))
+                      newTxo = TxOut adr xval (Just dhsh)
+                      outp' = replaceAt n newTxo outp
+                  return $ modl {pmOutput = outp'}
+                [] -> do
+                  let newVal = assetClassValue nft 1
+                      newTxo = TxOut adr newVal (Just dhsh)
+                  return modl {pmOutput = [newTxo]}
+        }
     ]
 
 instance HasParameterisedGenerator PriceModuleProp PriceModuleModel where
