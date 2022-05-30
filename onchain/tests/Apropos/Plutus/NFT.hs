@@ -49,7 +49,7 @@ instance HasPermutationGenerator NFTProp NFTModel where
         , covers = Yes
         , gen =
             (NFTModel <$>) $
-              list (linear 0 100) $
+              list (linear 0 10) $
                 (,,,)
                   <$> txOutRef
                   <*> address

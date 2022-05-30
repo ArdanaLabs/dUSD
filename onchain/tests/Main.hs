@@ -24,6 +24,7 @@ main =
   sydTest $ do
     describe "plutus" $ do
       NFT.spec
+    xdescribe "tmp ignore rest" $ do
       AssetClass.spec
       Integer.spec
       SingletonValue.spec
