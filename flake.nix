@@ -2,10 +2,7 @@
   inputs = {
     haskell-nix = {
       url = "github:input-output-hk/haskell.nix";
-      inputs.nixpkgs.follows = "haskell-nix/nixpkgs-2105";
     };
-    # An instance of Nixpkgs specially for haskell.nix usage
-    bloated-nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     cardano-node.url = "github:input-output-hk/cardano-node?rev=73f9a746362695dc2cb63ba757fbcabb81733d23";
     #   used for libsodium-vrf
@@ -25,6 +22,11 @@
       url = "github:davhau/dream2nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    purs-nix.url = "github:ursi/purs-nix";
+    easy-purescript-nix = {
+      url = "github:justinwoo/easy-purescript-nix";
+      flake = false;
+    };
   };
 
   outputs = { self, flake-modules-core, ... }:
@@ -34,6 +36,7 @@
         systems = [ "x86_64-linux" ];
         imports = [
           ./offchain/flake-module.nix
+          ./offchain/hello-world-ui/flake-module.nix
           ./onchain/flake-module.nix
           ./docs/flake-module.nix
           ./nix/flake-modules/format/flake-module.nix
