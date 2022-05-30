@@ -694,17 +694,22 @@ genNewPricePoint :: PricePoint -> Gen PricePoint
 genNewPricePoint PricePoint {ppTime = tim, ppAdaPerUsd = apu, ppUsdPerAda = _upa} = do
   -- Convert to Double and back; otherwise the size
   -- of the rational could grow out of hand.
+  tempPrice <- Gen.rationalRange 1_000_000 (0.8 * apu) (1.2 * apu)
+  {-
   mdf <- fromRational @Double <$> Gen.rationalRange 1_000_000 0.8 1.2
   let orig = fromRational apu
       tempPrice' = orig * mdf
       tempPrice = approxRational tempPrice' 0.000_01 -- maybe change epsilon?
+  -}
   newPrice <-
-    if (tempPrice /= 0)
+    if (tempPrice > 0)
       then return tempPrice
-      else do
-        mdf' <- fromRational @Double <$> Gen.rationalRange 1_000_000 1 1.2
-        let tempPrice2 = orig * mdf'
-        return $ approxRational tempPrice2 0.000_01
+      else Gen.rationalRange 1_000_000 apu (apu * 1.2)
+  {- do
+  mdf' <- fromRational @Double <$> Gen.rationalRange 1_000_000 1 1.2
+  let tempPrice2 = orig * mdf'
+  return $ approxRational tempPrice2 0.000_01
+  -}
   dfTime <- fromIntegral <$> int (linear 300 18_000)
   let newTime = tim + dfTime
   return $ PricePoint {ppTime = newTime, ppAdaPerUsd = newPrice, ppUsdPerAda = recip newPrice}
