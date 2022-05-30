@@ -20,9 +20,6 @@ import Plutarch.Api.V1 (mkValidator)
 import Plutus.V1.Ledger.Scripts (applyValidator)
 import Validator (mainValidator, mainValidatorHash)
 
-import Control.Monad.Identity (Identity)
-import Control.Monad.State
-
 data ValidatorProp
   = HasConfig
   | ConfigIsValid
@@ -155,7 +152,7 @@ instance ScriptModel ValidatorProp ValidatorModel where
     let ctx =
           buildContext $ do
             -- TODO this should be reworked in apropos-tx so the type hint is shorter
-            withTxInfoBuilder @(StateT ScriptContext) @Identity @(StateT TxInfo) $ do
+            withTxInfo $ do
               case configInput m of
                 Nothing -> pure ()
                 Just (ref, adr, val, Right maybeDatum) ->
