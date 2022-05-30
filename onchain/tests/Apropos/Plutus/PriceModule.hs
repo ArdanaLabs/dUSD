@@ -239,7 +239,9 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
     , Morphism
         { name = "AddPrice"
         , match = Yes
-        , contract = (branchIf VectorsSame (remove VectorsSame) (removeAll [VectorHandled, VectorsSame])) >> remove OutputHasHash
+        , -- Note: DO NOT move OutputHasHash into the removeAll list; we want
+          -- to remove OutputHasHash after either branch.
+          contract = (branchIf VectorsSame (remove VectorsSame) (removeAll [VectorHandled, VectorsSame])) >> remove OutputHasHash
         , morphism = \case
             modl@(PriceModuleModel {pmPriceVectorOut = prices}) -> do
               oldPrice <- case prices of
@@ -460,13 +462,101 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
         , morphism = \case
             modl@(PriceModuleModel {pmOutput = outp, pmAddress = adr, pmValidNFT = nft}) -> do
               let dhsh = pmPVOHash modl
-                  inpTxs = findIndices (\(TxOut tadr val _) -> tadr == adr && (assetClassValueOf val nft == 1)) outp
-              case inpTxs of
+                  outpTxs = findIndices (\(TxOut tadr val _) -> tadr == adr && (assetClassValueOf val nft == 1)) outp
+              case outpTxs of
                 (n : _) -> do
                   let (TxOut _xadr xval _xdat) = outp !! n
                       -- oldVal = assetClassValueOf xval nft
                       -- newVal = xval <> (assetClassValue nft (1 - oldVal))
                       newTxo = TxOut adr xval (Just dhsh)
+                      outp' = replaceAt n newTxo outp
+                  return $ modl {pmOutput = outp'}
+                [] -> do
+                  let newVal = assetClassValue nft 1
+                      newTxo = TxOut adr newVal (Just dhsh)
+                  return modl {pmOutput = [newTxo]}
+        }
+    , Morphism
+        { name = "FixInputAddress"
+        , match = (Var InputHasHash) :&&: (Var InputHasNFT) :&&: (Not (Var InputHasAdr))
+        , contract = addAll [InputHasAdr, InputHasAll]
+        , morphism = \case
+            modl@(PriceModuleModel {pmInput = inp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVIHash modl
+                  inpTxs = findIndices (\(TxInInfo _ (TxOut _ val thsh)) -> thsh == (Just dhsh) && (assetClassValueOf val nft == 1)) inp
+              case inpTxs of
+                (n : _) -> do
+                  let inTx@(TxInInfo _ref (TxOut _xadr xval xdat)) = inp !! n
+                      -- oldVal = assetClassValueOf xval nft
+                      -- newVal = xval <> (assetClassValue nft (1 - oldVal))
+                      newTxo = TxOut adr xval xdat
+                      newTxi = inTx {txInInfoResolved = newTxo}
+                      inp' = replaceAt n newTxi inp
+                  return $ modl {pmInput = inp'}
+                [] -> do
+                  let newVal = assetClassValue nft 1
+                      newTxo = TxOut adr newVal (Just dhsh)
+                  txi <- genTxInFromOut newTxo
+                  return modl {pmInput = [txi]}
+        }
+    , Morphism
+        { name = "FixOutputAddress"
+        , match = (Var OutputHasHash) :&&: (Var OutputHasNFT) :&&: (Not (Var OutputHasAdr))
+        , contract = addAll [OutputHasAdr, OutputHasAll]
+        , morphism = \case
+            modl@(PriceModuleModel {pmOutput = outp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVOHash modl
+                  outpTxs = findIndices (\(TxOut _ val thsh) -> thsh == (Just dhsh) && (assetClassValueOf val nft == 1)) outp
+              case outpTxs of
+                (n : _) -> do
+                  let (TxOut _xadr xval xdat) = outp !! n
+                      -- oldVal = assetClassValueOf xval nft
+                      -- newVal = xval <> (assetClassValue nft (1 - oldVal))
+                      newTxo = TxOut adr xval xdat
+                      outp' = replaceAt n newTxo outp
+                  return $ modl {pmOutput = outp'}
+                [] -> do
+                  let newVal = assetClassValue nft 1
+                      newTxo = TxOut adr newVal (Just dhsh)
+                  return modl {pmOutput = [newTxo]}
+        }
+    , Morphism
+        { name = "FixInputValue"
+        , match = (Var InputHasHash) :&&: (Var InputHasAdr) :&&: (Not (Var InputHasNFT))
+        , contract = addAll [InputHasAdr, InputHasAll]
+        , morphism = \case
+            modl@(PriceModuleModel {pmInput = inp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVIHash modl
+                  inpTxs = findIndices (\(TxInInfo _ (TxOut tadr _val thsh)) -> thsh == (Just dhsh) && tadr == adr) inp
+              case inpTxs of
+                (n : _) -> do
+                  let inTx@(TxInInfo _ref (TxOut _xadr xval xdat)) = inp !! n
+                      oldVal = assetClassValueOf xval nft
+                      newVal = xval <> (assetClassValue nft (1 - oldVal))
+                      newTxo = TxOut adr newVal xdat
+                      newTxi = inTx {txInInfoResolved = newTxo}
+                      inp' = replaceAt n newTxi inp
+                  return $ modl {pmInput = inp'}
+                [] -> do
+                  let newVal = assetClassValue nft 1
+                      newTxo = TxOut adr newVal (Just dhsh)
+                  txi <- genTxInFromOut newTxo
+                  return modl {pmInput = [txi]}
+        }
+    , Morphism
+        { name = "FixOutputValue"
+        , match = (Var OutputHasHash) :&&: (Var OutputHasAdr) :&&: (Not (Var OutputHasNFT))
+        , contract = addAll [OutputHasAdr, OutputHasAll]
+        , morphism = \case
+            modl@(PriceModuleModel {pmOutput = outp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVOHash modl
+                  outpTxs = findIndices (\(TxOut tadr _val thsh) -> thsh == (Just dhsh) && tadr == adr) outp
+              case outpTxs of
+                (n : _) -> do
+                  let (TxOut _xadr xval xdat) = outp !! n
+                      oldVal = assetClassValueOf xval nft
+                      newVal = xval <> (assetClassValue nft (1 - oldVal))
+                      newTxo = TxOut adr newVal xdat
                       outp' = replaceAt n newTxo outp
                   return $ modl {pmOutput = outp'}
                 [] -> do
