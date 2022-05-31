@@ -35,7 +35,6 @@ ci
 .direnv
 .envrc
 
-
 # Ignore flake.nix anywhere except for the root
 flake.nix
 !/flake.nix
