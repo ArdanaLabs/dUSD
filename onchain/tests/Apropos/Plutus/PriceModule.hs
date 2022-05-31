@@ -110,9 +110,6 @@ instance LogicalModel PriceModuleProp where
       :&&: (Var InputHasAll :->: (Var InputHasHash :&&: Var InputHasNFT :&&: Var InputHasAdr))
       :&&: (Var OutputHasAll :->: (Var OutputHasHash :&&: Var OutputHasNFT :&&: Var OutputHasAdr))
 
---   :&&: (Var MintsCorrectly :->: Var MintsChoice)
---   :&&: (Var MintsChoice    :->: Var ValidCurChoice)
-
 instance HasLogicalModel PriceModuleProp PriceModuleModel where
   satisfiesProperty BeenSigned modl = (pmOwner modl) `elem` (pmSignatures modl)
   satisfiesProperty VectorHandled PriceModuleModel {pmPriceVectorIn = pv1, pmPriceVectorOut = pv2} =
@@ -564,6 +561,109 @@ instance HasPermutationGenerator PriceModuleProp PriceModuleModel where
                       newTxo = TxOut adr newVal (Just dhsh)
                   return modl {pmOutput = [newTxo]}
         }
+    , Morphism
+        { name = "AddNFTInput"
+        , match = (Not (Var InputHasAll)) :&&: (Not (Var InputHasNFT)) :&&: ((Var InputHasAdr) :||: (Var InputHasHash))
+        , contract = add InputHasNFT
+        , morphism = \case
+            modl@(PriceModuleModel {pmInput = inp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVOHash modl
+                  inpTxs = findIndices (\(TxInInfo _ (TxOut tadr _val thsh)) -> thsh == (Just dhsh) || tadr == adr) inp
+              case inpTxs of
+                (n : _) -> do
+                  let inTx@(TxInInfo _ (TxOut xadr xval xdat)) = inp !! n
+                      oldVal = assetClassValueOf xval nft
+                      newVal = xval <> (assetClassValue nft (1 - oldVal))
+                      newTxo = TxOut xadr newVal xdat
+                      newTxi = inTx {txInInfoResolved = newTxo}
+                      inp' = replaceAt n newTxi inp
+                  return $ modl {pmInput = inp'}
+                [] -> undefined -- should be unreachable
+        }
+    , Morphism
+        { name = "AddNFTOutput"
+        , match = (Not (Var OutputHasAll)) :&&: (Not (Var OutputHasNFT)) :&&: ((Var OutputHasAdr) :||: (Var OutputHasHash))
+        , contract = add OutputHasNFT
+        , morphism = \case
+            modl@(PriceModuleModel {pmOutput = outp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVOHash modl
+                  outpTxs = findIndices (\(TxOut tadr _val thsh) -> thsh == (Just dhsh) || tadr == adr) outp
+              case outpTxs of
+                (n : _) -> do
+                  let (TxOut xadr xval xdat) = outp !! n
+                      oldVal = assetClassValueOf xval nft
+                      newVal = xval <> (assetClassValue nft (1 - oldVal))
+                      newTxo = TxOut xadr newVal xdat
+                      outp' = replaceAt n newTxo outp
+                  return $ modl {pmOutput = outp'}
+                [] -> undefined -- should be unreachable
+        }
+    , Morphism
+        { name = "AddAdrInput"
+        , match = (Not (Var InputHasAll)) :&&: (Not (Var InputHasAdr)) :&&: ((Var InputHasNFT) :||: (Var InputHasHash))
+        , contract = add InputHasAdr
+        , morphism = \case
+            modl@(PriceModuleModel {pmInput = inp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVOHash modl
+                  inpTxs = findIndices (\(TxInInfo _ (TxOut _tadr val thsh)) -> thsh == (Just dhsh) || (assetClassValueOf val nft == 1)) inp
+              case inpTxs of
+                (n : _) -> do
+                  let inTx@(TxInInfo _ (TxOut _xadr xval xdat)) = inp !! n
+                      newTxo = TxOut adr xval xdat
+                      newTxi = inTx {txInInfoResolved = newTxo}
+                      inp' = replaceAt n newTxi inp
+                  return $ modl {pmInput = inp'}
+                [] -> undefined -- should be unreachable
+        }
+    , Morphism
+        { name = "AddAdrOutput"
+        , match = (Not (Var OutputHasAll)) :&&: (Not (Var OutputHasAdr)) :&&: ((Var OutputHasNFT) :||: (Var OutputHasHash))
+        , contract = add OutputHasAdr
+        , morphism = \case
+            modl@(PriceModuleModel {pmOutput = outp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVOHash modl
+                  outpTxs = findIndices (\(TxOut _tadr val thsh) -> thsh == (Just dhsh) || (assetClassValueOf val nft == 1)) outp
+              case outpTxs of
+                (n : _) -> do
+                  let (TxOut _xadr xval xdat) = outp !! n
+                      newTxo = TxOut adr xval xdat
+                      outp' = replaceAt n newTxo outp
+                  return $ modl {pmOutput = outp'}
+                [] -> undefined -- should be unreachable
+        }
+    , Morphism
+        { name = "AddHashInput"
+        , match = (Not (Var InputHasAll)) :&&: (Not (Var InputHasHash)) :&&: ((Var InputHasNFT) :||: (Var InputHasAdr))
+        , contract = add InputHasHash
+        , morphism = \case
+            modl@(PriceModuleModel {pmInput = inp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVOHash modl
+                  inpTxs = findIndices (\(TxInInfo _ (TxOut tadr val _thsh)) -> tadr == adr || (assetClassValueOf val nft == 1)) inp
+              case inpTxs of
+                (n : _) -> do
+                  let inTx@(TxInInfo _ (TxOut xadr xval _xdat)) = inp !! n
+                      newTxo = TxOut xadr xval (Just dhsh)
+                      newTxi = inTx {txInInfoResolved = newTxo}
+                      inp' = replaceAt n newTxi inp
+                  return $ modl {pmInput = inp'}
+                [] -> undefined -- should be unreachable
+        }
+    , Morphism
+        { name = "AddHashOutput"
+        , match = (Not (Var OutputHasAll)) :&&: (Not (Var OutputHasHash)) :&&: ((Var OutputHasNFT) :||: (Var OutputHasHash))
+        , contract = add OutputHasHash
+        , morphism = \case
+            modl@(PriceModuleModel {pmOutput = outp, pmAddress = adr, pmValidNFT = nft}) -> do
+              let dhsh = pmPVOHash modl
+                  outpTxs = findIndices (\(TxOut tadr val _thsh) -> tadr == adr || (assetClassValueOf val nft == 1)) outp
+              case outpTxs of
+                (n : _) -> do
+                  let (TxOut xadr xval _xdat) = outp !! n
+                      newTxo = TxOut xadr xval (Just dhsh)
+                      outp' = replaceAt n newTxo outp
+                  return $ modl {pmOutput = outp'}
+                [] -> undefined -- should be unreachable
+        }
     ]
 
 instance HasParameterisedGenerator PriceModuleProp PriceModuleModel where
@@ -578,9 +678,6 @@ instance ScriptModel PriceModuleProp PriceModuleModel where
       :&&: (Var VectorHandled)
       :&&: (Var InputHasHash)
       :&&: (Var OutputHasHash)
-
-  -- :&&: (Var OutDatumHashed)
-  -- :&&: (Var ConfigPresent)
   script mm = applyMintingPolicyScript (mkCtx mm) priceModuleMintingPolicy (Redeemer (toBuiltinData ()))
 
 priceModuleMintingPolicy :: MintingPolicy
