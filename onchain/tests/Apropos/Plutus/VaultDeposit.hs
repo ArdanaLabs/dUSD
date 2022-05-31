@@ -21,8 +21,6 @@ import Test.Syd.Hedgehog (fromHedgehogGroup)
 
 import Apropos.ContextBuilder
 import Control.Arrow (second)
-import Control.Monad.Identity (Identity)
-import Control.Monad.State
 
 import Plutarch.Api.V1 (PDatum (..))
 import Plutarch.Builtin (pforgetData)
