@@ -74,6 +74,7 @@ library
   exposed-modules:
     DUSD
     Hello
+    NFT
     Plutarch.Extensions.Api
     Plutarch.Extensions.List
     Plutarch.Extensions.Monad
@@ -113,6 +114,7 @@ test-suite tests
     Apropos.Plutus.Auction
     Apropos.Plutus.HelloValidator
     Apropos.Plutus.Integer
+    Apropos.Plutus.NFT
     Apropos.Plutus.SingletonValue
     Apropos.Plutus.Value
     Apropos.Plutus.Vault

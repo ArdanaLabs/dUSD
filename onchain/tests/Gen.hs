@@ -12,6 +12,7 @@ module Gen (
   datum,
   value,
   pos,
+  txOutRef,
 ) where
 
 import Apropos (Gen, choice, element, int, linear, list)
@@ -25,6 +26,8 @@ import Plutus.V1.Ledger.Api (
   PubKeyHash,
   StakingCredential (..),
   TokenName,
+  TxId,
+  TxOutRef (TxOutRef),
   ValidatorHash,
   Value,
   singleton,
@@ -102,10 +105,13 @@ datum = choice [datumOf integer, datumOf value]
 
 value :: Gen Value
 value = mconcat <$> list (linear 0 64) singletonValue
-
-singletonValue :: Gen Value
-singletonValue =
-  singleton <$> currencySymbol <*> tokenName <*> pos
+  where
+    singletonValue :: Gen Value
+    singletonValue =
+      singleton <$> currencySymbol <*> tokenName <*> pos
 
 datumOf :: ToData a => Gen a -> Gen Datum
 datumOf g = Datum . toBuiltinData <$> g
+
+txOutRef :: Gen TxOutRef
+txOutRef = TxOutRef <$> hexString @TxId <*> pos
