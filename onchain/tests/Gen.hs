@@ -104,7 +104,7 @@ datum :: Gen Datum
 datum = choice [datumOf integer, datumOf value]
 
 value :: Gen Value
-value = mconcat <$> list (linear 0 64) singletonValue
+value = mconcat <$> list (linear 0 8) singletonValue
   where
     singletonValue :: Gen Value
     singletonValue =
