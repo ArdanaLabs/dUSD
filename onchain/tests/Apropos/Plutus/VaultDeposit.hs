@@ -124,7 +124,7 @@ instance ScriptModel VaultDepProp VaultDepModel where
   -- TODO use commented correct logic
   script m =
     let ctx = buildContext $ do
-          withTxInfoBuilder @(StateT ScriptContext) @Identity @(StateT TxInfo) $ do
+          withTxInfo $ do
             uncurry (addInput (TxOutRef "" 0) mainAdr) $ second (Just . toDatum) (input m)
             uncurry (addOutput mainAdr) $ second (toDatum <$>) (output m)
      in applyMintingPolicyScript
