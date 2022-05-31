@@ -4,6 +4,7 @@ import Apropos.Plutus.AssetClass qualified as AssetClass
 import Apropos.Plutus.Auction qualified as Auction
 import Apropos.Plutus.HelloValidator qualified as HelloValidator
 import Apropos.Plutus.Integer qualified as Integer
+import Apropos.Plutus.NFT qualified as NFT
 import Apropos.Plutus.SingletonValue qualified as SingletonValue
 import Apropos.Plutus.Value qualified as Value
 import Apropos.Plutus.Vault qualified as Vault
@@ -20,8 +21,10 @@ import Test.Syd
 main :: IO ()
 main =
   --print (length $ solveAll (logic :: Formula VaultProp))
-  sydTest $
+  sydTest $ do
     describe "plutus" $ do
+      NFT.spec
+    xdescribe "tmp ignore rest" $ do
       AssetClass.spec
       Integer.spec
       SingletonValue.spec

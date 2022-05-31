@@ -738,8 +738,10 @@ It is parameterised by a TXOutRef and only allows minting of its token when that
 The tests must check that the policy
 \begin{itemize}
   \item only validates if the TxOut it expects is being spent.
-  \item only mints a single token.
-  \item the output is otherwise unconstrained.
+	% We've decided not to enforce this with the minting policy
+	% because once the nft is minted anyone can verify that this was obeyed
+  % \item only mints a single token.
+  % \item the output is otherwise unconstrained.
 \end{itemize}
 
 \subsubsection{Configuration Management Minting Policy}
