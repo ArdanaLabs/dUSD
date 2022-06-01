@@ -75,6 +75,7 @@ library
     DUSD
     Hello
     NFT
+    VaultTransfer
     Plutarch.Extensions.Api
     Plutarch.Extensions.List
     Plutarch.Extensions.Monad
@@ -117,6 +118,7 @@ test-suite tests
     Apropos.Plutus.SingletonValue
     Apropos.Plutus.Value
     Apropos.Plutus.Vault
+    Apropos.Plutus.VaultTransfer
     Gen
     Tests
 
