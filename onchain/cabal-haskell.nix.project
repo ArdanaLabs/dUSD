@@ -8,7 +8,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/mlabs-haskell/apropos-tx
-  tag: 7bdfeb36b9b0fe66045f93331a80511cc6e3632f
+  tag: aecc3bc558f4a096f8a45b7146d5de0f2830890b
 
 source-repository-package
   type: git

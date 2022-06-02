@@ -1,32 +1,32 @@
-module Apropos.Plutus.VaultTransfer
-  ( VaultTransferProp(..)
-  , VaultTransferModel(..)
-  , spec
-  ) where
+module Apropos.Plutus.VaultTransfer (
+  VaultTransferProp (..),
+  VaultTransferModel (..),
+  spec,
+) where
 
 import Gen (pubKeyHash)
-import VaultTransfer
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Scripts (applyMintingPolicyScript)
+import VaultTransfer
 
 import Test.Syd
 import Test.Syd.Hedgehog (fromHedgehogGroup)
 
 import Apropos
-import Apropos.Script
 import Apropos.ContextBuilder
+import Apropos.Script
 
 data VaultTransferProp
-    = Signed
-    -- TODO model changes other than the config
-  deriving stock (Eq,Ord,Show,Generic)
-  deriving anyclass (Hashable,Enumerable)
+  = Signed
+  -- TODO model changes other than the config
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass (Hashable, Enumerable)
 
-newtype VaultTransferModel
-  = VaultTransferModel
-    {signatures :: [PubKeyHash]
-    }
-    deriving stock (Eq,Show)
+data VaultTransferModel = VaultTransferModel
+  { signatures :: [PubKeyHash]
+  , input :: TxInInfo
+  }
+  deriving stock (Eq, Show)
 
 magicpkh :: PubKeyHash
 magicpkh = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -35,24 +35,30 @@ instance LogicalModel VaultTransferProp where
   logic = Yes
 
 instance HasLogicalModel VaultTransferProp VaultTransferModel where
-  satisfiesProperty Signed VaultTransferModel{signatures=sigs} = magicpkh `elem` sigs
+  satisfiesProperty Signed VaultTransferModel {signatures = sigs} = magicpkh `elem` sigs
 
 instance HasPermutationGenerator VaultTransferProp VaultTransferModel where
   sources =
     [ Source
-      { sourceName = "no signature"
-      ,covers = Not $ Var Signed
-      , gen = genFilter (not . satisfiesProperty Signed) $ VaultTransferModel <$> list (linear 0 10) pubKeyHash
-      }
+        { sourceName = "no signature"
+        , covers = Not $ Var Signed
+        , gen = do
+            sigs <- list (linear 0 10) $ genFilter (/= magicpkh) pubKeyHash
+            let inp =
+                  TxInInfo
+                    (TxOutRef "" 0)
+                    (TxOut (Address (PubKeyCredential "") Nothing) mempty Nothing)
+            pure $ VaultTransferModel sigs inp
+        }
     ]
 
   generators =
     [ Morphism
-      { name = "add signature"
-      , match = Not $ Var Signed
-      , contract = add Signed
-      , morphism = \(VaultTransferModel sigs) -> pure $ VaultTransferModel (magicpkh : sigs)
-      }
+        { name = "add signature"
+        , match = Not $ Var Signed
+        , contract = add Signed
+        , morphism = \m -> pure $ m {signatures = magicpkh : signatures m}
+        }
     ]
 
 instance HasParameterisedGenerator VaultTransferProp VaultTransferModel where
@@ -64,8 +70,7 @@ instance ScriptModel VaultTransferProp VaultTransferModel where
     let ctx =
           buildContext $ do
             withTxInfo $ do
-              let VaultTransferModel sigs = m
-              mapM_ addTxInfoSignatory sigs
+              mapM_ addTxInfoSignatory (signatures m)
      in applyMintingPolicyScript
           ctx
           vaultTransferPolicy
@@ -73,7 +78,7 @@ instance ScriptModel VaultTransferProp VaultTransferModel where
 
 spec :: Spec
 spec = do
-  describe "nft tests" $ do
+  describe "vault transferr tests" $ do
     fromHedgehogGroup $
       runGeneratorTestsWhere @VaultTransferProp "generator" Yes
     fromHedgehogGroup $

@@ -1,6 +1,6 @@
 {
   "https://github.com/mlabs-haskell/apropos"."0ab6bf806475b26b8b6e4743e843b3568711794f" = "sha256-2/chaIMDLHwDzhEPeGclHQ7JomULHhzNAN+QKDVMSvU=";
-  "https://github.com/mlabs-haskell/apropos-tx"."7bdfeb36b9b0fe66045f93331a80511cc6e3632f" = "sha256-4EYGqMcTB17Pi060YC+51NpETvDDJrnUDRXhCMzmtYk=";
+  "https://github.com/mlabs-haskell/apropos-tx"."aecc3bc558f4a096f8a45b7146d5de0f2830890b" = "sha256-I/y7V3TTbE3ki+z+TW7KoK2ZEWV/3HsGoHyBNEZz/Xs=";
   "https://github.com/mlabs-haskell/digraph"."d4dfec22f6a6eb646dcfa9591eaca0a9be88d260" = "sha256-ytQkJ18tYs13rt66s4jdbaGa5mLNEIerF8u24PvyPLA=";
   "https://github.com/Plutonomicon/plutarch"."ae2059f11f24d47bedeaa18749d01711cddab0bc" = "sha256-DeSwiDyJeI9had5OCxLiGtYeDl07Vic0cR8RETBLY9k=";
   "https://github.com/input-output-hk/plutus.git"."983e6af2154c4bdf86ed645062bcb62f304d0a4f" = "sha256-Ga+hIhrgq2kR5Vnso/Edo2wgQpFn167eWGl35oM093U=";

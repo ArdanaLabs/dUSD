@@ -1,9 +1,9 @@
 module VaultTransfer (
   vaultTransferPolicy,
-  ) where
+) where
 
-import Plutarch.Prelude
 import Plutarch.Api.V1
+import Plutarch.Prelude
 
 import Plutus.V1.Ledger.Scripts (MintingPolicy)
 

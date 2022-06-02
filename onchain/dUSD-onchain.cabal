@@ -75,10 +75,10 @@ library
     DUSD
     Hello
     NFT
-    VaultTransfer
     Plutarch.Extensions.Api
     Plutarch.Extensions.List
     Plutarch.Extensions.Monad
+    VaultTransfer
 
   hs-source-dirs:  src
   build-depends:

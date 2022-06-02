@@ -18,9 +18,9 @@ import Test.Syd.Hedgehog (fromHedgehogGroup)
 
 newtype NFTModel = NFTModel
   -- TODO I think we should have data structures for these inlined datum types
-  { inputs :: [(TxOutRef, Address, Value, Maybe Datum)]
+  { inputs :: [TxInInfo']
   }
-  deriving stock (Show)
+  deriving stock (Show, Eq)
 
 data NFTProp
   = SpendsRightInput
@@ -33,8 +33,8 @@ instance LogicalModel NFTProp where
 instance HasLogicalModel NFTProp NFTModel where
   satisfiesProperty SpendsRightInput m = any isMagicInput $ inputs m
 
-isMagicInput :: (TxOutRef, a, b, c) -> Bool
-isMagicInput (ref, _, _, _) = ref == inputRef
+isMagicInput :: TxInInfo' -> Bool
+isMagicInput (TxInInfo' ref _) = ref == inputRef
 
 inputRef :: TxOutRef
 inputRef =
@@ -49,12 +49,14 @@ instance HasPermutationGenerator NFTProp NFTModel where
         , covers = Yes
         , gen =
             (NFTModel <$>) $
-              list (linear 0 10) $
-                (,,,)
+              list (linear 0 1) $
+                TxInInfo'
                   <$> txOutRef
-                  <*> address
-                  <*> value
-                  <*> maybeOf datum
+                  <*> ( TxOut'
+                          <$> address
+                          <*> value
+                          <*> maybeOf datum
+                      )
         }
     ]
   generators =
@@ -62,13 +64,15 @@ instance HasPermutationGenerator NFTProp NFTModel where
         { name = "add right input"
         , match = Not $ Var SpendsRightInput
         , contract = add SpendsRightInput
-        , morphism = \(NFTModel is) -> pure $ NFTModel $ (inputRef, Address (PubKeyCredential "") Nothing, mempty, Nothing) : is
+        , morphism = \(NFTModel is) ->
+            pure $ NFTModel $ TxInInfo' inputRef (TxOut' (Address (PubKeyCredential "") Nothing) mempty Nothing) : is
         }
     , Morphism
         { name = "remove right input"
         , match = Var SpendsRightInput
         , contract = remove SpendsRightInput
-        , morphism = \(NFTModel is) -> pure $ NFTModel $ filter (\(ref, _, _, _) -> ref /= inputRef) is
+        , morphism = \(NFTModel is) ->
+            pure $ NFTModel $ filter (\(TxInInfo' ref _) -> ref /= inputRef) is
         }
     ]
 
@@ -76,14 +80,14 @@ instance HasParameterisedGenerator NFTProp NFTModel where
   parameterisedGenerator = buildGen
 
 instance ScriptModel NFTProp NFTModel where
-  expect = Yes
-
   -- TODO use real logic once validator is finished
   -- Var SpendsRightInput
+  expect = Yes
+
   script m =
     let ctx = buildContext $ do
           withTxInfo $ do
-            sequence_ [addInput ref adr val md | let NFTModel is = m, (ref, adr, val, md) <- is]
+            mapM_ addInput (inputs m)
      in applyMintingPolicyScript
           ctx
           (nftMintingPolicy inputRef)
@@ -91,7 +95,6 @@ instance ScriptModel NFTProp NFTModel where
 
 spec :: Spec
 spec =
-  --xdescribe "these pass but are pretty slow, I hope to look into this with fraser at some point" $
   describe "nft tests" $ do
     fromHedgehogGroup $
       runGeneratorTestsWhere @NFTProp "generator" Yes
