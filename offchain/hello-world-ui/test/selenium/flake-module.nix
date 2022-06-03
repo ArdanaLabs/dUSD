@@ -52,6 +52,7 @@
             selenium-server-standalone
             nixpkgs-fmt
           ];
+	  HELLO_WORLD_UI_INDEX = self'.packages.hello-world-ui;
         };
       };
     in
