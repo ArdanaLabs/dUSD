@@ -289,24 +289,10 @@ running a `curl' command on the Ardana Tenant.
 The admin user can set the debt floor (in dUSD), through running a `curl'
 command on the Ardana Tenant.
 
-\subsection{Update mechanism for the protocol}
+\subsection{Set Protocol Configuration}
 
-One important acceptance criterium is that the protocol can be updated without
-requiring users to update their vaults or dUSD becoming a new currency.
+The protocol logic can be set by an authorised party by changing the Configuration datum.
 
-Any updates to the protocol will be decided on by admin, and later governance.
-
-This is implemented by deferring all protocol logic to minting policies.
-
-These minting policies are defined in the Config UTXO which stores a lookup table that is mutable by an authorised party.
-
-The authorisation for changing the Config is defined by a minting policy referenced by the config.
-
-This allows the mechanism for updating the protocol to itself be changed.
-
-Initially the mechanism will be to check that the Tx is signed by an admin key.
-
-The admin can in the future change this mechanism to a more decentralised mechanism of control.
 
 \section{Acceptance criteria}
 
