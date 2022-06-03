@@ -24,7 +24,8 @@ data VaultTransferProp
 
 data VaultTransferModel = VaultTransferModel
   { signatures :: [PubKeyHash]
-  , input :: TxInInfo
+  , input :: TxInInfo'
+  , output :: TxInInfo'
   }
   deriving stock (Eq, Show)
 
@@ -45,10 +46,15 @@ instance HasPermutationGenerator VaultTransferProp VaultTransferModel where
         , gen = do
             sigs <- list (linear 0 10) $ genFilter (/= magicpkh) pubKeyHash
             let inp =
-                  TxInInfo
+                  TxInInfo'
                     (TxOutRef "" 0)
-                    (TxOut (Address (PubKeyCredential "") Nothing) mempty Nothing)
-            pure $ VaultTransferModel sigs inp
+                    (TxOut' (Address (PubKeyCredential "") Nothing) mempty Nothing)
+            let out =
+                  TxInInfo'
+                    (TxOutRef "" 0)
+                    (TxOut' (Address (PubKeyCredential "") Nothing) mempty Nothing)
+
+            pure $ VaultTransferModel sigs inp out
         }
     ]
 
