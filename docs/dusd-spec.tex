@@ -700,40 +700,10 @@ The protocol parameters module will be a UTXO that includes in its datum the fol
 
 \subsection{Contracts}
 
-\subsubsection{Data Definitions}
-Pseudo-code for Protocol Data Layouts. TODO keep up to date.
-
-\begin{lstlisting}[language=Haskell]
-type Configuration = [CurrencySymbol]
-
-type PricePoint = (Time,ADA/USD,DUSD/ADA)
-
-type PriceModule = Vec 48 PricePoint
-
-data Vault =
-  Vault {
-    debt :: Integer
-  , authorisation :: CurrencySymbol
-  }
-
-type Size = Integer
-type Price = Integer
-
-data Buffer =
-  Buffer {
-    surplusTrigger :: Maybe (Size,Price)
-  , debtTrigger :: Maybe (Size,Price)
-  , liquidationDiscount :: Integer
-  , liquidationFee :: Integer
-  , stabilityFee :: Integer
-  , debtFloor :: Integer
-  }
-\end{lstlisting}
-
 \subsubsection{NFT minting policy}
 This policy will be responsible for minting NFTs that identify the Configuration, Price Oracle, and Buffer UTXOs.
 
-It is parameterised by a TXOutRef and only allows minting of its token when that TxOut is spent.
+Uniqueness of the NFT is guaranteed in the usual way by parameterising the minting policy for the NFT by a TxOutRef which must be spent.
 
 The tests must check that the policy
 \begin{itemize}
@@ -747,13 +717,9 @@ Initially the Configuration will be managed by the owner of a private key.
 
 This minting policy will check that the owner of the private key has signed the transaction and if so allow modification of the Configuration UTXO.
 
-\begin{lstlisting}[language=Haskell]
-type Configuration = [CurrencySymbol]
-\end{lstlisting}
-
 The Configuration Datum is a list of CurrencySymbols.
 
-The Main Script Redeemer is an index into this list and ensures that exactly one of the referenced token (CurrencySymbol,"") is minted.
+The Main Script Redeemer is an index into this list and ensures that exactly one of the referenced token is minted.
 
 The Configuration Management Minting Policy will always be at index 0.
 
