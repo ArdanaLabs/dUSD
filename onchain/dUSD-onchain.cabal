@@ -78,6 +78,7 @@ library
     Plutarch.Extensions.Api
     Plutarch.Extensions.List
     Plutarch.Extensions.Monad
+    VaultDeposit
     Validator
     VaultTransfer
 
@@ -85,6 +86,7 @@ library
   build-depends:
     , base
     , bytestring
+    , generics-sop
     , plutarch
     , plutarch-extra
     , plutus-core
@@ -120,6 +122,7 @@ test-suite tests
     Apropos.Plutus.SingletonValue
     Apropos.Plutus.Value
     Apropos.Plutus.Vault
+    Apropos.Plutus.VaultDeposit
     Apropos.Plutus.VaultTransfer
     Gen
     Tests

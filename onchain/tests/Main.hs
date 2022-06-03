@@ -10,6 +10,7 @@ import Apropos.Plutus.SingletonValue qualified as SingletonValue
 import Apropos.Plutus.Value qualified as Value
 import Apropos.Plutus.Vault qualified as Vault
 import Apropos.Plutus.VaultTransfer qualified as VaultTransfer
+import Apropos.Plutus.VaultDeposit qualified as VaultDeposit
 
 import Test.Syd
 
@@ -29,4 +30,5 @@ main =
       SingletonValue.spec
       Value.spec
       Vault.spec
+      VaultDeposit.spec
       VaultTransfer.spec
