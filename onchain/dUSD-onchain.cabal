@@ -78,8 +78,9 @@ library
     Plutarch.Extensions.Api
     Plutarch.Extensions.List
     Plutarch.Extensions.Monad
-    VaultDeposit
+    Types
     Validator
+    VaultDeposit
     VaultTransfer
 
   hs-source-dirs:  src

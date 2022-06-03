@@ -4,7 +4,7 @@ module Apropos.Plutus.VaultTransfer (
   spec,
 ) where
 
-import Gen (pubKeyHash)
+import Gen
 import VaultTransfer
 
 import Test.Syd
@@ -18,19 +18,27 @@ import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Scripts (applyMintingPolicyScript)
 
 import Control.Monad (forM_)
-import Data.Maybe (isJust)
 
 data VaultTransferProp
   = Signed
-  | ChangesDatum
+  | ChangeDebt
   -- TODO model changes other than the config
   deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (Hashable, Enumerable)
 
+-- This may or may not be a good way to do this?
+-- if it is it can probably be generic
+data VTxInInfo = VTxInInfo TxOutRef VTxOut
+  deriving stock (Eq, Show)
+data VTxOut = VTxOut Address Value (Maybe VaultDatumModel)
+  deriving stock (Eq, Show)
+data VaultDatumModel = VaultDatumModel Integer CurrencySymbol
+  deriving stock (Eq, Show)
+
 data VaultTransferModel = VaultTransferModel
   { signatures :: [PubKeyHash]
-  , input :: TxInInfo'
-  , output :: TxInInfo'
+  , input :: VTxInInfo
+  , output :: VTxOut
   }
   deriving stock (Eq, Show)
 
@@ -42,15 +50,11 @@ instance LogicalModel VaultTransferProp where
 
 instance HasLogicalModel VaultTransferProp VaultTransferModel where
   satisfiesProperty Signed VaultTransferModel {signatures = sigs} = magicpkh `elem` sigs
-  satisfiesProperty ChangesDatum VaultTransferModel {input = i, output = o} =
-    let TxInInfo' _ (TxOut' _ _ mdi) = i
-        TxInInfo' _ (TxOut' _ _ mdo) = o
+  satisfiesProperty ChangeDebt VaultTransferModel {input = i, output = o} =
+    let VTxInInfo _ (VTxOut _ _ mdi) = i
+        (VTxOut _ _ mdo) = o
      in case (mdi, mdo) of
-          (Just (Datum (BuiltinData inpd)), Just (Datum (BuiltinData outd))) -> isJust $ do
-            -- this is a dummy type to compile for now
-            _ <- fromData @Integer inpd
-            _ <- undefined outd
-            undefined
+          (Just (VaultDatumModel inDebt _), Just (VaultDatumModel outDebt _)) -> inDebt /= outDebt
           (Nothing, Nothing) -> False
           _ -> True
 
@@ -58,18 +62,17 @@ instance HasPermutationGenerator VaultTransferProp VaultTransferModel where
   sources =
     [ Source
         { sourceName = "no signature"
-        , covers = Not $ Var Signed
+        , covers = Not (Var Signed) :&&: Not (Var ChangeDebt)
         , gen = do
             sigs <- list (linear 0 10) $ genFilter (/= magicpkh) pubKeyHash
+            debt <- integer
+            auth <- hexString @CurrencySymbol
             let inp =
-                  TxInInfo'
+                  VTxInInfo
                     (TxOutRef "" 0)
-                    (TxOut' (Address (PubKeyCredential "") Nothing) mempty Nothing)
+                    (VTxOut (Address (PubKeyCredential "") Nothing) mempty (Just (VaultDatumModel debt auth)))
             let out =
-                  TxInInfo'
-                    (TxOutRef "" 0)
-                    (TxOut' (Address (PubKeyCredential "") Nothing) mempty Nothing)
-
+                  VTxOut (Address (PubKeyCredential "") Nothing) mempty (Just (VaultDatumModel debt auth))
             pure $ VaultTransferModel sigs inp out
         }
     ]
@@ -80,6 +83,18 @@ instance HasPermutationGenerator VaultTransferProp VaultTransferModel where
         , match = Not $ Var Signed
         , contract = add Signed
         , morphism = \m -> pure $ m {signatures = magicpkh : signatures m}
+        }
+    , Morphism
+        { name = "change debt"
+        , match = Not $ Var ChangeDebt
+        , contract = add ChangeDebt
+        , morphism = \m -> do
+            let (VTxOut adr val mvd) = output m
+            case mvd of
+              Nothing -> error "vault had no datum?"
+              Just (VaultDatumModel originalDebt auth) -> do
+                newDebt <- genFilter (/= originalDebt) integer
+                pure $ m {output = VTxOut adr val (Just $ VaultDatumModel newDebt auth)}
         }
     ]
 
