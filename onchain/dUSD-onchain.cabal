@@ -79,6 +79,7 @@ library
     Plutarch.Extensions.List
     Plutarch.Extensions.Monad
     VaultDeposit
+    Validator
 
   hs-source-dirs:  src
   build-depends:
@@ -115,6 +116,7 @@ test-suite tests
     Apropos.Plutus.Auction
     Apropos.Plutus.HelloValidator
     Apropos.Plutus.Integer
+    Apropos.Plutus.MainValidator
     Apropos.Plutus.NFT
     Apropos.Plutus.SingletonValue
     Apropos.Plutus.Value
