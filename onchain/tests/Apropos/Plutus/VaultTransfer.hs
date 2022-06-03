@@ -5,8 +5,6 @@ module Apropos.Plutus.VaultTransfer (
 ) where
 
 import Gen (pubKeyHash)
-import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Scripts (applyMintingPolicyScript)
 import VaultTransfer
 
 import Test.Syd
@@ -16,8 +14,15 @@ import Apropos
 import Apropos.ContextBuilder
 import Apropos.Script
 
+import Plutus.V1.Ledger.Api
+import Plutus.V1.Ledger.Scripts (applyMintingPolicyScript)
+
+import Control.Monad (forM_)
+import Data.Maybe (isJust)
+
 data VaultTransferProp
   = Signed
+  | ChangesDatum
   -- TODO model changes other than the config
   deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (Hashable, Enumerable)
@@ -37,6 +42,17 @@ instance LogicalModel VaultTransferProp where
 
 instance HasLogicalModel VaultTransferProp VaultTransferModel where
   satisfiesProperty Signed VaultTransferModel {signatures = sigs} = magicpkh `elem` sigs
+  satisfiesProperty ChangesDatum VaultTransferModel {input = i, output = o} =
+    let TxInInfo' _ (TxOut' _ _ mdi) = i
+        TxInInfo' _ (TxOut' _ _ mdo) = o
+     in case (mdi, mdo) of
+          (Just (Datum (BuiltinData inpd)), Just (Datum (BuiltinData outd))) -> isJust $ do
+            -- this is a dummy type to compile for now
+            _ <- fromData @Integer inpd
+            _ <- undefined outd
+            undefined
+          (Nothing, Nothing) -> False
+          _ -> True
 
 instance HasPermutationGenerator VaultTransferProp VaultTransferModel where
   sources =
@@ -76,7 +92,7 @@ instance ScriptModel VaultTransferProp VaultTransferModel where
     let ctx =
           buildContext $ do
             withTxInfo $ do
-              mapM_ addTxInfoSignatory (signatures m)
+              forM_ (signatures m) addTxInfoSignatory
      in applyMintingPolicyScript
           ctx
           vaultTransferPolicy
