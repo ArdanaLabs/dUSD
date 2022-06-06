@@ -9,6 +9,7 @@ module Gen (
   hexString,
   integer,
   maybeOf,
+  pos,
   pubKeyHash,
   rational,
   tokenName,

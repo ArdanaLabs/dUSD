@@ -79,11 +79,13 @@ library
     Plutarch.Extensions.List
     Plutarch.Extensions.Monad
     Validator
+    VaultDeposit
 
   hs-source-dirs:  src
   build-depends:
     , base
     , bytestring
+    , generics-sop
     , plutarch
     , plutarch-extra
     , plutus-core
@@ -119,6 +121,7 @@ test-suite tests
     Apropos.Plutus.SingletonValue
     Apropos.Plutus.Value
     Apropos.Plutus.Vault
+    Apropos.Plutus.VaultDeposit
     Gen
     Tests
 

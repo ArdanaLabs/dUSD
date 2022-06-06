@@ -9,6 +9,7 @@ import Apropos.Plutus.NFT qualified as NFT
 import Apropos.Plutus.SingletonValue qualified as SingletonValue
 import Apropos.Plutus.Value qualified as Value
 import Apropos.Plutus.Vault qualified as Vault
+import Apropos.Plutus.VaultDeposit qualified as VaultDeposit
 
 import Test.Syd
 
@@ -26,5 +27,6 @@ main =
       MainValidator.spec
       NFT.spec
       SingletonValue.spec
-      Value.spec
       Vault.spec
+      Value.spec
+      VaultDeposit.spec
