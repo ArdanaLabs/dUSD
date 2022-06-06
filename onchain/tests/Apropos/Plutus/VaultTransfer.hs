@@ -18,18 +18,21 @@ import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Scripts (applyMintingPolicyScript)
 import Plutus.V1.Ledger.Value qualified as Val
 
-import Control.Monad (forM_)
+import Plutarch.Builtin
+import Plutarch.Prelude
+import Types
 
 data VaultTransferProp
-  = Signed
-  | MintsAuthCS
+  = MintsAuthCS
   | ChangeDebt
   | MoveAdr
   deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (Hashable, Enumerable)
 
--- This may or may not be a good way to do this?
--- if it is it can probably be generic
+-- TODO
+-- I think this is a fairly good way to go
+-- but it would be better with some sort of GADT
+-- and a type class that converts it to a plutarch type with a pdata instance
 data VTxInInfo = VTxInInfo TxOutRef VTxOut
   deriving stock (Eq, Show)
 data VTxOut = VTxOut Address Value (Maybe VaultDatumModel)
@@ -37,25 +40,33 @@ data VTxOut = VTxOut Address Value (Maybe VaultDatumModel)
 data VaultDatumModel = VaultDatumModel Integer CurrencySymbol
   deriving stock (Eq, Show)
 
+marshalToData :: VaultDatumModel -> Data
+marshalToData (VaultDatumModel debt auth) =
+  plift $
+    pforgetData . pdata . pcon . VaultDatum $
+      pdcons # pdata (pconstant debt)
+        #$ pdcons # pdata (pconstant auth)
+        #$ pdnil
+
+toTxOut' :: VTxOut -> TxOut'
+toTxOut' (VTxOut a v md) = TxOut' a v (Datum . BuiltinData . marshalToData <$> md)
+
+toTxInInfo' :: VTxInInfo -> TxInInfo'
+toTxInInfo' (VTxInInfo ref out) = TxInInfo' ref (toTxOut' out)
+
 -- TODO
 -- we should probably model extra other outputs and inputs
 data VaultTransferModel = VaultTransferModel
-  { signatures :: [PubKeyHash]
-  , minting :: Value
+  { minting :: Value
   , input :: VTxInInfo
   , output :: VTxOut
   }
   deriving stock (Eq, Show)
 
-magicpkh :: PubKeyHash
-magicpkh = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-
 instance LogicalModel VaultTransferProp where
   logic = Yes
 
 instance HasLogicalModel VaultTransferProp VaultTransferModel where
-  satisfiesProperty Signed VaultTransferModel {signatures = sigs} =
-    magicpkh `elem` sigs
   satisfiesProperty ChangeDebt VaultTransferModel {input = i, output = o} =
     let VTxInInfo _ (VTxOut _ _ mdi) = i
         VTxOut _ _ mdo = o
@@ -81,9 +92,8 @@ instance HasPermutationGenerator VaultTransferProp VaultTransferModel where
   sources =
     [ Source
         { sourceName = "no signature"
-        , covers = None $ Var <$> [Signed, ChangeDebt, MoveAdr, MintsAuthCS]
+        , covers = None $ Var <$> [ChangeDebt, MoveAdr, MintsAuthCS]
         , gen = do
-            sigs <- list (linear 0 10) $ genFilter (/= magicpkh) pubKeyHash
             debt <- integer
             auth <- hexString @CurrencySymbol
             let inp =
@@ -96,18 +106,12 @@ instance HasPermutationGenerator VaultTransferProp VaultTransferModel where
                     )
             let out =
                   VTxOut (Address (PubKeyCredential "") Nothing) mempty (Just (VaultDatumModel debt auth))
-            pure $ VaultTransferModel sigs mempty inp out
+            pure $ VaultTransferModel mempty inp out
         }
     ]
 
   generators =
     [ Morphism
-        { name = "add signature"
-        , match = Not $ Var Signed
-        , contract = add Signed
-        , morphism = \m -> pure $ m {signatures = magicpkh : signatures m}
-        }
-    , Morphism
         { name = "change debt"
         , match = Not $ Var ChangeDebt
         , contract = add ChangeDebt
@@ -153,7 +157,9 @@ instance ScriptModel VaultTransferProp VaultTransferModel where
     let ctx =
           buildContext $ do
             withTxInfo $ do
-              forM_ (signatures m) addTxInfoSignatory
+              addInput $ toTxInInfo' (input m)
+              addOutput $ toTxOut' (output m)
+              mint $ minting m
      in applyMintingPolicyScript
           ctx
           vaultTransferPolicy
