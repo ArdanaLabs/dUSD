@@ -22,7 +22,7 @@ import Control.Monad (forM_)
 data VaultTransferProp
   = Signed
   | ChangeDebt
-  -- TODO model changes other than the config
+  | MoveAdr
   deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (Hashable, Enumerable)
 
@@ -35,6 +35,8 @@ data VTxOut = VTxOut Address Value (Maybe VaultDatumModel)
 data VaultDatumModel = VaultDatumModel Integer CurrencySymbol
   deriving stock (Eq, Show)
 
+-- TODO
+-- we should probably model extra other outputs and inputs
 data VaultTransferModel = VaultTransferModel
   { signatures :: [PubKeyHash]
   , input :: VTxInInfo
@@ -57,12 +59,13 @@ instance HasLogicalModel VaultTransferProp VaultTransferModel where
           (Just (VaultDatumModel inDebt _), Just (VaultDatumModel outDebt _)) -> inDebt /= outDebt
           (Nothing, Nothing) -> False
           _ -> True
+  satisfiesProperty MoveAdr VaultTransferModel {input = VTxInInfo _ (VTxOut inAdr _ _), output = VTxOut outAdr _ _} = inAdr /= outAdr
 
 instance HasPermutationGenerator VaultTransferProp VaultTransferModel where
   sources =
     [ Source
         { sourceName = "no signature"
-        , covers = Not (Var Signed) :&&: Not (Var ChangeDebt)
+        , covers = Not (Var Signed) :&&: Not (Var ChangeDebt) :&&: Not (Var MoveAdr)
         , gen = do
             sigs <- list (linear 0 10) $ genFilter (/= magicpkh) pubKeyHash
             debt <- integer
@@ -95,6 +98,15 @@ instance HasPermutationGenerator VaultTransferProp VaultTransferModel where
               Just (VaultDatumModel originalDebt auth) -> do
                 newDebt <- genFilter (/= originalDebt) integer
                 pure $ m {output = VTxOut adr val (Just $ VaultDatumModel newDebt auth)}
+        }
+    , Morphism
+        { name = "move adr"
+        , match = Not $ Var MoveAdr
+        , contract = add MoveAdr
+        , morphism = \m -> do
+            let VTxOut oldadr v md = output m
+            adr <- genFilter (/= oldadr) address
+            pure $ m {output = VTxOut adr v md}
         }
     ]
 
