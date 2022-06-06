@@ -78,8 +78,8 @@ library
     Plutarch.Extensions.Api
     Plutarch.Extensions.List
     Plutarch.Extensions.Monad
-    VaultDeposit
     Validator
+    VaultDeposit
 
   hs-source-dirs:  src
   build-depends:
