@@ -1,5 +1,7 @@
 # CTL Scaffold
 
+This project was built from MLab's [`ctl-scaffold`](https://github.com/mlabs-haskell/ctl-scaffold).
+
 
 ## Running Locally
 
@@ -7,7 +9,7 @@ In order to run the dApp on local, you'll need to run some backend services as w
 
 ### Docker dependency
 
-Because the backend services are run from docker via nix, you'll need to ensure your system has the latest docker installed. You can get it [here](https://www.docker.com/get-started/)
+Because the backend services are run from docker via nix, you'll need to ensure your system has the latest docker installed. You can get it [here](https://www.docker.com/get-started/).
 
 ### Backend Services
 
