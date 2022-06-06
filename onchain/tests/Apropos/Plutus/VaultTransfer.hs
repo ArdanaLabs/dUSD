@@ -16,11 +16,13 @@ import Apropos.Script
 
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Scripts (applyMintingPolicyScript)
+import Plutus.V1.Ledger.Value qualified as Val
 
 import Control.Monad (forM_)
 
 data VaultTransferProp
   = Signed
+  | MintsAuthCS
   | ChangeDebt
   | MoveAdr
   deriving stock (Eq, Ord, Show, Generic)
@@ -39,6 +41,7 @@ data VaultDatumModel = VaultDatumModel Integer CurrencySymbol
 -- we should probably model extra other outputs and inputs
 data VaultTransferModel = VaultTransferModel
   { signatures :: [PubKeyHash]
+  , minting :: Value
   , input :: VTxInInfo
   , output :: VTxOut
   }
@@ -51,21 +54,34 @@ instance LogicalModel VaultTransferProp where
   logic = Yes
 
 instance HasLogicalModel VaultTransferProp VaultTransferModel where
-  satisfiesProperty Signed VaultTransferModel {signatures = sigs} = magicpkh `elem` sigs
+  satisfiesProperty Signed VaultTransferModel {signatures = sigs} =
+    magicpkh `elem` sigs
   satisfiesProperty ChangeDebt VaultTransferModel {input = i, output = o} =
     let VTxInInfo _ (VTxOut _ _ mdi) = i
-        (VTxOut _ _ mdo) = o
+        VTxOut _ _ mdo = o
      in case (mdi, mdo) of
-          (Just (VaultDatumModel inDebt _), Just (VaultDatumModel outDebt _)) -> inDebt /= outDebt
+          (Just (VaultDatumModel inDebt _), Just (VaultDatumModel outDebt _)) ->
+            inDebt /= outDebt
           (Nothing, Nothing) -> False
           _ -> True
-  satisfiesProperty MoveAdr VaultTransferModel {input = VTxInInfo _ (VTxOut inAdr _ _), output = VTxOut outAdr _ _} = inAdr /= outAdr
+  satisfiesProperty
+    MoveAdr
+    VaultTransferModel
+      { input = VTxInInfo _ (VTxOut inAdr _ _)
+      , output = VTxOut outAdr _ _
+      } =
+      inAdr /= outAdr
+  satisfiesProperty MintsAuthCS VaultTransferModel {minting = m, input = VTxInInfo _ (VTxOut _ _ mvd)} =
+    case mvd of
+      Nothing -> False
+      Just (VaultDatumModel _ auth) ->
+        Val.assetClassValueOf m (Val.AssetClass (auth, "")) > 0
 
 instance HasPermutationGenerator VaultTransferProp VaultTransferModel where
   sources =
     [ Source
         { sourceName = "no signature"
-        , covers = Not (Var Signed) :&&: Not (Var ChangeDebt) :&&: Not (Var MoveAdr)
+        , covers = None $ Var <$> [Signed, ChangeDebt, MoveAdr, MintsAuthCS]
         , gen = do
             sigs <- list (linear 0 10) $ genFilter (/= magicpkh) pubKeyHash
             debt <- integer
@@ -73,10 +89,14 @@ instance HasPermutationGenerator VaultTransferProp VaultTransferModel where
             let inp =
                   VTxInInfo
                     (TxOutRef "" 0)
-                    (VTxOut (Address (PubKeyCredential "") Nothing) mempty (Just (VaultDatumModel debt auth)))
+                    ( VTxOut
+                        (Address (PubKeyCredential "") Nothing)
+                        mempty
+                        (Just (VaultDatumModel debt auth))
+                    )
             let out =
                   VTxOut (Address (PubKeyCredential "") Nothing) mempty (Just (VaultDatumModel debt auth))
-            pure $ VaultTransferModel sigs inp out
+            pure $ VaultTransferModel sigs mempty inp out
         }
     ]
 
@@ -97,7 +117,10 @@ instance HasPermutationGenerator VaultTransferProp VaultTransferModel where
               Nothing -> error "vault had no datum?"
               Just (VaultDatumModel originalDebt auth) -> do
                 newDebt <- genFilter (/= originalDebt) integer
-                pure $ m {output = VTxOut adr val (Just $ VaultDatumModel newDebt auth)}
+                pure $
+                  m
+                    { output = VTxOut adr val (Just $ VaultDatumModel newDebt auth)
+                    }
         }
     , Morphism
         { name = "move adr"
@@ -108,13 +131,24 @@ instance HasPermutationGenerator VaultTransferProp VaultTransferModel where
             adr <- genFilter (/= oldadr) address
             pure $ m {output = VTxOut adr v md}
         }
+    , Morphism
+        { name = "mint authCS"
+        , match = Not $ Var MintsAuthCS
+        , contract = add MintsAuthCS
+        , morphism = \m -> do
+            let VTxInInfo _ (VTxOut _ _ mvd) = input m
+            case mvd of
+              Nothing -> error "vault had no datum?"
+              Just (VaultDatumModel _originalDebt auth) -> do
+                pure m {minting = minting m <> Val.singleton auth "" 1}
+        }
     ]
 
 instance HasParameterisedGenerator VaultTransferProp VaultTransferModel where
   parameterisedGenerator = buildGen
 
 instance ScriptModel VaultTransferProp VaultTransferModel where
-  expect = Yes -- Var Signed
+  expect = (Yes :||:) $ Var MintsAuthCS :&&: Not (Var ChangeDebt) :&&: Not (Var MoveAdr)
   script m =
     let ctx =
           buildContext $ do
