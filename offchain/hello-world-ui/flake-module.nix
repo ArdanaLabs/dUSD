@@ -31,7 +31,6 @@
 
             srcs = [ ./src ];
           };
-      easy-ps = import self.inputs.easy-purescript-nix { inherit pkgs; };
     in
     {
       packages = {
@@ -70,14 +69,13 @@
       };
       devShells.${projectName} = pkgs.mkShell {
         name = projectName;
-        inputsFrom = builtins.attrValues self'.packages;
         buildInputs = (with pkgs; [
           nodejs-16_x
           (ps.command {})
           purs-nix.esbuild
           purs-nix.purescript
           purs-nix.purescript-language-server
-          easy-ps.purs-tidy
+          nodePackages.purs-tidy
         ]);
       };
     };
