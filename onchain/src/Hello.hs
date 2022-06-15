@@ -1,21 +1,42 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 module Hello (
   helloValidator,
   helloLogic,
   helloValidatorHash,
   helloAddress,
   helloWorldHexString,
+  HelloRedemer (..),
+  incRedemer,
 ) where
 
+import GHC.Generics qualified as GHC
+import Generics.SOP (Generic, I (I))
 import Utils (validatorToHexString)
 
-import Plutus.V1.Ledger.Address (Address (..))
-import Plutus.V1.Ledger.Credential (Credential (..))
-import Plutus.V1.Ledger.Scripts (Validator, ValidatorHash)
+import Plutus.V1.Ledger.Api
+
+import Plutarch.Prelude
 
 import Plutarch.Api.V1 (PScriptContext, mkValidator, validatorHash)
+import Plutarch.Builtin (pforgetData)
+import Plutarch.DataRepr (PIsDataReprInstances (PIsDataReprInstances))
 import Plutarch.Extensions.Api (passert, pgetContinuingDatum)
-import Plutarch.Prelude
+import Plutarch.Extra.TermCont (pmatchC)
 import Plutarch.Unsafe (punsafeCoerce)
+
+incRedemer :: Data
+incRedemer = plift $ pforgetData $ pdata $ pcon $ Inc pdnil
+
+data HelloRedemer (s :: S)
+  = Inc (Term s (PDataRecord '[]))
+  | Spend (Term s (PDataRecord '[]))
+  deriving stock (GHC.Generic)
+  deriving anyclass (Generic)
+  deriving anyclass (PIsDataRepr)
+  deriving
+    (PlutusType, PIsData, PEq)
+    via (PIsDataReprInstances HelloRedemer)
 
 helloWorldHexString :: String
 helloWorldHexString = validatorToHexString helloValidator
@@ -39,10 +60,14 @@ validator = plam $ \dn dunit dsc -> do
 -- TODO Try wrapping the counter in a newtype to
 -- test shareing newtypes/datatypes with apps
 
-validator' :: ClosedTerm (PInteger :--> PUnit :--> PScriptContext :--> PUnit)
-validator' = plam $ \n _unit sc -> unTermCont $ do
-  datum <- pgetContinuingDatum @PInteger sc
-  pure $ helloLogic # n # pfromData datum
+validator' :: ClosedTerm (PInteger :--> HelloRedemer :--> PScriptContext :--> PUnit)
+validator' = plam $ \n r sc -> unTermCont $ do
+  pmatchC r >>= \case
+    Inc _ -> do
+      datum <- pgetContinuingDatum @PInteger sc
+      pure $ helloLogic # n # pfromData datum
+    Spend _ ->
+      pure $ pcon PUnit
 
 helloLogic :: ClosedTerm (PInteger :--> PInteger :--> PUnit)
 helloLogic = plam $ \n m -> unTermCont $ passert "int was not correct" $ n + 1 #== m
