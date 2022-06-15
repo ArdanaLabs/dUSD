@@ -23,6 +23,7 @@ import Contract.Scripts (Validator, ValidatorHash, validatorHash)
 import Contract.Transaction
   ( BalancedSignedTransaction(BalancedSignedTransaction)
   , TransactionHash
+  , TransactionOutput
   , TransactionInput(TransactionInput)
   , balanceAndSignTx
   , submit
@@ -62,24 +63,33 @@ main = launchAff_ $ do
     txId <- payToHello 5 vhash
     logInfo' $ "Woooo! You did a CTL transaction. Id: " <> show txId
 
-    countToZero 60
+    countToZeroOrTx 60 vhash txId
 
     logInfo' "Try to increment"
     maybeNewId <- incHello 6 vhash validator txId
     case maybeNewId of
       Just txId2 -> do
-        countToZero 60
+        countToZeroOrTx 60 vhash txId2
 
         logInfo' "Try to spend"
         spendFromHello vhash validator txId2
       Nothing -> logInfo' "failed"
 
-countToZero :: Int -> Contract () Unit
-countToZero n =
-  unless (n <= 0) do
-    logInfo' $ "Waiting before we try to unlock: " <> show n
-    (liftAff <<< delay <<< wrap) 1000.0
-    countToZero (n - 1)
+-- TODO it would probably be better to make this return the txInput
+countToZeroOrTx :: Int -> ValidatorHash -> TransactionHash -> Contract () Unit
+countToZeroOrTx n vhash txid = do
+  let scriptAddress = scriptHashAddress vhash
+  UtxoM utxos <- fromMaybe (UtxoM Map.empty) <$> utxosAt scriptAddress
+  case fst <$> find hasTransactionId (Map.toUnfoldable utxos :: Array (TransactionInput /\ TransactionOutput)) of
+      Nothing -> unless (n <= 0) $ do
+        logInfo' $ "No tx yet wating: " <> show n
+        (liftAff <<< delay <<< wrap) 1000.0
+        countToZeroOrTx (n - 1) vhash txid
+      Just _ -> logInfo' $ "found tx stoping wait at: " <> show n
+  where
+    hasTransactionId :: forall a. TransactionInput /\ a -> Boolean
+    hasTransactionId (TransactionInput tx /\ _) =
+      tx.transactionId == txid
 
 payToHello :: Int -> ValidatorHash -> Contract () TransactionHash
 payToHello n vhash = do
