@@ -1,4 +1,4 @@
-module Utils (validatorToHexString, trivialHexString) where
+module Utils (validatorToHexString, trivialHexString, closedTermToHexString) where
 
 import Codec.Serialise (serialise)
 import Data.ByteString.Lazy qualified as BSL
@@ -6,6 +6,7 @@ import Data.Word (Word8)
 import Numeric
 import Plutarch.Api.V1
 import Plutarch.Prelude
+import Plutarch (compile)
 import Plutus.V1.Ledger.Scripts (Validator)
 
 {- | This function turns a validator into a hex string usable with CTL.
@@ -16,14 +17,19 @@ import Plutus.V1.Ledger.Scripts (Validator)
 -}
 validatorToHexString :: Validator -> String
 validatorToHexString v = concatMap byteToHex $ BSL.unpack $ serialise v
-  where
-    byteToHex :: Word8 -> String
-    byteToHex b = padToLen 2 '0' (showHex b "")
-    padToLen :: Int -> Char -> String -> String
-    padToLen len c w = replicate (len - length w) c <> w
+
+closedTermToHexString :: forall (p :: PType). ClosedTerm p -> String
+closedTermToHexString t = concatMap byteToHex $ BSL.unpack $ serialise $ compile t
+
+byteToHex :: Word8 -> String
+byteToHex b = padToLen 2 '0' (showHex b "")
+
+padToLen :: Int -> Char -> String -> String
+padToLen len c w = replicate (len - length w) c <> w
 
 trivialHexString :: String
 trivialHexString = validatorToHexString $ mkValidator trivialValidator
 
 trivialValidator :: ClosedTerm (PData :--> PData :--> PScriptContext :--> POpaque)
 trivialValidator = plam $ \_ _ _ -> popaque $ pcon PUnit
+
