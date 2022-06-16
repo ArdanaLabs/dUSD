@@ -59,35 +59,25 @@ main = launchAff_ $ do
   cfg <- over ContractConfig _ { wallet = wallet } <$> traceContractConfig
   runContract_ cfg $ do
     logInfo' "Running Examples.Hello"
-    mvalidator <- helloScript 4
-    case mvalidator of
-      Nothing -> logInfo' "applyArgsM failed"
-      Just validator -> do
-        vhash <- liftContractM "Couldn't hash validator" $ validatorHash validator
-        logInfo' "Attempt to lock value"
+    validator <- helloScript 4
+    vhash <- liftContractM "Couldn't hash validator" $ validatorHash validator
 
-        txId <- payToHello 5 vhash
-        logInfo' $ "Woooo! You did a CTL transaction. Id: " <> show txId
+    -- Pay to hello
+    logInfo' "Starting pay to hello"
+    txId <- payToHello 5 vhash
+    txIn1 <- liftContractM "gave up waiting for payToHello TX" =<< waitForTx 60 vhash txId
 
-        -- There's gotta be a way to do this with MaybeT Eff or something
-        -- but I'm not sure yet
-        -- It's liftContractM
-        maybeTxin <- waitForTx 60 vhash txId
+    -- Increment
+    logInfo' "Starting increment"
+    txId2 <- incHello 9 txIn1 vhash validator -- this failed with 10 like you would want
+    txIn2 <- liftContractM "failed waiting for increment" =<< waitForTx 60 vhash txId2
 
-        case maybeTxin of
-          Just txin -> do
-            logInfo' "Try to increment"
-            -- this failed with 10 like you would want
-            txId2 <- incHello 9 txin vhash validator
+    -- Redeem
+    logInfo' "Starting redeem ad"
+    _txId3 <- redeemFromHello txIn2 vhash validator
 
-            maybeTxIn2 <- waitForTx 60 vhash txId2
-            case maybeTxIn2 of
-              Just txIn2 -> do
-                logInfo' "Try to spend"
-                txId3 <- spendFromHello txIn2 vhash validator
-                logInfo' $ "finished with txid:" <> show txId3
-              Nothing -> logInfo' "failed"
-          Nothing -> logInfo' "failed"
+    logInfo' "finished"
+
 
 -- TODO it would probably be better to make this return the txInput
 waitForTx :: Int -> ValidatorHash -> TransactionHash -> Contract () (Maybe TransactionInput)
@@ -114,13 +104,14 @@ waitForTx n vhash txid = do
 payToHello :: Int -> ValidatorHash -> Contract () TransactionHash
 payToHello n vhash = do
   let
+    lookups :: Lookups.ScriptLookups PlutusData
+    lookups = mempty
+
     constraints :: TxConstraints Unit Unit
     constraints = Constraints.mustPayToScript vhash (Datum $ toData (BigInt.fromInt n))
       $ Value.lovelaceValueOf
       $ BigInt.fromInt 2_000_000
 
-    lookups :: Lookups.ScriptLookups PlutusData
-    lookups = mempty
 
   buildBalanceSignAndSubmitTx lookups constraints
 
@@ -137,6 +128,7 @@ incHello n txInput vhash validator = do
     lookups :: Lookups.ScriptLookups PlutusData
     lookups = Lookups.validator validator
         <> Lookups.unspentOutputs utxos
+
     constraints :: TxConstraints Unit Unit
     constraints =
       (Constraints.mustSpendScriptOutput txInput incRedeemer)
@@ -148,12 +140,12 @@ incHello n txInput vhash validator = do
 
   buildBalanceSignAndSubmitTx lookups constraints
 
-spendFromHello
+redeemFromHello
   :: TransactionInput
   -> ValidatorHash
   -> Validator
   -> Contract () TransactionHash
-spendFromHello txInput vhash validator = do
+redeemFromHello txInput vhash validator = do
   let scriptAddress = scriptHashAddress vhash
   UtxoM utxos <- fromMaybe (UtxoM Map.empty) <$> utxosAt scriptAddress
   let
@@ -163,6 +155,7 @@ spendFromHello txInput vhash validator = do
 
     constraints :: TxConstraints Unit Unit
     constraints = Constraints.mustSpendScriptOutput txInput spendRedeemer
+
   buildBalanceSignAndSubmitTx lookups constraints
 
 buildBalanceSignAndSubmitTx
@@ -177,16 +170,14 @@ buildBalanceSignAndSubmitTx lookups constraints = do
   logInfo' $ "Tx ID: " <> show txId
   pure txId
 
-helloScript :: Int -> Contract () (Maybe Validator)
+helloScript :: Int -> Contract () Validator
 helloScript n =
-  let maybeParamValidator =
+  let maybeParamValidator :: Maybe Validator
+      maybeParamValidator =
         map wrap $ hush $ decodeAeson $ fromString
           "5901a4010000323232323232323232323222223233322232323253330103370e90000010991919191919299980b19b87480080084c8c8c94ccc064cdc3a400000426666446666030466e3c00cdd7180f98100008009111801191811181098118021bad3021302030220031225001375c60380026eb0c070c8c070c070c070c070c058004c06c01c8c94ccc06ccdc399b80011012001149858dd68008b0b180e801180e8009baa32301a3013301b0013253330160011613253330170011301b0021630190013332223333016301a0010032332301922533301c00114bd70099299980f1802000899aba0001300330200021300330200023020001301b32301e301f001301d301c301e001003163758603200a6eb0c064010c06400458c068008c068004dd5180b180a801980a000980a980a000980a0020a4c602800460280026ea8008dd68020018011bad00423007300700130012225333005001122500115333006300230090011223002300b00313300300230080012323002233002002001230022330020020015573eae6888cdd780118021802800aba25742460046ea800555cf2ab9d01"
-   in case maybeParamValidator of
-          Nothing -> pure Nothing
-          Just paramValidator ->
-            applyArgsM
-              paramValidator
-              [Integer $ BigInt.fromInt n]
-              -- TODO It'd be cool if this could be an Integer not Data
+   in do
+      paramValidator <- liftContractM "decoding failed" maybeParamValidator
+      liftContractM "apply args failed" =<< applyArgsM paramValidator [Integer $ BigInt.fromInt n]
+         -- TODO It'd be cool if this could be an Integer not Data
 
