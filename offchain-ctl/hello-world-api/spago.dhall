@@ -11,7 +11,13 @@ When creating a new Spago project, you can use
 to generate this file without the comments in this block.
 -}
 { name = "offchain-ctl"
-, dependencies = [ "aeson", "aff", "bigints", "cardano-transaction-lib" ]
+, dependencies =
+	[ "aeson"
+	, "aff"
+	, "bigints"
+	, "cardano-transaction-lib"
+	, "ordered-collections"
+	]
 , packages = ../packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
 }
