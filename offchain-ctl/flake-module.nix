@@ -77,6 +77,7 @@
           purs-nix.purescript-language-server
           nodePackages.purs-tidy
         ]);
+        shellHook = "export NODE_PATH=${npmlock2nix.node_modules { src = ./.; }}/node_modules/";
       };
     };
   flake = {
