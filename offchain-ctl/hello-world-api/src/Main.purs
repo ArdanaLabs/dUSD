@@ -54,7 +54,8 @@ spendRedeemer :: Redeemer
 spendRedeemer = Redeemer (toData Spend)
 
 main :: Effect Unit
-main = launchAff_ $ do
+main =
+  launchAff_ $ do
   wallet <- Just <$> mkNamiWalletAff
   cfg <- over ContractConfig _ { wallet = wallet } <$> traceContractConfig
   runContract_ cfg $ do
@@ -79,7 +80,7 @@ main = launchAff_ $ do
     logInfo' "finished"
 
 
--- TODO it would probably be better to make this return the txInput
+
 waitForTx :: Int -> ValidatorHash -> TransactionHash -> Contract () (Maybe TransactionInput)
 waitForTx n vhash txid = do
   let scriptAddress = scriptHashAddress vhash
