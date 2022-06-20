@@ -53,3 +53,4 @@ Thumbs.db
 .spago*
 *output
 .psci_modules
+.psc-ide-port
