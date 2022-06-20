@@ -4,9 +4,9 @@ import Codec.Serialise (serialise)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Word (Word8)
 import Numeric
+import Plutarch (compile)
 import Plutarch.Api.V1
 import Plutarch.Prelude
-import Plutarch (compile)
 import Plutus.V1.Ledger.Scripts (Validator)
 
 {- | This function turns a validator into a hex string usable with CTL.
@@ -32,4 +32,3 @@ trivialHexString = validatorToHexString $ mkValidator trivialValidator
 
 trivialValidator :: ClosedTerm (PData :--> PData :--> PScriptContext :--> POpaque)
 trivialValidator = plam $ \_ _ _ -> popaque $ pcon PUnit
-
