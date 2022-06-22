@@ -1,6 +1,7 @@
 module Util
   (waitForTx
   ,buildBalanceSignAndSubmitTx
+  ,getUtxos
   ) where
 
 import Contract.Prelude
@@ -24,6 +25,9 @@ import Contract.Transaction
   )
 import Contract.TxConstraints (TxConstraints)
 import Contract.Utxos (UtxoM(UtxoM), utxosAt)
+
+
+import Data.Map (Map)
 import Data.Map as Map
 import Effect.Aff (delay)
 import Types.PlutusData (PlutusData)
@@ -64,3 +68,9 @@ buildBalanceSignAndSubmitTx lookups constraints = do
   txId <- submit bsTx.signedTxCbor
   logInfo' $ "Tx ID: " <> show txId
   pure txId
+
+getUtxos :: ValidatorHash -> Contract () (Map TransactionInput TransactionOutput)
+getUtxos vhash = do
+  let scriptAddress = scriptHashAddress vhash
+  UtxoM utxos <- fromMaybe (UtxoM Map.empty) <$> utxosAt scriptAddress
+  pure utxos
