@@ -11,6 +11,7 @@ import CBOR as CBOR
 import Util(buildBalanceSignAndSubmitTx,waitForTx,getUtxos)
 
 import Data.BigInt as BigInt
+import Data.Time.Duration(Minutes(..))
 
 import Contract.Aeson (decodeAeson, fromString)
 import Contract.Monad ( Contract , liftContractM , logInfo')
@@ -39,7 +40,7 @@ payToHello n vhash = do
         )
         enoughForFees
   txId <- buildBalanceSignAndSubmitTx lookups constraints
-  liftContractM "gave up waiting for payToHello TX" =<< waitForTx 60 vhash txId
+  liftContractM "gave up waiting for payToHello TX" =<< waitForTx (Minutes 1.0) vhash txId
 
 incHello
   :: Int
@@ -66,7 +67,7 @@ incHello n vhash validator txInput = do
         enoughForFees
       )
   txId <- buildBalanceSignAndSubmitTx lookups constraints
-  liftContractM "failed waiting for increment" =<< waitForTx 60 vhash txId
+  liftContractM "failed waiting for increment" =<< waitForTx (Minutes 1.0) vhash txId
 
 redeemFromHello
   :: ValidatorHash

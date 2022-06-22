@@ -29,33 +29,41 @@ import Contract.Utxos (UtxoM(UtxoM), utxosAt)
 
 import Data.Map (Map)
 import Data.Map as Map
+import Data.Time.Duration
+  (Milliseconds(..)
+  ,Seconds(..)
+  ,class Duration
+  ,fromDuration
+  ,convertDuration
+  ,negateDuration
+  )
 import Effect.Aff (delay)
 import Types.PlutusData (PlutusData)
 
 waitForTx
-  :: Int
+  :: forall a.
+  Duration a
+  => a
   -> ValidatorHash
   -> TransactionHash
   -> Contract () (Maybe TransactionInput)
-waitForTx n vhash txid = do
-  let scriptAddress = scriptHashAddress vhash
-  UtxoM utxos <- fromMaybe (UtxoM Map.empty) <$> utxosAt scriptAddress
+waitForTx d vhash txid = do
+  let hasTransactionId :: TransactionInput /\ TransactionOutput -> Boolean
+      hasTransactionId (TransactionInput tx /\ _) =
+        tx.transactionId == txid
+  utxos <- getUtxos vhash
   case fst <$> find hasTransactionId (Map.toUnfoldable utxos :: Array (TransactionInput /\ TransactionOutput)) of
       Nothing ->
-        if (n <= 0)
+        if (fromDuration d <= (Milliseconds 0.0))
           then do
             pure Nothing
           else do
-            logInfo' $ "No tx yet, waiting for: " <> show n <> " more seconds"
-            (liftAff <<< delay <<< wrap) 1000.0
-            waitForTx (n - 1) vhash txid
+              logInfo' $ "No tx yet, waiting for: " <> show (convertDuration d :: Seconds)
+              (liftAff <<< delay <<< wrap) 1000.0
+              waitForTx (fromDuration d <> fromDuration (negateDuration (Seconds 1.0))) vhash txid
       Just txin -> do
         logInfo' $ "found tx:" <> show txid
         pure $ Just txin
-  where
-    hasTransactionId :: forall a. TransactionInput /\ a -> Boolean
-    hasTransactionId (TransactionInput tx /\ _) =
-      tx.transactionId == txid
 
 buildBalanceSignAndSubmitTx
   :: Lookups.ScriptLookups PlutusData
