@@ -1,7 +1,7 @@
 module Api
-  (payToHello
-  ,incHello
-  ,redeemFromHello
+  (sendDatumToScript
+  ,setDatumAtScript
+  ,redeemFromScript
   ,helloScript
   ) where
 
@@ -25,8 +25,8 @@ import Contract.Value as Value
 import ToData(class ToData,toData)
 import Types.PlutusData (PlutusData(Constr,Integer))
 
-payToHello :: Int -> ValidatorHash -> Contract () TransactionInput
-payToHello n vhash = do
+sendDatumToScript :: Int -> ValidatorHash -> Contract () TransactionInput
+sendDatumToScript n vhash = do
   let
     lookups :: Lookups.ScriptLookups PlutusData
     lookups = mempty
@@ -40,15 +40,15 @@ payToHello n vhash = do
         )
         enoughForFees
   txId <- buildBalanceSignAndSubmitTx lookups constraints
-  liftContractM "gave up waiting for payToHello TX" =<< waitForTx (Minutes 1.0) vhash txId
+  liftContractM "gave up waiting for sendDatumToScript TX" =<< waitForTx (Minutes 1.0) vhash txId
 
-incHello
+setDatumAtScript
   :: Int
   -> ValidatorHash
   -> Validator
   -> TransactionInput
   -> Contract () TransactionInput
-incHello n vhash validator txInput = do
+setDatumAtScript n vhash validator txInput = do
   utxos <- getUtxos vhash
   let
     lookups :: Lookups.ScriptLookups PlutusData
@@ -69,12 +69,12 @@ incHello n vhash validator txInput = do
   txId <- buildBalanceSignAndSubmitTx lookups constraints
   liftContractM "failed waiting for increment" =<< waitForTx (Minutes 1.0) vhash txId
 
-redeemFromHello
+redeemFromScript
   :: ValidatorHash
   -> Validator
   -> TransactionInput
   -> Contract () Unit
-redeemFromHello vhash validator txInput = do
+redeemFromScript vhash validator txInput = do
   utxos <- getUtxos vhash
   let
     lookups :: Lookups.ScriptLookups PlutusData

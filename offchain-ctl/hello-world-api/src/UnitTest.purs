@@ -4,7 +4,7 @@ module UnitTest
 
 import Contract.Prelude
 
-import Api(helloScript, payToHello, incHello, redeemFromHello)
+import Api(helloScript, sendDatumToScript, setDatumAtScript, redeemFromScript)
 
 import Contract.Monad (Contract, liftContractM, logInfo')
 import Contract.Scripts (validatorHash)
@@ -14,5 +14,5 @@ helloUnitTest = do
   logInfo' "Running Examples.Hello"
   validator <- helloScript 4
   vhash <- liftContractM "Couldn't hash validator" $ validatorHash validator
-  payToHello 5 vhash >>= incHello 9 vhash validator >>= redeemFromHello vhash validator
+  sendDatumToScript 5 vhash >>= setDatumAtScript 9 vhash validator >>= redeemFromScript vhash validator
 
