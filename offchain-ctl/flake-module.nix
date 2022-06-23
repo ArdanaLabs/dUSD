@@ -14,7 +14,11 @@
               [ aeson
                 aff
                 bigints
-                cardano-transaction-lib
+                ( purs-nix.build { name = "ctl";
+                                  inherit (cardano-transaction-lib) repo dependencies;
+                                  ref = "klntsky/master-to-develop-2";
+                                  rev = "472650f725ba77ab06b501be9a1b10a5fe72ee76";
+                                } )
               ];
 
             srcs = [ ./hello-world-api/src ];
@@ -40,7 +44,7 @@
         ''
         mkdir $out; cd $out
         export BROWSER_RUNTIME=1
-        cp ${ps.modules.Main.bundle {main = true;} } output.js
+        cp -r ${ps.modules.Main.output {}} output
         cp ${./index.js} index.js
         cp ${./index.html} index.html
         cp ${./webpack.config.js} webpack.config.js

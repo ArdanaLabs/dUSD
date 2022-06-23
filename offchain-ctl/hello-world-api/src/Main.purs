@@ -1,5 +1,6 @@
 module Main
   ( main
+  , hello
   ) where
 
 import Contract.Prelude
@@ -10,7 +11,13 @@ import Contract.Monad
   , launchAff_
   , runContract_
   , traceTestnetContractConfig
+  , logInfo'
   )
+
+hello :: String -> Effect Unit
+hello config = do
+  log config
+  pure unit
 
 main :: Effect Unit
 main = launchAff_ $ do
