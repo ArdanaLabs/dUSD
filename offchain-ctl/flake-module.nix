@@ -14,6 +14,7 @@
               [ aeson
                 aff
                 bigints
+                spec
                 cardano-transaction-lib
               ];
 
