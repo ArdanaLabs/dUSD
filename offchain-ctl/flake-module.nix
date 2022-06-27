@@ -48,7 +48,7 @@
                 [ prelude
                   hello-world-api.package
                 ];
-              srcs = [ ./hello-world-browser/src ];
+              srcs = [ ./hello-world-cli/src ];
             };
       };
 
@@ -66,6 +66,7 @@
     in
     {
       packages.hello-world-api = hello-world-api.package;
+
 
       packages.hello-world-browser =
         pkgs.runCommand "build-hello-world-browser" { }
@@ -85,7 +86,7 @@
         webpack --mode=production -c webpack.config.js -o ./dist --entry ./index.js
         '';
 
-      packages.hello-world-cli = hello-world-browser.ps.modules.Main.bundle {main = true;};
+      packages.hello-world-cli = hello-world-cli.ps.modules.Main.bundle {main = true;};
 
       apps = {
         ctl-runtime = ctl-pkgs.launchCtlRuntime config;
@@ -120,6 +121,18 @@
         buildInputs = (with pkgs; [
           nodejs-16_x
           (hello-world-api.ps.command {})
+          purs-nix.ps-pkgs.psci-support
+          purs-nix.purescript
+          purs-nix.purescript-language-server
+          nodePackages.purs-tidy
+        ]);
+        shellHook = "export NODE_PATH=${npmlock2nix.node_modules { src = ./.; }}/node_modules/";
+      };
+      devShells.hello-world-cli = pkgs.mkShell {
+        name = projectName;
+        buildInputs = (with pkgs; [
+          nodejs-16_x
+          (hello-world-cli.ps.command {})
           purs-nix.ps-pkgs.psci-support
           purs-nix.purescript
           purs-nix.purescript-language-server
