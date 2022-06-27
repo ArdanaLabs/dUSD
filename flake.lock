@@ -1179,17 +1179,17 @@
         "servant-purescript": "servant-purescript"
       },
       "locked": {
-        "lastModified": 1655911658,
-        "narHash": "sha256-RhLoeytvx/iquz+uMdbJ9PJyt5UQFwxHDRX3RtCZ5cM=",
+        "lastModified": 1656071946,
+        "narHash": "sha256-oQRlMSHLv6igYIcnneJjCyrxYuQfylkVZqLnsFNMue8=",
         "owner": "Plutonomicon",
         "repo": "cardano-transaction-lib",
-        "rev": "6d47a100781379b54debc801b4f13a21ea182c23",
+        "rev": "6fca5ee2ff27f81762689c7da0d307e1afe7bbd3",
         "type": "github"
       },
       "original": {
         "owner": "Plutonomicon",
         "repo": "cardano-transaction-lib",
-        "rev": "6d47a100781379b54debc801b4f13a21ea182c23",
+        "rev": "6fca5ee2ff27f81762689c7da0d307e1afe7bbd3",
         "type": "github"
       }
     },
@@ -4291,17 +4291,17 @@
         "unstable_nixpkgs": "unstable_nixpkgs"
       },
       "locked": {
-        "lastModified": 1655041544,
-        "narHash": "sha256-ZTftQtrivnugqHjsMrV0wxKLfnrDxSX0MXM1KUkf4R0=",
+        "lastModified": 1655911416,
+        "narHash": "sha256-MTP1y+4xMAW3slZbdeD2P8a7s+df98/pzQJBKFGzcm0=",
         "owner": "mlabs-haskell",
         "repo": "ogmios-datum-cache",
-        "rev": "54ad2964af07ea0370bf95c0fed71f60a778ead5",
+        "rev": "1be5e903e14f5a1785983bdb38203195b401bd15",
         "type": "github"
       },
       "original": {
         "owner": "mlabs-haskell",
         "repo": "ogmios-datum-cache",
-        "rev": "54ad2964af07ea0370bf95c0fed71f60a778ead5",
+        "rev": "1be5e903e14f5a1785983bdb38203195b401bd15",
         "type": "github"
       }
     },
@@ -4817,15 +4817,15 @@
         "utils": "utils_7"
       },
       "locked": {
-        "lastModified": 1653680808,
-        "narHash": "sha256-67c65LVDrscS0wdHV4NSVnkgdnhFs63Lq3cyIp68hSE=",
-        "owner": "ursi",
+        "lastModified": 1656046585,
+        "narHash": "sha256-YaGws31OOdaZFF5dbCH/tq1VAQFK6GmX/LZuB03Wpmk=",
+        "owner": "Geometer1729",
         "repo": "purs-nix",
-        "rev": "163680803f6fe8bd602d4bf617bdb5f938617dd2",
+        "rev": "82b25201530a7ec2ae101a477b6ab804f4aaf685",
         "type": "github"
       },
       "original": {
-        "owner": "ursi",
+        "owner": "Geometer1729",
         "repo": "purs-nix",
         "type": "github"
       }
@@ -4841,17 +4841,17 @@
         "utils": "utils_9"
       },
       "locked": {
-        "lastModified": 1655932771,
-        "narHash": "sha256-3nj0dYMEWECMEuPfEsu7ku4w3EEM8AyyxY/Kl7Phl/o=",
-        "owner": "ursi",
+        "lastModified": 1656354611,
+        "narHash": "sha256-l6v4uuFRBA9A1BEAjdOc7yf0mq22e48R7ageNq5N9RY=",
+        "owner": "Geometer1729",
         "repo": "purs-nix",
-        "rev": "203cd6a2efbce26d5cdabe1d5f55299ee730843b",
+        "rev": "3fafe63040257b2740e7dfe5db311f16cbf89fd0",
         "type": "github"
       },
       "original": {
-        "owner": "ursi",
-        "ref": "ps-0.14",
+        "owner": "Geometer1729",
         "repo": "purs-nix",
+        "rev": "3fafe63040257b2740e7dfe5db311f16cbf89fd0",
         "type": "github"
       }
     },
