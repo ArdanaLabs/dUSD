@@ -14,10 +14,6 @@ import Contract.Monad
 
 main :: Effect Unit
 main = launchAff_ $ do
-  wallet' <- mkKeyWalletFromFile "wallet.skey"
-  case wallet' of
-  Just wallet -> do
-    cfg <- configWithLogLevel TestnetId wallet Trace
-    runContract_ cfg helloUnitTest
-  Nothing -> undefined
+  wallet <- Just <$> mkNamiWalletAff
+  cfg <- over ContractConfig _ { wallet = wallet } <$> traceTestnetContractConfig
   runContract_ cfg helloUnitTest
