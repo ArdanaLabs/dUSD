@@ -47,7 +47,7 @@
                 [ prelude
                   hello-world-api.package
                 ];
-              srcs = [ ./hello-world-browser/src ];
+              srcs = [ ./hello-world-cli/src ];
             };
       };
 
