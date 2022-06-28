@@ -89,17 +89,17 @@
       apps = {
         ctl-runtime = ctl-pkgs.launchCtlRuntime config;
 
-        serve-hello-world-browser = {
-          type = "app";
-          program = pkgs.writeShellApplication
-            {
-              name = projectName;
-              runtimeInputs = [
-                pkgs.nodePackages.http-server
-              ];
-              text = "http-server -c-1 ${self'.packages.hello-world-browser}";
-            };
-        };
+        # serve-hello-world-browser = {
+        #   type = "app";
+        #   program = pkgs.writeShellApplication
+        #     {
+        #       name = projectName;
+        #       runtimeInputs = [
+        #         pkgs.nodePackages.http-server
+        #       ];
+        #       text = "http-server -c-1 ${self'.packages.hello-world-browser}";
+        #     };
+        # };
       };
 
       devShells.hello-world-browser = pkgs.mkShell {
