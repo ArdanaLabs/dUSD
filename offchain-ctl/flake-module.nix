@@ -66,25 +66,25 @@
     {
       packages.hello-world-api = hello-world-api.package;
 
-      packages.hello-world-browser =
-        pkgs.runCommand "build-hello-world-browser" { }
-        # see buildPursProjcet: https://github.com/Plutonomicon/cardano-transaction-lib/blob/c906ead97563fef3b554320bb321afc31956a17e/nix/default.nix#L74
-        # see bundlePursProject: https://github.com/Plutonomicon/cardano-transaction-lib/blob/c906ead97563fef3b554320bb321afc31956a17e/nix/default.nix#L149
-        ''
-        mkdir $out; cd $out
-        export BROWSER_RUNTIME=1
-        cp ${hello-world-browser.ps.modules.Main.bundle {main = true;} } output.js
-        cp ${./hello-world-browser/index.js} index.js
-        cp ${./hello-world-browser/index.html} index.html
-        cp ${./webpack.config.js} webpack.config.js
-        cp -r ${npmlock2nix.node_modules { src = ./.; }}/* .
-        export NODE_PATH="node_modules"
-        export PATH="bin:$PATH"
-        mkdir dist
-        webpack --mode=production -c webpack.config.js -o ./dist --entry ./index.js
-        '';
+      # packages.hello-world-browser =
+      #   pkgs.runCommand "build-hello-world-browser" { }
+      #   # see buildPursProjcet: https://github.com/Plutonomicon/cardano-transaction-lib/blob/c906ead97563fef3b554320bb321afc31956a17e/nix/default.nix#L74
+      #   # see bundlePursProject: https://github.com/Plutonomicon/cardano-transaction-lib/blob/c906ead97563fef3b554320bb321afc31956a17e/nix/default.nix#L149
+      #   ''
+      #   mkdir $out; cd $out
+      #   export BROWSER_RUNTIME=1
+      #   cp ${hello-world-browser.ps.modules.Main.bundle {main = true;} } output.js
+      #   cp ${./hello-world-browser/index.js} index.js
+      #   cp ${./hello-world-browser/index.html} index.html
+      #   cp ${./webpack.config.js} webpack.config.js
+      #   cp -r ${npmlock2nix.node_modules { src = ./.; }}/* .
+      #   export NODE_PATH="node_modules"
+      #   export PATH="bin:$PATH"
+      #   mkdir dist
+      #   webpack --mode=production -c webpack.config.js -o ./dist --entry ./index.js
+      #   '';
 
-      packages.hello-world-cli = hello-world-browser.ps.modules.Main.bundle {main = true;};
+      # packages.hello-world-cli = hello-world-browser.ps.modules.Main.bundle {main = true;};
 
       apps = {
         ctl-runtime = ctl-pkgs.launchCtlRuntime config;
