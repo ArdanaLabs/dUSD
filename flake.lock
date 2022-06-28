@@ -4841,16 +4841,16 @@
         "utils": "utils_9"
       },
       "locked": {
-        "lastModified": 1655932771,
-        "narHash": "sha256-3nj0dYMEWECMEuPfEsu7ku4w3EEM8AyyxY/Kl7Phl/o=",
-        "owner": "ursi",
+        "lastModified": 1656414925,
+        "narHash": "sha256-YpwurUCF4u3ZICHg8rer7XB97suOpCe5jzaJM0uUDQw=",
+        "owner": "marijanp",
         "repo": "purs-nix",
-        "rev": "203cd6a2efbce26d5cdabe1d5f55299ee730843b",
+        "rev": "358f6eae108988e2e9416684cef99c1fab5cc7c6",
         "type": "github"
       },
       "original": {
-        "owner": "ursi",
-        "ref": "ps-0.14",
+        "owner": "marijanp",
+        "ref": "ps-0.14-fix",
         "repo": "purs-nix",
         "type": "github"
       }

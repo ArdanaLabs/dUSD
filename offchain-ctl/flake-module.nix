@@ -84,7 +84,7 @@
       #   webpack --mode=production -c webpack.config.js -o ./dist --entry ./index.js
       #   '';
 
-      # packages.hello-world-cli = hello-world-browser.ps.modules.Main.bundle {main = true;};
+      packages.hello-world-cli = hello-world-browser.ps.modules.Main.bundle {main = true;};
 
       apps = {
         ctl-runtime = ctl-pkgs.launchCtlRuntime config;
