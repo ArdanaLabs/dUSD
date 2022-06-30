@@ -119,10 +119,8 @@
           '';
 
       packages.docs = pkgs.runCommandNoCC "docs" {} ''
-                        mkdir $out; cd $out
-                        ${hello-world-browser.ps.command {}}/bin/purs-nix docs
-                        mv generated-docs/html/* .
-                        rm -rf generated-docs
+                        mkdir $out
+                        ${hello-world-browser.ps.command {}}/bin/purs-nix docs -o $out
                       '';
 
 
@@ -150,7 +148,7 @@
               runtimeInputs = [
                 pkgs.nodePackages.http-server
               ];
-              text = "http-server -c-1 ${self'.packages.hello-world-browser}";
+              text = "http-server -c-1 ${self'.packages.hello-world-browser ./generated-docs/html}";
             };
         };
       };
