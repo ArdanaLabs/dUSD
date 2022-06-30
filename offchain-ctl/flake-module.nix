@@ -118,7 +118,7 @@
           echo 'require("${js}").main()' | ${pkgs.nodejs}/bin/node
           '';
 
-      packages.docs = pkgs.runCommand "docs" {} ''
+      packages.docs = pkgs.runCommandNoCC "docs" {} ''
                         mkdir $out; cd $out
                         ${hello-world-browser.ps.command {}}/bin/purs-nix docs
                         mv generated-docs/html/* .
