@@ -16,30 +16,26 @@
     haskellNixFlake = fixHaskellDotNix (project.flake {}) [./dUSD-onchain.cabal];
 
     project = pkgs.haskell-nix.cabalProject' {
-      src = pkgs.runCommand "fakesrc-onchain" {} ''
-        cp -rT ${./.} $out
-        chmod u+w $out/cabal.project
-        cat $out/cabal-haskell.nix.project >> $out/cabal.project
+      src = pkgs.runCommandNoCC "fakesrc-onchain" {} ''
+        cp -rT ${./.} $out && cd $out
+        chmod u+w cabal.project
+        cat cabal-haskell.nix.project >> cabal.project
       '';
       compiler-nix-name = "ghc8107";
       cabalProjectFileName = "cabal.project";
-      modules =
-        commonPlutusModules
-        ++ [
-          {
-          }
-        ];
+      modules = commonPlutusModules;
       shell =
         commonPlutusShell
         // {
-          additional = ps: [
-            ps.apropos
-            ps.apropos-tx
-            ps.plutarch
-            ps.plutarch-extra
-            ps.sydtest
-            ps.sydtest-hedgehog
-          ];
+          additional = ps:
+            with ps; [
+              apropos
+              apropos-tx
+              plutarch
+              plutarch-extra
+              sydtest
+              sydtest-hedgehog
+            ];
         };
       sha256map = import ./sha256map;
     };
@@ -50,26 +46,25 @@
         onchain-scripts = pkgs.stdenv.mkDerivation {
           name = "onchain-scripts";
           src = self; # FIXME: Why should src be project root here?
+
           buildInputs = [haskellNixFlake.packages."dUSD-onchain:exe:scripts"];
+
           doCheck = false;
+          doConfigure = false;
+
+          buildPhase = "scripts .";
           installPhase = ''
-            scripts "$out"
-          '';
-          configurePhase = ''
-            mkdir $out
+            mkdir -p $out
+            mv ./* $out
           '';
         };
-        hello-world-cbor-purs = pkgs.runCommand "hello-world-cbor-purs" {} ''
+        hello-world-cbor-purs = pkgs.runCommandNoCC "hello-world-cbor-purs" {} ''
           mkdir -p $out/src
           ${haskellNixFlake.packages."dUSD-onchain:exe:hello-world"}/bin/hello-world $out/src
         '';
       };
-    checks =
-      haskellNixFlake.checks
-      // {
-      };
-    devShells.onchain = haskellNixFlake.devShell // {};
+    checks = haskellNixFlake.checks;
+    devShells.onchain = haskellNixFlake.devShell;
   };
-  flake = {
-  };
+  flake = {};
 }
