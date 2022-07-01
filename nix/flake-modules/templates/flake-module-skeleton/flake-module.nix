@@ -1,6 +1,10 @@
-{ self, ... }:
-{
-  perSystem = system: { config, self', inputs', ... }: {
+{self, ...}: {
+  perSystem = system: {
+    config,
+    self',
+    inputs',
+    ...
+  }: {
   };
   flake = {
   };

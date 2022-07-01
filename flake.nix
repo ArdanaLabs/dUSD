@@ -31,11 +31,16 @@
     purs-nix-0-14.url = "github:ursi/purs-nix/ps-0.14";
   };
 
-  outputs = { self, flake-modules-core, ... }:
-    (flake-modules-core.lib.evalFlakeModule
-      { inherit self; }
+  outputs = {
+    self,
+    flake-modules-core,
+    ...
+  }:
+    (
+      flake-modules-core.lib.evalFlakeModule
+      {inherit self;}
       {
-        systems = [ "x86_64-linux" ];
+        systems = ["x86_64-linux"];
         imports = [
           ./offchain-ctl
           #./offchain
@@ -44,5 +49,7 @@
           ./nix/flake-modules
         ];
       }
-    ).config.flake;
+    )
+    .config
+    .flake;
 }

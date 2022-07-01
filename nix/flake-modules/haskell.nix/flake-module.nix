@@ -1,12 +1,20 @@
-{ lib, self, ... }:
-let
-  inherit (lib)
+{
+  lib,
+  self,
+  ...
+}: let
+  inherit
+    (lib)
     mkOption
     types
     ;
-in
-{
-  perSystem = system: { config, self', inputs', ... }: {
+in {
+  perSystem = system: {
+    config,
+    self',
+    inputs',
+    ...
+  }: {
     options = {
       haskell-nix = {
         pkgs = mkOption {
@@ -19,11 +27,10 @@ in
           '';
           default = import self.inputs.haskell-nix.inputs.nixpkgs {
             inherit system;
-            overlays = [ self.inputs.haskell-nix.overlay ];
+            overlays = [self.inputs.haskell-nix.overlay];
           };
         };
       };
     };
   };
 }
-
