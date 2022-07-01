@@ -10,9 +10,15 @@
     pkgs = config.haskell-nix.pkgs;
     # dusd-lib contains helper functions for dealing with haskell.nix. From it,
     # we inherit fixHaskellDotNix and some common attributes to give to
-    # cabalProject'
-    dusd-lib = import "${self}/nix/lib/haskell.nix" {inherit system self pkgs;};
-    inherit (dusd-lib) commonPlutusModules commonPlutusShell fixHaskellDotNix;
+    # cabalProject'. The library is defined in a flake-module in
+    # nix/flake-modules/dusd-lib, to make it more performant and convenient
+    # in reuses
+    inherit
+      (config.dusd.lib)
+      commonPlutusModules
+      commonPlutusShell
+      fixHaskellDotNix
+      ;
 
     haskellNixFlake =
       fixHaskellDotNix (project.flake {})

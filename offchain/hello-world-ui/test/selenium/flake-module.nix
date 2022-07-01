@@ -7,9 +7,10 @@
   }: let
     description = "Selenium test for dUSD Hello World UI";
     # dusd-lib contains helper functions for dealing with haskell.nix. From it,
-    # we inherit fixHaskellDotNix
-    dusd-lib = import "${self}/nix/lib/haskell.nix" {inherit system self pkgs;};
-    inherit (dusd-lib) fixHaskellDotNix;
+    # we inherit fixHaskellDotNix. The library is defined in a flake-module in
+    # nix/flake-modules/dusd-lib, to make it more performant and convenient
+    # in reuses.
+    inherit (config.dusd.lib) fixHaskellDotNix;
     # realNixpkgs is required to get chromium and selenium from
     # cache.nixos.org rather than the bloated Haskell.nix Nixpkgs.
     realNixpkgs = inputs'.nixpkgs.legacyPackages;
