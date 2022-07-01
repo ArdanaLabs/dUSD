@@ -24,7 +24,7 @@
         {
           packages = {
             hello-world-ui-selenium-test.components.tests.sydtest-webdriver = {
-              pkgconfig = [[realNixpkgs.makeWrapper]];
+              pkgconfig = [realNixpkgs.makeWrapper];
               postInstall = with realNixpkgs; ''
                 wrapProgram $out/bin/sydtest-webdriver \
                   --set FONTCONFIG_FILE ${makeFontsConf {fontDirectories = [twitter-color-emoji roboto];}} \

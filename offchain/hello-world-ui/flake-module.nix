@@ -36,38 +36,33 @@
       };
   in {
     packages = {
-      "${projectName}" =
-        pkgs.runCommand projectName {}
-        ''
-          mkdir $out; cd $out
-          ln -s ${ps.modules.Main.bundle {esbuild.minify = false;}} main.js
-          ln -s ${./dist/index.html} index.html
-        '';
+      ${projectName} = pkgs.runCommandNoCC projectName {} ''
+        mkdir $out; cd $out
+        ln -s ${ps.modules.Main.bundle {esbuild.minify = false;}} main.js
+        ln -s ${./dist/index.html} index.html
+      '';
     };
     apps = {
       ${projectName} = {
         type = "app";
-        program =
-          pkgs.writeShellApplication
-          {
-            name = projectName;
-            runtimeInputs = with pkgs; [
-              entr
-              simple-http-server
-              # Nix unstable is required for --print-out-paths, this should
-              # be changed to stable when it is released.
-              nixVersions.unstable
-            ];
-            text = let
-              script = pkgs.writeShellScript "serve.sh" ''
-                simple-http-server --index --nocache \
-                  $(nix build --print-out-paths --no-link .#${projectName})
-              '';
-            in ''
-              find . -name "*.purs" | entr -r ${script}
+        program = pkgs.writeShellApplication {
+          name = projectName;
+          runtimeInputs = with pkgs; [
+            entr
+            simple-http-server
+            # Nix unstable is required for --print-out-paths, this should
+            # be changed to stable when it is released.
+            nixVersions.unstable
+          ];
+          text = let
+            script = pkgs.writeShellScript "serve.sh" ''
+              simple-http-server --index --nocache \
+                $(nix build --print-out-paths --no-link .#${projectName})
             '';
-          }
-          + "/bin/${projectName}";
+          in ''
+            find . -name "*.purs" | entr -r ${script}
+          '';
+        };
       };
     };
     devShells.${projectName} = pkgs.mkShell {
@@ -82,6 +77,5 @@
       ];
     };
   };
-  flake = {
-  };
+  flake = {};
 }
