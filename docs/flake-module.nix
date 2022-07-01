@@ -11,34 +11,42 @@
       build-docs = pkgs.stdenv.mkDerivation {
         name = "build-docs";
         src = ./.;
-        buildInputs = with pkgs; [(texlive.combine {inherit (texlive) scheme-basic latexmk todonotes metafont;})];
+
+        buildInputs = with pkgs; [
+          (texlive.combine {
+            inherit
+              (texlive)
+              scheme-basic
+              latexmk
+              todonotes
+              metafont
+              ;
+          })
+        ];
+
         doCheck = false;
+        doConfigure = false;
+
         buildPhase = ''
-          HOME=$TMP latexmk -output-directory="tmp" -pdf ./*.tex
-          mkdir $out -p
-          cp tmp/*.pdf $out
+          export HOME="$TMP"
+          latexmk -output-directory=. -pdf ./*.tex
         '';
         installPhase = ''
-          ls -lah
+          mkdir -p $out
+          mv ./*.pdf $out
         '';
       };
     };
     apps = {
       feedback-loop = {
         type = "app";
-        program =
-          pkgs.writeShellApplication
-          {
-            name = "dusd-feedback-loop";
-            runtimeInputs = [pkgs.entr];
-            text = ''
-              find docs -name "*.tex" | entr nix build .#build-docs
-            '';
-          }
-          + "/bin/dusd-feedback-loop";
+        program = pkgs.writeShellApplication {
+          name = "dusd-feedback-loop";
+          runtimeInputs = [pkgs.entr];
+          text = "find docs -name '*.tex' | entr nix build .#build-docs";
+        };
       };
     };
   };
-  flake = {
-  };
+  flake = {};
 }
