@@ -1,8 +1,8 @@
+# Selenium test for dUSD Hello World UI
 { self, ... }:
 {
   perSystem = system: { config, self', inputs', ... }:
     let
-      description = "Selenium test for dUSD Hello World UI";
       # dusd-lib contains helper functions for dealing with haskell.nix. From it,
       # we inherit fixHaskellDotNix
       dusd-lib = import "${self}/nix/lib/haskell.nix" { inherit system self pkgs; };

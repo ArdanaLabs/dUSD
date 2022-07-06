@@ -1,6 +1,5 @@
 { self, ... }:
 {
-  imports = [ ./hello-world-browser/test/selenium/flake-module.nix ];
   perSystem = system: { config, self', inputs', ... }:
     let
       pkgs = inputs'.nixpkgs.legacyPackages;
