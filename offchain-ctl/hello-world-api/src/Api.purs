@@ -11,18 +11,23 @@ import Contract.Prelude
 import CBOR as CBOR
 import Util(buildBalanceSignAndSubmitTx,waitForTx,getUtxos)
 
+import Control.Bind (bindFlipped)
 import Data.BigInt as BigInt
+import Data.Map as Map
 import Data.Time.Duration(Minutes(..))
 
+import Contract.Address (Address)
 import Contract.Aeson (decodeAeson, fromString)
 import Contract.Monad ( Contract , liftContractM , logInfo')
 import Contract.PlutusData (Datum(Datum),Redeemer(Redeemer))
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, ValidatorHash, applyArgsM)
-import Contract.Transaction ( TransactionInput)
+import Contract.Transaction ( TransactionInput, TransactionOutput)
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as Constraints
+import Contract.Utxos (utxosAt, UtxoM)
 import Contract.Value as Value
+import Contract.Value (CurrencySymbol, TokenName, Value)
 import ToData(class ToData,toData)
 import Types.PlutusData (PlutusData(Constr,Integer))
 
@@ -115,3 +120,22 @@ spendRedeemer = Redeemer (toData Spend)
 
 enoughForFees :: Value.Value
 enoughForFees = Value.lovelaceValueOf $ BigInt.fromInt 6_000_000
+
+-- incrementHandler
+
+
+-- | Same as PAB version, except you can 
+-- | change the Address value.
+findUtxoWithToken :: forall (r :: Row Type). Address -> CurrencySymbol -> Contract r (Maybe (TransactionInput /\ TransactionOutput))
+findUtxoWithToken adrs cs = do
+  -- Have to use fmap since the UtxoM is in two
+  -- layers of Functors.
+  bindFlipped singleElement <<< map Map.toUnfoldable <<< map (Map.filter (containsToken cs)) <<< map unwrap <$> utxosAt adrs
+  where 
+    containsToken :: CurrencySymbol -> TransactionOutput -> Boolean
+    containsToken csymb txout = (BigInt.fromInt 1) == Value.valueOf ((_.amount) (unwrap txout)) csymb Value.adaToken
+    singleElement :: forall (a :: Type). Array a -> Maybe a
+    singleElement [x] = Just x
+    singleElement  _  = Nothing
+
+
