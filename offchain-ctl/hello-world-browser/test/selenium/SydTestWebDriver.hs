@@ -1,29 +1,31 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
 module Main where
 
 import Control.Concurrent qualified as C
-
 import Control.Monad
 import Data.String
 import Data.Text (unpack)
-
+import GHC.Generics (Generic)
 import Network.Socket.Free
 import Network.URI
 import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
 import Network.Wai.Handler.Warp (Port, run)
 import System.Environment (getEnv)
-import Test.QuickCheck
+import Test.QuickCheck (mapSize, withMaxSuccess)
 import Test.Syd
+import Test.Syd.Validity
 import Test.Syd.Webdriver
 import Test.WebDriver
 
 data Command = Init | Incr
-  deriving (Show)
+  deriving (Show, Eq, Generic)
 
-instance Arbitrary Command where
-  arbitrary = elements [Init, Incr, Incr, Incr, Incr]
+instance Validity Command -- Implementation is derived via Generic
+
+instance GenValid Command
 
 evalCommands :: [Command] -> Int
 evalCommands = foldl f 0
@@ -50,7 +52,7 @@ main = sydTest $
   initPage $
     it "test 1" $ \wte -> mapSize (* 10) $
       withMaxSuccess 5 $
-        property $ \commands ->
+        forAllValid $ \commands ->
           runWebdriverTestM wte $ do
             openPath ""
             initialize <- findElem $ ById "initialize"
@@ -64,4 +66,4 @@ main = sydTest $
             mapM_ interpret commands
             n <- unpack <$> getText counter
 
-            when (n /= (show $ evalCommands commands)) $ error "fail"
+            when (n /= show (evalCommands commands)) $ error "fail"
