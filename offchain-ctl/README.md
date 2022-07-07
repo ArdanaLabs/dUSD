@@ -34,5 +34,5 @@ purs-nix test Main
 
 To run the browser integration tests
 ```
-nix build -L .#hello-world-browser-selenium-test:test:sydtest-webdriver
+nix build -L .#hello-world-browser-test:test:integration
 ```
