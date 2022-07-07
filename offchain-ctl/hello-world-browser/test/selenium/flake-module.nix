@@ -50,7 +50,6 @@
             chromedriver
             chromium
             selenium-server-standalone
-            nixpkgs-fmt
           ];
         };
       };
