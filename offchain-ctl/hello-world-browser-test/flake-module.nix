@@ -1,4 +1,4 @@
-# Selenium test for dUSD Hello World UI
+# test for dUSD Hello World Browser
 { self, ... }:
 {
   perSystem = system: { config, self', inputs', ... }:
@@ -15,14 +15,14 @@
       pkgs = config.haskell-nix.pkgs;
       haskellNixFlake =
         fixHaskellDotNix (project.flake { })
-          [ ./hello-world-browser-selenium-test.cabal ];
+          [ ./hello-world-browser-test.cabal ];
       project = pkgs.haskell-nix.cabalProject {
         modules = [{
           packages = {
-            hello-world-browser-selenium-test.components.tests.sydtest-webdriver = {
+            hello-world-browser-test.components.tests.integration = {
               pkgconfig = [ [ realNixpkgs.makeWrapper ] ];
               postInstall = with realNixpkgs; ''
-                wrapProgram $out/bin/sydtest-webdriver \
+                wrapProgram $out/bin/integration \
                   --set FONTCONFIG_FILE ${makeFontsConf { fontDirectories = [ twitter-color-emoji roboto ]; }} \
                   --set HELLO_WORLD_BROWSER_INDEX ${self'.packages.hello-world-browser} \
                   --prefix PATH : "${realNixpkgs.lib.makeBinPath [
@@ -34,7 +34,7 @@
             };
           };
         }];
-        name = "hello-world-browser-selenium-test";
+        name = "hello-world-browser-test";
         src = ./.;
         compiler-nix-name = "ghc8107";
         sha256map = import ./sha256map;
@@ -56,7 +56,7 @@
     in
     {
       packages = haskellNixFlake.packages;
-      devShells.hello-world-browser-selenium-test = haskellNixFlake.devShell;
+      devShells.hello-world-browser-test = haskellNixFlake.devShell;
       checks = haskellNixFlake.checks // { };
     };
   flake = { };
