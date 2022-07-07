@@ -5,19 +5,18 @@
 
 module Main where
 
-import Control.Concurrent qualified as C
 import Control.Monad
 import Data.String
 import Data.Text (unpack)
 import GHC.Generics (Generic)
-import Network.Socket.Free
+import Network.HTTP.Client as HTTP
 import Network.URI
 import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
-import Network.Wai.Handler.Warp (Port, run)
 import System.Environment (getEnv)
 import Test.QuickCheck (mapSize, withMaxSuccess)
 import Test.Syd
 import Test.Syd.Validity
+import Test.Syd.Wai
 import Test.Syd.Webdriver
 import Test.WebDriver
 
@@ -34,23 +33,24 @@ evalCommands = foldl f 0
     f _ Init = 0
     f c Incr = c + 1
 
-startHelloWorldBrowser :: Port -> IO ()
-startHelloWorldBrowser port = do
-  helloWorldBrowserIndex <- getEnv "HELLO_WORLD_BROWSER_INDEX"
-  run port $ staticApp (defaultFileServerSettings $ fromString helloWorldBrowserIndex)
-
-initPage :: WebdriverSpec () -> Spec
-initPage = webdriverSpec $ \_ -> do
-  port <- liftIO getFreePort
-  liftIO $ C.forkIO $ startHelloWorldBrowser port
+startHelloWorldBrowser :: SetupFunc URI
+startHelloWorldBrowser = do
+  helloWorldBrowserIndex <- liftIO $ getEnv "HELLO_WORLD_BROWSER_INDEX"
+  port <- applicationSetupFunc $ staticApp (defaultFileServerSettings $ fromString helloWorldBrowserIndex)
   let uriStr = "http://127.0.0.1:" <> show port
   case parseURI uriStr of
     Nothing -> liftIO $ expectationFailure $ "Failed to parse uri as string: " <> show uriStr
-    Just uri -> pure (uri, ())
+    Just uri -> pure uri
+
+setupWebdriverTestEnv :: URI -> SetupFunc (WebdriverTestEnv ())
+setupWebdriverTestEnv uri = do
+  ssh <- seleniumServerSetupFunc
+  manager <- liftIO $ HTTP.newManager HTTP.defaultManagerSettings
+  webdriverTestEnvSetupFunc ssh manager uri ()
 
 main :: IO ()
 main = sydTest $
-  initPage $
+  setupAround (startHelloWorldBrowser >>= setupWebdriverTestEnv) $
     it "test 1" $ \wte -> mapSize (* 10) $
       withMaxSuccess 5 $
         forAllValid $ \commands ->

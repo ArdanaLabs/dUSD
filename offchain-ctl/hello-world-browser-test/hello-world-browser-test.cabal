@@ -14,12 +14,12 @@ test-suite integration
   build-depends:
     , base                 ^>=4.14
     , genvalidity-sydtest
+    , http-client
     , network-uri
-    , port-utils
     , QuickCheck
     , sydtest
+    , sydtest-wai
     , sydtest-webdriver
     , text
     , wai-app-static
-    , warp
     , webdriver
