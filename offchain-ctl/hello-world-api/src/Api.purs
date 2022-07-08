@@ -19,7 +19,7 @@ import Type.Proxy (Proxy(Proxy))
 
 import Contract.Address (Address)
 import Contract.Aeson (decodeAeson, fromString)
-import Contract.Monad ( Contract , liftContractM , logInfo', liftQueryM, liftedE, liftedM)
+import Contract.Monad ( Contract , liftContractM , logInfo', liftQueryM, liftedE, liftedM, liftContractM, liftContractAffM)
 import Contract.PlutusData (Datum(Datum),Redeemer(Redeemer), FromData, ToData, toData, getDatumByHash, unitRedeemer)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, ValidatorHash, applyArgsM)
@@ -163,33 +163,30 @@ incrementHandler cs = do
           logInfo $ "Successfully incremented to value " <> showText updatedHelloWorldDatum
 
 -}
+
 incrementHandler :: forall (r :: Row Type). Validator -> ValidatorHash -> CurrencySymbol -> Contract r Unit
 incrementHandler helloVal helloHash cs = do
   let helloAdr = scriptHashAddress helloHash
   maybeUtxo <- findUtxoWithToken helloAdr cs
-  case maybeUtxo of
-    Nothing -> pure unit -- lookup how to log an error message
-    Just tup -> do
-      let txin  = get1 tup
-          txout = get2 tup
-      maybeHelloWorldDatum <- getDatum'' (Proxy :: Proxy BigInt.BigInt) txout
-      case maybeHelloWorldDatum of
-        Nothing -> pure unit -- log error here
-        Just oldDatum -> do
-          let newDatum = oldDatum + 1
-              newHelloWorldDatum = Datum (toData newDatum)
-              unspentMap = Map.fromFoldable maybeUtxo
-              lookups = 
-                unspentOutputs unspentMap
-                  <> validator helloVal
-              outputVal = Value.mkSingletonValue' cs Value.adaToken (BigInt.fromInt 1)
-              tx =
-                mustPayToScript helloHash newHelloWorldDatum outputVal
-                  <> mustSpendScriptOutput txin unitRedeemer
-          unbalancedTx <- liftedE $ wrap $ liftQueryM $ mkUnbalancedTx lookups tx
-          balancedTx <- liftedM "Could not balance Transaction." $ balanceAndSignTx unbalancedTx
-          txHash <- submit balancedTx
-          logInfo' ("Tx hash: " <> show txHash)
+  tup <- liftContractM "Couldn't find any UTxO at script address for given token." maybeUtxo
+  let txin  = get1 tup
+      txout = get2 tup
+  maybeHelloWorldDatum <- getDatum'' (Proxy :: Proxy BigInt.BigInt) txout
+  oldDatum <- liftContractM "No hello world datum found at script address." maybeHelloWorldDatum
+  let newDatum = oldDatum + 1
+      newHelloWorldDatum = Datum (toData newDatum)
+      unspentMap = Map.fromFoldable maybeUtxo
+      lookups = 
+        unspentOutputs unspentMap
+          <> validator helloVal
+      outputVal = Value.mkSingletonValue' cs Value.adaToken (BigInt.fromInt 1)
+      tx =
+        mustPayToScript helloHash newHelloWorldDatum outputVal
+          <> mustSpendScriptOutput txin unitRedeemer
+  unbalancedTx <- liftedE $ wrap $ liftQueryM $ mkUnbalancedTx lookups tx
+  balancedTx <- liftedM "Could not balance Transaction." $ balanceAndSignTx unbalancedTx
+  txHash <- submit balancedTx
+  logInfo' ("Tx hash: " <> show txHash)
 
 -- | Same as PAB version, except you can 
 -- | change the Address value.
