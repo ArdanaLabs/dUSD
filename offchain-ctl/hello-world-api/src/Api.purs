@@ -17,16 +17,16 @@ import Data.Map as Map
 import Data.Time.Duration(Minutes(..))
 import Type.Proxy (Proxy(Proxy))
 
-import Contract.Address (Address)
+import Contract.Address (Address, scriptHashAddress)
 import Contract.Aeson (decodeAeson, fromString)
-import Contract.Monad ( Contract , liftContractM , logInfo', liftQueryM, liftedE, liftedM, liftContractM, liftContractAffM)
-import Contract.PlutusData (Datum(Datum),Redeemer(Redeemer), FromData, ToData, toData, getDatumByHash, unitRedeemer)
+import Contract.Monad ( Contract , liftContractM , logInfo', liftQueryM, liftedE, liftedM, liftContractAffM)
+import Contract.PlutusData (Datum(Datum),Redeemer(Redeemer), class FromData, fromData, getDatumByHash, unitRedeemer)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (Validator, ValidatorHash, applyArgsM)
+import Contract.Scripts (Validator, ValidatorHash, applyArgsM, validatorHash)
 import Contract.Transaction ( TransactionInput, TransactionOutput, mkUnbalancedTx, balanceAndSignTx, submit)
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (utxosAt, UtxoM)
+import Contract.Utxos (utxosAt)
 import Contract.Value as Value
 import Contract.Value (CurrencySymbol, TokenName, Value)
 import ToData(class ToData,toData)
@@ -164,25 +164,35 @@ incrementHandler cs = do
 
 -}
 
+-- | Like `incrementHandler`, but derives the
+-- | `ValidatorHash` automatically.`
+incrementHandler' :: forall (r :: Row Type). Validator -> CurrencySymbol -> Contract r Unit 
+incrementHandler' val cs = do
+  valHash <- liftContractAffM "Couldn't hash validator script." (validatorHash val)
+  incrementHandler val valHash cs
+
+-- | The main contract for increment.
 incrementHandler :: forall (r :: Row Type). Validator -> ValidatorHash -> CurrencySymbol -> Contract r Unit
 incrementHandler helloVal helloHash cs = do
   let helloAdr = scriptHashAddress helloHash
   maybeUtxo <- findUtxoWithToken helloAdr cs
-  tup <- liftContractM "Couldn't find any UTxO at script address for given token." maybeUtxo
-  let txin  = get1 tup
-      txout = get2 tup
+  (Tuple txin txout) <- liftContractM "Couldn't find any UTxO at script address for given token." maybeUtxo
+  -- let txin  = get1 tup
+  --     txout = get2 tup
   maybeHelloWorldDatum <- getDatum'' (Proxy :: Proxy BigInt.BigInt) txout
   oldDatum <- liftContractM "No hello world datum found at script address." maybeHelloWorldDatum
-  let newDatum = oldDatum + 1
+  let newDatum = oldDatum + (BigInt.fromInt 1)
       newHelloWorldDatum = Datum (toData newDatum)
       unspentMap = Map.fromFoldable maybeUtxo
+      lookups :: Lookups.ScriptLookups PlutusData
       lookups = 
-        unspentOutputs unspentMap
-          <> validator helloVal
-      outputVal = Value.mkSingletonValue' cs Value.adaToken (BigInt.fromInt 1)
+        Lookups.unspentOutputs unspentMap
+          <> Lookups.validator helloVal
+      outputVal = Value.singleton cs Value.adaToken (BigInt.fromInt 1)
+      tx :: Constraints.TxConstraints Unit Unit
       tx =
-        mustPayToScript helloHash newHelloWorldDatum outputVal
-          <> mustSpendScriptOutput txin unitRedeemer
+        Constraints.mustPayToScript helloHash newHelloWorldDatum outputVal
+          <> Constraints.mustSpendScriptOutput txin unitRedeemer
   unbalancedTx <- liftedE $ wrap $ liftQueryM $ mkUnbalancedTx lookups tx
   balancedTx <- liftedM "Could not balance Transaction." $ balanceAndSignTx unbalancedTx
   txHash <- submit balancedTx
@@ -190,7 +200,7 @@ incrementHandler helloVal helloHash cs = do
 
 -- | Same as PAB version, except you can 
 -- | change the Address value.
-findUtxoWithToken :: forall (r :: Row Type). Address -> CurrencySymbol -> Contract r (Maybe (TransactionInput /\ TransactionOutput))
+findUtxoWithToken :: forall (r :: Row Type). Address -> CurrencySymbol -> Contract r (Maybe (Tuple TransactionInput TransactionOutput))
 findUtxoWithToken adrs cs = do
   -- Have to use map since the UtxoM is in two
   -- layers of Functors.
@@ -213,4 +223,4 @@ getDatum' txout' = do
 
 -- | A version of `getDatum'` with a proxy.
 getDatum'' :: forall (a :: Type) (r :: Row Type). (FromData a) => Proxy a -> TransactionOutput -> Contract r (Maybe a)
-getDatum'' prox = getDatum'
+getDatum'' _prox = getDatum'
