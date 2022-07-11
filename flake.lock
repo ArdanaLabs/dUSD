@@ -1179,11 +1179,11 @@
         "servant-purescript": "servant-purescript"
       },
       "locked": {
-        "lastModified": 1657506409,
-        "narHash": "sha256-9eJJ1iVC/1OlkMHmFqeAbkLZrKscaNEEcc+BonpDdR4=",
+        "lastModified": 1657551833,
+        "narHash": "sha256-/THKU4kBSSwo9iT6Rp1yM1v4+96Amn9tVtEzmmchGWE=",
         "owner": "yusdacra",
         "repo": "cardano-transaction-lib",
-        "rev": "682de85e82d3633c936349662625459e8534aa93",
+        "rev": "4d9e9e1daaddd47a6cd52f4d5d85025b0b7a5bc2",
         "type": "github"
       },
       "original": {
