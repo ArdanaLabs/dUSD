@@ -122,48 +122,6 @@ spendRedeemer = Redeemer (toData Spend)
 enoughForFees :: Value.Value
 enoughForFees = Value.lovelaceValueOf $ BigInt.fromInt 6_000_000
 
-{-
-increment :: CurrencySymbol -> Contract () IncHelloWorldSchema Text ()
-increment cs = forever $ handleError (logError @Text) $ awaitPromise $ endpoint @"increment" $ const $ incrementHandler cs
-
-
-getDatum' :: (FromData a, AsContractError e) => ChainIndexTxOut -> Contract w s e (Maybe a)
-getDatum' (PublicKeyChainIndexTxOut _ _) = return Nothing
-getDatum' (ScriptChainIndexTxOut _ _ eitherDatum _) =
-  either
-    (\datumHash -> (fromBuiltinData =<<) <$> getDatum <$$> datumFromHash datumHash) -- try to get the datum using the datumHash
-    (return . fromBuiltinData . getDatum)
-    eitherDatum
-  where
-    f <$$> x = (fmap . fmap) f x
-
-
-incrementHandler :: AsContractError e => CurrencySymbol -> Contract w s e ()
-incrementHandler cs = do
-  maybeUTxO <- findUTxOWithToken cs
-  case maybeUTxO of
-    Nothing ->
-      logInfo @Text "Couldn't find any UTxO at the script address for the given token"
-    Just (txOutRef, ciTxOut) -> do
-      maybeHelloWorldDatum <- getDatum' @Integer ciTxOut
-      case maybeHelloWorldDatum of
-        Nothing ->
-          logInfo @Text $ "No hello world datum found at the script address"
-        Just oldDatum -> do
-          let updatedHelloWorldDatum = oldDatum + 1
-              lookups =
-                unspentOutputs (Map.singleton txOutRef ciTxOut)
-                  <> otherScript helloValidator
-              tx =
-                mustPayToOtherScript helloValidatorHash (Datum $ mkI updatedHelloWorldDatum) (singleton cs "" 1)
-                  <> mustSpendScriptOutput txOutRef (Redeemer $ toBuiltinData ())
-          adjustedTx <- adjustUnbalancedTx <$> mkTxConstraints @Void lookups tx
-          ledgerTx <- submitUnbalancedTx adjustedTx
-          awaitTxConfirmed $ getCardanoTxId ledgerTx
-          logInfo $ "Successfully incremented to value " <> showText updatedHelloWorldDatum
-
--}
-
 -- | Like `incrementHandler`, but derives the
 -- | `ValidatorHash` automatically.`
 incrementHandler' :: forall (r :: Row Type). Validator -> CurrencySymbol -> Contract r Unit 
@@ -177,8 +135,6 @@ incrementHandler helloVal helloHash cs = do
   let helloAdr = scriptHashAddress helloHash
   maybeUtxo <- findUtxoWithToken helloAdr cs
   (Tuple txin txout) <- liftContractM "Couldn't find any UTxO at script address for given token." maybeUtxo
-  -- let txin  = get1 tup
-  --     txout = get2 tup
   maybeHelloWorldDatum <- getDatum'' (Proxy :: Proxy BigInt.BigInt) txout
   oldDatum <- liftContractM "No hello world datum found at script address." maybeHelloWorldDatum
   let newDatum = oldDatum + (BigInt.fromInt 1)
@@ -197,6 +153,7 @@ incrementHandler helloVal helloHash cs = do
   balancedTx <- liftedM "Could not balance Transaction." $ balanceAndSignTx unbalancedTx
   txHash <- submit balancedTx
   logInfo' ("Tx hash: " <> show txHash)
+  liftContractM "Gave up waiting for increment Tx." =<< waitForTx (Minutes 1.0) helloHash txHash
 
 -- | Same as PAB version, except you can 
 -- | change the Address value.
