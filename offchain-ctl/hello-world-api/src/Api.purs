@@ -5,12 +5,13 @@ module Api
   ,helloScript
   ,enoughForFees
   ,incrementHandler'
+  ,readHandler'
   ) where
 
 import Contract.Prelude
 
 import CBOR as CBOR
-import Util(buildBalanceSignAndSubmitTx,waitForTx,getUtxos)
+import Util(buildBalanceSignAndSubmitTx,waitForTx,getUtxos,(#%))
 
 import Control.Bind (bindFlipped)
 import Data.BigInt as BigInt
@@ -128,17 +129,25 @@ enoughForFees = Value.lovelaceValueOf $ BigInt.fromInt 6_000_000
 incrementHandler' :: forall (r :: Row Type). Validator -> CurrencySymbol -> Contract r Unit 
 incrementHandler' val cs = do
   valHash <- liftContractAffM "Couldn't hash validator script." (validatorHash val)
-  incrementHandler val valHash cs
+  datVal <- adjustDatumHandler (\x -> x + (BigInt.fromInt 1)) val valHash cs
+  logInfo' $ "New datum value: " <> show datVal
 
--- | The main contract for increment.
-incrementHandler :: forall (r :: Row Type). Validator -> ValidatorHash -> CurrencySymbol -> Contract r Unit
-incrementHandler helloVal helloHash cs = do
+readHandler' :: forall (r :: Row Type). Validator -> CurrencySymbol -> Contract r Unit
+readHandler' val cs = do
+  valHash <- liftContractAffM "Couldn't hash validator script." (validatorHash val)
+  datVal <- adjustDatumHandler (\x -> x) val valHash cs
+  logInfo' $ "Datum value: " <> show datVal
+
+-- | The main contract for modifying the
+-- | datum in some way.
+adjustDatumHandler :: forall (r :: Row Type). (BigInt.BigInt -> BigInt.BigInt) -> Validator -> ValidatorHash -> CurrencySymbol -> Contract r (BigInt.BigInt)
+adjustDatumHandler datumMod helloVal helloHash cs = do
   let helloAdr = scriptHashAddress helloHash
   maybeUtxo <- findUtxoWithToken helloAdr cs
   (Tuple txin txout) <- liftContractM "Couldn't find any UTxO at script address for given token." maybeUtxo
   maybeHelloWorldDatum <- getDatum'' (Proxy :: Proxy BigInt.BigInt) txout
   oldDatum <- liftContractM "No hello world datum found at script address." maybeHelloWorldDatum
-  let newDatum = oldDatum + (BigInt.fromInt 1)
+  let newDatum = datumMod oldDatum
       newHelloWorldDatum = Datum (toData newDatum)
       unspentMap = Map.fromFoldable maybeUtxo
       lookups :: Lookups.ScriptLookups PlutusData
@@ -154,8 +163,9 @@ incrementHandler helloVal helloHash cs = do
   balancedTx <- liftedM "Could not balance Transaction." $ balanceAndSignTx unbalancedTx
   txHash <- submit balancedTx
   logInfo' ("Tx hash: " <> show txHash)
-  txi <- liftContractM "Gave up waiting for increment Tx." =<< waitForTx (Minutes 1.0) helloHash txHash
+  txi <- liftContractM "Gave up waiting for Tx response." =<< waitForTx (Minutes 1.0) helloHash txHash
   logInfo' ("TxInput: " <> show txi)
+  pure newDatum
 
 -- | Same as PAB version, except you can 
 -- | change the Address value.
@@ -185,9 +195,3 @@ getDatum'' :: forall (a :: Type) (r :: Row Type). (FromData a) => Proxy a -> Tra
 getDatum'' _prox = getDatum'
 
 
--- | Reverse function application on 
--- | a wrapped newtype.
-rapplyUnwrap :: forall (new :: Type) (old :: Type) (a :: Type). (Newtype new old) => new -> (old -> a) -> a
-rapplyUnwrap val f = f (unwrap val)
-
-infixl 1 rapplyUnwrap as #%

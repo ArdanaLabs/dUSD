@@ -2,6 +2,8 @@ module Util
   (waitForTx
   ,buildBalanceSignAndSubmitTx
   ,getUtxos
+  ,rapplyUnwrap
+  ,(#%)
   ) where
 
 import Contract.Prelude
@@ -81,3 +83,12 @@ getUtxos vhash = do
   let scriptAddress = scriptHashAddress vhash
   UtxoM utxos <- fromMaybe (UtxoM Map.empty) <$> utxosAt scriptAddress
   pure utxos
+
+-- | Reverse function application on 
+-- | a wrapped newtype. Intended to
+-- | be used
+rapplyUnwrap :: forall (new :: Type) (old :: Type) (a :: Type). (Newtype new old) => new -> (old -> a) -> a
+rapplyUnwrap val f = f (unwrap val)
+
+infixl 1 rapplyUnwrap as #%
+
