@@ -40,12 +40,12 @@ import Effect.Aff (delay)
 import Types.PlutusData (PlutusData)
 
 waitForTx
-  :: forall a.
+  :: forall (a :: Type) (r :: Row Type).
   Duration a
   => a
   -> ValidatorHash
   -> TransactionHash
-  -> Contract () (Maybe TransactionInput)
+  -> Contract r (Maybe TransactionInput)
 waitForTx d vhash txid = do
   let hasTransactionId :: TransactionInput /\ TransactionOutput -> Boolean
       hasTransactionId (TransactionInput tx /\ _) =
@@ -65,9 +65,10 @@ waitForTx d vhash txid = do
         pure $ Just txin
 
 buildBalanceSignAndSubmitTx
-  :: Lookups.ScriptLookups PlutusData
+  :: forall (r :: Row Type).
+  Lookups.ScriptLookups PlutusData
   -> TxConstraints Unit Unit
-  -> Contract () TransactionHash
+  -> Contract r TransactionHash
 buildBalanceSignAndSubmitTx lookups constraints = do
   ubTx <- liftedE $ Lookups.mkUnbalancedTx lookups constraints
   bsTx <- liftedE $ balanceAndSignTxE ubTx
@@ -75,7 +76,7 @@ buildBalanceSignAndSubmitTx lookups constraints = do
   logInfo' $ "Tx ID: " <> show txId
   pure txId
 
-getUtxos :: ValidatorHash -> Contract () (Map TransactionInput TransactionOutput)
+getUtxos :: forall (r :: Row Type). ValidatorHash -> Contract r (Map TransactionInput TransactionOutput)
 getUtxos vhash = do
   let scriptAddress = scriptHashAddress vhash
   UtxoM utxos <- fromMaybe (UtxoM Map.empty) <$> utxosAt scriptAddress

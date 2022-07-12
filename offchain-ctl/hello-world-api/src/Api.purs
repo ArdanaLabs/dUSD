@@ -4,6 +4,7 @@ module Api
   ,redeemFromScript
   ,helloScript
   ,enoughForFees
+  ,incrementHandler'
   ) where
 
 import Contract.Prelude
@@ -153,7 +154,8 @@ incrementHandler helloVal helloHash cs = do
   balancedTx <- liftedM "Could not balance Transaction." $ balanceAndSignTx unbalancedTx
   txHash <- submit balancedTx
   logInfo' ("Tx hash: " <> show txHash)
-  liftContractM "Gave up waiting for increment Tx." =<< waitForTx (Minutes 1.0) helloHash txHash
+  txi <- liftContractM "Gave up waiting for increment Tx." =<< waitForTx (Minutes 1.0) helloHash txHash
+  logInfo' ("TxInput: " <> show txi)
 
 -- | Same as PAB version, except you can 
 -- | change the Address value.
@@ -164,7 +166,7 @@ findUtxoWithToken adrs cs = do
   bindFlipped singleElement <<< map Map.toUnfoldable <<< map (Map.filter (containsToken cs)) <<< map unwrap <$> utxosAt adrs
   where 
     containsToken :: CurrencySymbol -> TransactionOutput -> Boolean
-    containsToken csymb txout = (BigInt.fromInt 1) == Value.valueOf ((_.amount) (unwrap txout)) csymb Value.adaToken
+    containsToken csymb txout = (BigInt.fromInt 1) == Value.valueOf (txout #% _.amount) csymb Value.adaToken
     singleElement :: forall (a :: Type). Array a -> Maybe a
     singleElement [x] = Just x
     singleElement  _  = Nothing
@@ -181,3 +183,11 @@ getDatum' txout' = do
 -- | A version of `getDatum'` with a proxy.
 getDatum'' :: forall (a :: Type) (r :: Row Type). (FromData a) => Proxy a -> TransactionOutput -> Contract r (Maybe a)
 getDatum'' _prox = getDatum'
+
+
+-- | Reverse function application on 
+-- | a wrapped newtype.
+rapplyUnwrap :: forall (new :: Type) (old :: Type) (a :: Type). (Newtype new old) => new -> (old -> a) -> a
+rapplyUnwrap val f = f (unwrap val)
+
+infixl 1 rapplyUnwrap as #%
