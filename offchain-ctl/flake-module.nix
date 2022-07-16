@@ -67,7 +67,10 @@
               dependencies =
                 with all-ps-pkgs;
                 [
+                  aff
                   halogen
+                  transformers
+                  type-equality
                   cardano-transaction-lib
                   hello-world-api.package
                 ];
