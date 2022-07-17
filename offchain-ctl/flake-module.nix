@@ -68,6 +68,7 @@
                 with all-ps-pkgs;
                 [
                   aff
+                  bigints
                   halogen
                   transformers
                   type-equality
