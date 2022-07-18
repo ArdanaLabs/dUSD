@@ -28,6 +28,13 @@ nix run .#serve-hello-world-browser
 To run the api tests (currently just cbor encoding tests):
 ```
 nix develop .#hello-world-api
-cd offchain-ctl/hello-world-api
+
+cd offchain/hello-world-api
 purs-nix test Main
 ```
+
+To run the browser integration tests
+```
+nix build -L .#hello-world-browser-test:test:integration
+```
+the test output will be there in `result` folder, it could be viewed in color with `less -r result/test-stdout`

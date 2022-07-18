@@ -31,6 +31,7 @@ import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
 import Contract.Value as Value
 import Contract.Value (CurrencySymbol, TokenName, Value)
+
 import ToData(class ToData,toData)
 import Types.PlutusData (PlutusData(Constr,Integer))
 

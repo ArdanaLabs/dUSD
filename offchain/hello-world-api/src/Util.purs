@@ -43,6 +43,7 @@ import Types.PlutusData (PlutusData)
 
 waitForTx
   :: forall (a :: Type) (r :: Row Type).
+  :: forall a.
   Duration a
   => a
   -> ValidatorHash
@@ -71,6 +72,7 @@ buildBalanceSignAndSubmitTx
   Lookups.ScriptLookups PlutusData
   -> TxConstraints Unit Unit
   -> Contract r TransactionHash
+
 buildBalanceSignAndSubmitTx lookups constraints = do
   ubTx <- liftedE $ Lookups.mkUnbalancedTx lookups constraints
   bsTx <- liftedE $ balanceAndSignTxE ubTx
@@ -91,4 +93,3 @@ rapplyUnwrap :: forall (new :: Type) (old :: Type) (a :: Type). (Newtype new old
 rapplyUnwrap val f = f (unwrap val)
 
 infixl 1 rapplyUnwrap as #%
-
