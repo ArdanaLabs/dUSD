@@ -155,6 +155,17 @@
               text = "http-server -c-1 ${self'.packages.hello-world-browser}";
             };
         };
+        #purs-format = {
+        #  type = "app";
+        #  program = pkgs.writeShellApplication
+        #    {
+        #      name = projectName;
+        #      runtimeInputs = [
+        #        pkgs.nodePackages.purs-tidy
+        #      ];
+        #      text = "echo How did I get here?";
+        #    };
+        #};
       };
 
       devShells.hello-world-cli = pkgs.mkShell {
