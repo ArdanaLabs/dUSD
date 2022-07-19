@@ -155,17 +155,34 @@
               text = "http-server -c-1 ${self'.packages.hello-world-browser}";
             };
         };
-        #purs-format = {
-        #  type = "app";
-        #  program = pkgs.writeShellApplication
-        #    {
-        #      name = projectName;
-        #      runtimeInputs = [
-        #        pkgs.nodePackages.purs-tidy
-        #      ];
-        #      text = "echo How did I get here?";
-        #    };
-        #};
+
+        format-check = {
+          type = "app";
+          program = pkgs.writeShellApplication
+            {
+              name = projectName;
+              runtimeInputs = [
+                pkgs.nodePackages.purs-tidy
+              ];
+              text = ''
+                purs-tidy check "$FORM_FOLDER/src/**/*.purs"
+                '';
+            };
+        };
+
+        reformat = {
+          type = "app";
+          program = pkgs.writeShellApplication
+            {
+              name = projectName;
+              runtimeInputs = [
+                pkgs.nodePackages.purs-tidy
+              ];
+              text = ''
+                purs-tidy format-in-place "$FORM_FOLDER/src/**/*.purs"
+                '';
+            };
+        };
       };
 
       devShells.hello-world-cli = pkgs.mkShell {
@@ -178,7 +195,10 @@
           purs-nix.purescript-language-server
           nodePackages.purs-tidy
         ]);
-        shellHook = "export NODE_PATH=${npmlock2nix.node_modules { src = self.inputs.cardano-transaction-lib ; }}/node_modules/";
+        shellHook = ''
+          export NODE_PATH=${npmlock2nix.node_modules { src = self.inputs.cardano-transaction-lib ; }}/node_modules/
+          export FORM_FOLDER="hello-world-cli"
+          '';
       };
       devShells.hello-world-browser = pkgs.mkShell {
         name = projectName;
@@ -190,7 +210,10 @@
           purs-nix.purescript-language-server
           nodePackages.purs-tidy
         ]);
-        shellHook = "export NODE_PATH=${npmlock2nix.node_modules { src = self.inputs.cardano-transaction-lib; }}/node_modules/";
+        shellHook = ''
+          export NODE_PATH=${npmlock2nix.node_modules { src = self.inputs.cardano-transaction-lib; }}/node_modules/
+          export FORM_FOLDER="hello-world-browser"
+          '';
       };
       devShells.hello-world-api = pkgs.mkShell {
         name = projectName;
@@ -202,7 +225,10 @@
           purs-nix.purescript-language-server
           nodePackages.purs-tidy
         ]);
-        shellHook = "export NODE_PATH=${npmlock2nix.node_modules { src = self.inputs.cardano-transaction-lib; }}/node_modules/";
+        shellHook = ''
+          export NODE_PATH=${npmlock2nix.node_modules { src = self.inputs.cardano-transaction-lib; }}/node_modules/
+          export FORM_FOLDER="hello-world-api"
+          '';
       };
     };
   flake = { };
