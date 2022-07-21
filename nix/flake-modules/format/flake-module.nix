@@ -12,6 +12,7 @@
         haskellPackages.fourmolu
         treefmt
         nixpkgs-fmt
+        nodePackages.purs-tidy
       ];
     in
     {

@@ -166,7 +166,7 @@
               ];
               text = ''
                 purs-tidy check "$FORM_FOLDER/src/**/*.purs"
-                '';
+              '';
             };
         };
 
@@ -180,7 +180,7 @@
               ];
               text = ''
                 purs-tidy format-in-place "$FORM_FOLDER/src/**/*.purs"
-                '';
+              '';
             };
         };
       };
@@ -199,7 +199,7 @@
         shellHook = ''
           export NODE_PATH=${npmlock2nix.node_modules { src = self.inputs.cardano-transaction-lib ; }}/node_modules/
           export FORM_FOLDER="hello-world-cli"
-          '';
+        '';
       };
       devShells.hello-world-browser = pkgs.mkShell {
         name = projectName;
@@ -215,7 +215,7 @@
         shellHook = ''
           export NODE_PATH=${npmlock2nix.node_modules { src = self.inputs.cardano-transaction-lib; }}/node_modules/
           export FORM_FOLDER="hello-world-browser"
-          '';
+        '';
       };
       devShells.hello-world-api = pkgs.mkShell {
         name = projectName;
@@ -231,7 +231,7 @@
         shellHook = ''
           export NODE_PATH=${npmlock2nix.node_modules { src = self.inputs.cardano-transaction-lib; }}/node_modules/
           export FORM_FOLDER="hello-world-api"
-          '';
+        '';
       };
     };
   flake = { };
