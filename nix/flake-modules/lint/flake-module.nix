@@ -17,7 +17,7 @@
     in
     {
       apps = {
-        # Formats the project tree.
+        # Lints .hs files.
         lint = {
           type = "app";
           program = pkgs.writeShellApplication {
@@ -27,18 +27,19 @@
           };
         };
       };
-      checks = {
-        # Checks that the project tree is *already* formatted.
-        lint = pkgs.runCommandLocal "lint-check"
-          {
-            buildInputs = dependencies;
-          } ''
-          # set -e
-          # export HOME="$TMP"
-          # treefmt -vvv --no-cache --fail-on-change -C ${self}
-          # touch $out
-        '';
-      };
+      checks = { };
+        # Old
+        # lint = pkgs.runCommandLocal "lint-check"
+        #   {
+        #     buildInputs = dependencies;
+        #   } ''
+        #   # set -e
+        #   # export HOME="$TMP"
+        #   # treefmt -vvv --no-cache --fail-on-change -C ${self}
+        #   # touch $out
+        #   echo ${self}
+        # '';
+        # };
     };
   flake = { };
 }
