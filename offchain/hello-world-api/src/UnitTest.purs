@@ -1,10 +1,10 @@
 module UnitTest
-  (helloUnitTest
+  ( helloUnitTest
   ) where
 
 import Contract.Prelude
 
-import Api(helloScript, sendDatumToScript, setDatumAtScript, redeemFromScript)
+import Api (helloScript, sendDatumToScript, setDatumAtScript, redeemFromScript)
 
 import Contract.Monad (Contract, liftContractAffM, logInfo')
 import Contract.Scripts (validatorHash)

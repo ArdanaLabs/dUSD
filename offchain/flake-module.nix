@@ -194,6 +194,7 @@
           purs-nix.purescript
           purs-nix.purescript-language-server
           nodePackages.purs-tidy
+          treefmt
         ]);
         shellHook = ''
           export NODE_PATH=${npmlock2nix.node_modules { src = self.inputs.cardano-transaction-lib ; }}/node_modules/
@@ -209,6 +210,7 @@
           purs-nix.purescript
           purs-nix.purescript-language-server
           nodePackages.purs-tidy
+          treefmt
         ]);
         shellHook = ''
           export NODE_PATH=${npmlock2nix.node_modules { src = self.inputs.cardano-transaction-lib; }}/node_modules/
@@ -224,6 +226,7 @@
           purs-nix.purescript
           purs-nix.purescript-language-server
           nodePackages.purs-tidy
+          treefmt
         ]);
         shellHook = ''
           export NODE_PATH=${npmlock2nix.node_modules { src = self.inputs.cardano-transaction-lib; }}/node_modules/

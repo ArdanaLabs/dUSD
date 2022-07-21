@@ -1,5 +1,5 @@
 module Test.Main
-  (main
+  ( main
   ) where
 
 import Prelude

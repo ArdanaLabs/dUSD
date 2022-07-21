@@ -1,43 +1,44 @@
 module Api
-  (sendDatumToScript
-  ,setDatumAtScript
-  ,redeemFromScript
-  ,helloScript
-  ,enoughForFees
+  ( sendDatumToScript
+  , setDatumAtScript
+  , redeemFromScript
+  , helloScript
+  , enoughForFees
   ) where
 
 import Contract.Prelude
 
 import CBOR as CBOR
-import Util(buildBalanceSignAndSubmitTx,waitForTx,getUtxos)
+import Util (buildBalanceSignAndSubmitTx, waitForTx, getUtxos)
 
 import Data.BigInt as BigInt
-import Data.Time.Duration(Minutes(..))
+import Data.Time.Duration (Minutes(..))
 
 import Contract.Aeson (decodeAeson, fromString)
-import Contract.Monad ( Contract , liftContractM , logInfo')
-import Contract.PlutusData (Datum(Datum),Redeemer(Redeemer))
+import Contract.Monad (Contract, liftContractM, logInfo')
+import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer))
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, ValidatorHash, applyArgsM)
-import Contract.Transaction ( TransactionInput)
+import Contract.Transaction (TransactionInput)
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
-import ToData(class ToData,toData)
-import Types.PlutusData (PlutusData(Constr,Integer))
+import ToData (class ToData, toData)
+import Types.PlutusData (PlutusData(Constr, Integer))
 
 sendDatumToScript :: Int -> ValidatorHash -> Contract () TransactionInput
 sendDatumToScript n vhash = do
   let
     lookups :: Lookups.ScriptLookups PlutusData
     lookups = mempty
+
     constraints :: TxConstraints Unit Unit
     constraints =
       Constraints.mustPayToScript
         vhash
-        (Datum $ n
-          # BigInt.fromInt
-          # toData
+        ( Datum $ n
+            # BigInt.fromInt
+            # toData
         )
         enoughForFees
   txId <- buildBalanceSignAndSubmitTx lookups constraints
@@ -54,19 +55,20 @@ setDatumAtScript n vhash validator txInput = do
   let
     lookups :: Lookups.ScriptLookups PlutusData
     lookups = Lookups.validator validator
-        <> Lookups.unspentOutputs utxos
+      <> Lookups.unspentOutputs utxos
+
     constraints :: TxConstraints Unit Unit
     constraints =
       (Constraints.mustSpendScriptOutput txInput incRedeemer)
-      <>
-      (Constraints.mustPayToScript
-        vhash
-        (Datum $ n
-          # BigInt.fromInt
-          # toData
-        )
-        enoughForFees
-      )
+        <>
+          ( Constraints.mustPayToScript
+              vhash
+              ( Datum $ n
+                  # BigInt.fromInt
+                  # toData
+              )
+              enoughForFees
+          )
   txId <- buildBalanceSignAndSubmitTx lookups constraints
   liftContractM "failed waiting for increment" =<< waitForTx (Minutes 1.0) vhash txId
 
@@ -81,6 +83,7 @@ redeemFromScript vhash validator txInput = do
     lookups :: Lookups.ScriptLookups PlutusData
     lookups = Lookups.validator validator
       <> Lookups.unspentOutputs utxos
+
     constraints :: TxConstraints Unit Unit
     constraints = Constraints.mustSpendScriptOutput txInput spendRedeemer
   _ <- buildBalanceSignAndSubmitTx lookups constraints
@@ -88,16 +91,18 @@ redeemFromScript vhash validator txInput = do
 
 helloScript :: Int -> Contract () Validator
 helloScript n = do
-  let maybeParamValidator :: Maybe Validator
-      maybeParamValidator =
-          CBOR.paramHello
-            # fromString
-            # decodeAeson
-            # hush
-            # map wrap
+  let
+    maybeParamValidator :: Maybe Validator
+    maybeParamValidator =
+      CBOR.paramHello
+        # fromString
+        # decodeAeson
+        # hush
+        # map wrap
   paramValidator <- liftContractM "decoding failed" maybeParamValidator
-  liftContractM "apply args failed" =<< applyArgsM paramValidator [Integer $ BigInt.fromInt n]
-         -- TODO It'd be cool if this could be an Integer not Data
+  liftContractM "apply args failed" =<< applyArgsM paramValidator [ Integer $ BigInt.fromInt n ]
+
+-- TODO It'd be cool if this could be an Integer not Data
 
 data HelloRedemer = Inc | Spend
 

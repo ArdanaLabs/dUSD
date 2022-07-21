@@ -1,7 +1,7 @@
 module Util
-  (waitForTx
-  ,buildBalanceSignAndSubmitTx
-  ,getUtxos
+  ( waitForTx
+  , buildBalanceSignAndSubmitTx
+  , getUtxos
   ) where
 
 import Contract.Prelude
@@ -25,44 +25,43 @@ import Contract.Transaction
 import Contract.TxConstraints (TxConstraints)
 import Contract.Utxos (UtxoM(UtxoM), utxosAt)
 
-
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Time.Duration
-  (Milliseconds(..)
-  ,Seconds(..)
-  ,class Duration
-  ,fromDuration
-  ,convertDuration
-  ,negateDuration
+  ( Milliseconds(..)
+  , Seconds(..)
+  , class Duration
+  , fromDuration
+  , convertDuration
+  , negateDuration
   )
 import Effect.Aff (delay)
 import Types.PlutusData (PlutusData)
 
 waitForTx
-  :: forall a.
-  Duration a
+  :: forall a
+   . Duration a
   => a
   -> ValidatorHash
   -> TransactionHash
   -> Contract () (Maybe TransactionInput)
 waitForTx d vhash txid = do
-  let hasTransactionId :: TransactionInput /\ TransactionOutput -> Boolean
-      hasTransactionId (TransactionInput tx /\ _) =
-        tx.transactionId == txid
+  let
+    hasTransactionId :: TransactionInput /\ TransactionOutput -> Boolean
+    hasTransactionId (TransactionInput tx /\ _) =
+      tx.transactionId == txid
   utxos <- getUtxos vhash
   case fst <$> find hasTransactionId (Map.toUnfoldable utxos :: Array (TransactionInput /\ TransactionOutput)) of
-      Nothing ->
-        if (fromDuration d <= (Milliseconds 0.0))
-          then do
-            pure Nothing
-          else do
-              logInfo' $ "No tx yet, waiting for: " <> show (convertDuration d :: Seconds)
-              (liftAff <<< delay <<< wrap) 1000.0
-              waitForTx (fromDuration d <> fromDuration (negateDuration (Seconds 1.0))) vhash txid
-      Just txin -> do
-        logInfo' $ "found tx:" <> show txid
-        pure $ Just txin
+    Nothing ->
+      if (fromDuration d <= (Milliseconds 0.0)) then do
+        pure Nothing
+      else do
+        logInfo' $ "No tx yet, waiting for: " <> show (convertDuration d :: Seconds)
+        (liftAff <<< delay <<< wrap) 1000.0
+        waitForTx (fromDuration d <> fromDuration (negateDuration (Seconds 1.0))) vhash txid
+    Just txin -> do
+      logInfo' $ "found tx:" <> show txid
+      pure $ Just txin
 
 buildBalanceSignAndSubmitTx
   :: Lookups.ScriptLookups PlutusData

@@ -9,7 +9,7 @@ import Contract.Monad
   , runContract_
   , configWithLogLevel
   )
-import Contract.Wallet.KeyFile(mkKeyWalletFromFiles)
+import Contract.Wallet.KeyFile (mkKeyWalletFromFiles)
 import Serialization.Address (NetworkId(TestnetId))
 import Data.Log.Level (LogLevel(Trace))
 
