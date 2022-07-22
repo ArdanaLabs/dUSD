@@ -16,18 +16,7 @@
 
       # selenium-server-standalone v2.53.1
       selenium-server-standalone-v2 =
-        let
-          minorVersion = "2.53";
-          patchVersion = "1";
-        in
-        realNixpkgs.selenium-server-standalone.overrideAttrs (old: rec {
-          version = "${minorVersion}.${patchVersion}";
-
-          src = realNixpkgs.fetchurl {
-            url = "http://selenium-release.storage.googleapis.com/${minorVersion}/selenium-server-standalone-${version}.jar";
-            sha256 = "sha256-HM5tOlylsuMr4YylEH1PIb3aqaGHAOOxF3aPEwQLfPg=";
-          };
-        });
+        realNixpkgs.callPackage ./selenium-server-standalone.nix { };
       # runtime dependencies required for the integration test.
       integrationTestRuntimeDeps = with realNixpkgs; [
         chromedriver
