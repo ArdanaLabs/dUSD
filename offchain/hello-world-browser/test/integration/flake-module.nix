@@ -16,7 +16,7 @@
 
       # selenium-server-standalone v2.53.1
       selenium-server-standalone-v2 =
-        realNixpkgs.callPackage ./selenium-server-standalone.nix { };
+        (import self.inputs.nixpkgs-selenium-server { inherit system; }).selenium-server-standalone;
       # runtime dependencies required for the integration test.
       integrationTestRuntimeDeps = with realNixpkgs; [
         chromedriver
