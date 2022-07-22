@@ -87,10 +87,10 @@ maybeOf :: Gen a -> Gen (Maybe a)
 maybeOf g = choice [pure Nothing, Just <$> g]
 
 integer :: Gen Integer
-integer = fromIntegral <$> int (linear (-1_000_000) 1_000_000)
+integer = toInteger <$> int (linear (-1_000_000) 1_000_000)
 
 pos :: Gen Integer
-pos = fromIntegral <$> int (linear 1 1_000_000)
+pos = toInteger <$> int (linear 1 1_000_000)
 
 rational :: Gen Rational
 rational = (%) <$> integer <*> pos
