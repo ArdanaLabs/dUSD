@@ -40,10 +40,10 @@
 
   # _VERY_ hard to get right, use the async library instead.
   # See also https://github.com/informatikr/hedis/issues/165
-  - {name: forkIO, within: []}
+  - {name: forkIO, within: [], message: "Use functions from the async library instead."}
   # Mostly impossible to get right, rethink what you're doing entirely.
   # See also https://www.reddit.com/r/haskell/comments/jsap9r/how_dangerous_is_forkprocess/
-  - {name: forkProcess, within: []}
+  - {name: forkProcess, within: [], message: "Avoid altogether. Rethink what you're doing."}
 
   # Purposely fails. Deal with errors appropriately instead.
   - {name: undefined, within: [], message: "Don't use to signal errors. If using as a phantom value, use Proxy or Type Applications instead."}
@@ -87,8 +87,8 @@
 
   - {name: nub, within: []} # O(n^2)
 
-  - {name: Data.Foldable.foldl, within: []} # Lazy accumulator. Use foldl' instead.
-  - {name: Data.Foldable.foldMap, within: []} # Lazy accumulator. Use foldMap' instead.
+  - {name: Data.Foldable.foldl, within: [], message: "Lazy accumulator; use foldl' instead."} # Lazy accumulator. Use foldl' instead.
+  - {name: Data.Foldable.foldMap, within: [], message: "Lazy accumulator; use foldMap' instead."} # Lazy accumulator. Use foldMap' instead.
   - {name: Data.Foldable.sum, within: []} # Lazy accumulator
   - {name: Data.Foldable.product, within: []} # Lazy accumulator
 
@@ -108,31 +108,41 @@
   # - {name: 'Data.Ratio.%', within: []}
 
   # Don't use string for command-line output.
-  - {name: System.IO.putChar, within: []}
-  - {name: System.IO.putStr, within: []}
-  - {name: System.IO.putStrLn, within: []}
-  - {name: System.IO.print, within: []}
+  - {name: System.IO.putChar, within: [], message: "Use functions in `Data.Text.IO` instead."}
+  - {name: System.IO.putStr, within: [], message: "Use `Data.Text.IO.putStr` instead"}
+  - {name: System.IO.putStrLn, within: [], message: "Use `Data.Text.IO.putStrLn` instead"}
+  - {name: System.IO.print, within: [], message: "Use functions in `Data.Text.IO` together with `Data.Text.pack` and `show` instead."}
 
   # Don't use string for command-line input either.
-  - {name: System.IO.getChar, within: []}
-  - {name: System.IO.getLine, within: []}
-  - {name: System.IO.getContents, within: []} # Does lazy IO.
-  - {name: System.IO.interact, within: []}
+  - {name: System.IO.getChar, within: [], message: }
+  - {name: System.IO.getLine, within: [], message: "Use `Data.Text.IO.getLine` instead."}
+  - {name: System.IO.getContents, within: [], message: "Does lazy IO."} # Does lazy IO.
+  - {name: System.IO.interact, within: [], message: "Does lazy IO."}
   - {name: System.IO.readIO, within: []}
   - {name: System.IO.readLn, within: []}
 
   # Don't use strings to interact with files
-  - {name: System.IO.readFile, within: []}
-  - {name: System.IO.writeFile, within: []}
-  - {name: System.IO.appendFile, within: []}
+  - {name: System.IO.readFile, within: [], "Don't use Strings to interact with files. Use
+      functions in `Data.Text.Encoding` together with `Data.ByteString.readFile` instead."}
+  - {name: System.IO.writeFile, within: [], "Don't use Strings to interact with files. Use
+      functions in `Data.Text.Encoding` together with `Data.ByteString.writeFile` instead."}
+  - {name: System.IO.appendFile, within: [], "Don't use Strings to interact with files. Use
+      functions in `Data.Text.Encoding` together with `Data.ByteString.appendFile` instead."}
 
   # Can succeed in dev, but fail in prod, because of encoding guessing
   # It's also Lazy IO.
   # See https://www.snoyman.com/blog/2016/12/beware-of-readfile/ for more info.
-  - {name: Data.Text.IO.readFile, within: []}
-  - {name: Data.Text.IO.Lazy.readFile, within: []}
+  - {name: Data.Text.IO.readFile, within: [], message: "Guesses encoding; use `Data.ByteString.readFile`
+      together with `Data.Text.Encoding.decodeUtf8'` instead."}
+  - {name: Data.Text.IO.Lazy.readFile, within: [], message: "Guesses encoding and uses Lazy IO;
+      if you still want Lazy IO, use `Data.ByteString.Lazy.readFile` together with 
+      `Data.Text.Lazy.Encoding.decodeUtf8'` instead."}
 
-  - {name: Data.Text.Encoding.decodeUtf8, within: []} # Throws on invalid UTF8
+  - {name: Data.Text.Encoding.decodeUtf8, within: [] # Throws on invalid UTF8
+    , message: "Throws errors; use `Data.Text.Encoding.decodeUtf8'` or `Data.Text.Encoding.decodeUtf8With` instead."} 
+  - {name: Data.Text.Lazy.Encoding.decodeUtf8, within: []
+    , message: "Throws errors; use `Data.Text.Lazy.Encoding.decodeUtf8'` or `Data.Text.Lazy.Encoding.decodeUtf8With` instead."}
+  # Could also add for decodeUtf16BE etc..., but those are less commonly used.
 
   - {name: fromJust, within: [], message: 'Partial'} # Partial
 
@@ -141,10 +151,11 @@
   # 44
   # If converting to an Integer, consider
   # using `toInteger` instead.
-  - {name: fromIntegral, within: [], message: 'If converting to Integer, use toInteger instead.'}
+  - {name: fromIntegral, within: []
+    , message: 'If converting to Integer, use toInteger instead. Otherwise, use `Data.Bits.toIntegralSized`.'}
 
 
-  - {name: 'read', within: []} # Partial, use `Text.Read.readMaybe` instead.
+  - {name: 'read', within: [], message: "Partial; use `Text.Read.readMaybe` instead."} # Partial, use `Text.Read.readMaybe` instead.
   
   # Deprecated, use `pure` instead.
   # See https://gitlab.haskell.org/ghc/ghc/-/wikis/proposal/monad-of-no-return
