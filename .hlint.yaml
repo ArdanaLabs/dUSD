@@ -64,10 +64,10 @@
   - {name: Data.Text.init, within: []}
   - {name: Data.Text.last, within: []}
 
-  - {name: minimum, within: []} # Partial
-  - {name: minimumBy, within: []} # Partial
-  - {name: maximum, within: []} # Partial
-  - {name: maximumBy, within: []} # Partial
+  - {name: minimum, within: [], message: "Partial when used on structures that can be empty."} # Partial
+  - {name: minimumBy, within: [], message: "Partial when used on structures that can be empty."} # Partial
+  - {name: maximum, within: [], message: "Partial when used on structures that can be empty."} # Partial
+  - {name: maximumBy, within: [], message: "Partial when used on structures that can be empty."} # Partial
 
   # Same, but for Data.Text
   - {name: Data.Text.maximum, within: []}
