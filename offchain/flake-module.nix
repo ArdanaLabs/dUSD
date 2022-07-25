@@ -122,8 +122,15 @@
           pkgs.runCommand "offchain-docs" { }
             ''
               mkdir $out && cd $out
-              # it may make sense to eventually add cli and browser to the srcs, but we need to not define Main twice
-              ${hello-world-api.ps.command { srcs = [ ./hello-world-api/src ];} }/bin/purs-nix docs
+              # the src directorys for cli and browser need to exclude Main.purs
+              # so the same module isn't defined twice in the docs package
+              ${hello-world-api.ps.command
+                { srcs =
+                  [ ./hello-world-api/src
+                    ./hello-world-cli/src/HelloWorld
+                  ];
+                }
+              }/bin/purs-nix docs
             '';
         hello-world-browser =
           pkgs.runCommand "build-hello-world-browser" { }
