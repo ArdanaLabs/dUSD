@@ -156,33 +156,33 @@
             };
         };
 
-        format-check = {
-          type = "app";
-          program = pkgs.writeShellApplication
-            {
-              name = projectName;
-              runtimeInputs = [
-                pkgs.nodePackages.purs-tidy
-              ];
-              text = ''
-                purs-tidy check "$FORM_FOLDER/src/**/*.purs"
-              '';
-            };
-        };
+        # format-check = {
+        #   type = "app";
+        #   program = pkgs.writeShellApplication
+        #     {
+        #       name = projectName;
+        #       runtimeInputs = [
+        #         pkgs.nodePackages.purs-tidy
+        #       ];
+        #       text = ''
+        #         purs-tidy check "$FORM_FOLDER/src/**/*.purs"
+        #       '';
+        #     };
+        # };
 
-        reformat = {
-          type = "app";
-          program = pkgs.writeShellApplication
-            {
-              name = projectName;
-              runtimeInputs = [
-                pkgs.nodePackages.purs-tidy
-              ];
-              text = ''
-                purs-tidy format-in-place "$FORM_FOLDER/src/**/*.purs"
-              '';
-            };
-        };
+        # reformat = {
+        #   type = "app";
+        #   program = pkgs.writeShellApplication
+        #     {
+        #       name = projectName;
+        #       runtimeInputs = [
+        #         pkgs.nodePackages.purs-tidy
+        #       ];
+        #       text = ''
+        #         purs-tidy format-in-place "$FORM_FOLDER/src/**/*.purs"
+        #       '';
+        #     };
+        # };
       };
 
       devShells.hello-world-cli = pkgs.mkShell {
