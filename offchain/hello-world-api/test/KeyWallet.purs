@@ -8,13 +8,12 @@ import Contract.Monad
   ( runContract_
   , configWithLogLevel
   )
-import Contract.Wallet.KeyFile(mkKeyWalletFromFiles)
+import Contract.Wallet.KeyFile (mkKeyWalletFromFiles)
 import Data.Log.Level (LogLevel(Trace))
-import Node.Process(lookupEnv)
+import Node.Process (lookupEnv)
 import Serialization.Address (NetworkId(TestnetId))
-import Test.Spec(Spec,describe,it)
-import Test.Spec.Assertions(shouldReturn)
-
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldReturn)
 
 spec :: Spec Unit
 spec = do
@@ -25,9 +24,9 @@ integrationTest :: Aff Unit
 integrationTest = do
   testResourcesDir <- liftEffect $ fromMaybe "." <$> lookupEnv "TEST_RESOURCES"
   wallet <- mkKeyWalletFromFiles
-              (testResourcesDir <> "/wallet.skey") 
-              (pure $ testResourcesDir <> "/staking.skey")
+    (testResourcesDir <> "/wallet.skey")
+    (pure $ testResourcesDir <> "/staking.skey")
   cfg <- configWithLogLevel TestnetId wallet Trace
   runContract_ cfg $ do
     helloUnitTest
-    -- TODO this seems to work but also hangs
+-- TODO this seems to work but also hangs
