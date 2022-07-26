@@ -26,7 +26,7 @@ import HelloWorld.Page.Home as Home
 import HelloWorld.TestM (runTestM)
 import Serialization (privateKeyFromBytes)
 import Serialization.Address (NetworkId(TestnetId))
-import Wallet(mkKeyWallet,Wallet)
+import Wallet(mkKeyWallet,mkNamiWalletAff,Wallet)
 import Wallet.Key
   ( PrivatePaymentKey(PrivatePaymentKey)
   , PrivateStakeKey(PrivateStakeKey)
@@ -36,7 +36,10 @@ main :: Effect Unit
 main =
   HA.runHalogenAff do
     body <- HA.awaitBody
-    wallet <- loadKeyWallet
+    let useKeyWallet = true
+    wallet <- if useKeyWallet
+                then loadKeyWallet
+                else mkNamiWalletAff
     contractConfig <- configWithLogLevel TestnetId wallet Trace
     let
       store =
