@@ -1,40 +1,51 @@
 { self, ... }:
 {
-  perSystem = system: { config, self', inputs', ... }:
+  perSystem = { config, self', inputs', system, ... }:
     let
       pkgs = inputs'.nixpkgs.legacyPackages;
     in
     {
       packages = {
-        build-docs = pkgs.stdenv.mkDerivation {
+        docs = pkgs.stdenv.mkDerivation {
           name = "build-docs";
           src = ./.;
-          buildInputs = with pkgs; [ (texlive.combine { inherit (texlive) scheme-basic latexmk todonotes metafont listings; }) ];
-          doCheck = false;
+
+          buildInputs = with pkgs; [
+            (texlive.combine {
+              inherit
+                (texlive)
+                scheme-basic
+                latexmk
+                todonotes
+                listings
+                metafont;
+            })
+          ];
+
           buildPhase = ''
             HOME=$TMP latexmk -output-directory="tmp" -pdf ./*.tex
-            mkdir $out -p
-            cp tmp/*.pdf $out
           '';
+          doCheck = false;
           installPhase = ''
-            ls -lah
+            mkdir -p $out
+            cp tmp/*.pdf $out
           '';
         };
       };
       apps = {
-        feedback-loop = {
+        "docs:feedback-loop" = {
           type = "app";
-          program = pkgs.writeShellApplication
-            {
-              name = "dusd-feedback-loop";
-              runtimeInputs = [ pkgs.entr ];
-              text = ''
-                find docs -name "*.tex" | entr nix build .#build-docs
-              '';
-            } + "/bin/dusd-feedback-loop";
+          program =
+            pkgs.writeShellApplication
+              {
+                name = "dusd-feedback-loop";
+                runtimeInputs = [ pkgs.entr ];
+                text = ''
+                  find docs -name "*.tex" | entr nix build .#docs
+                '';
+              };
         };
       };
-  };
-  flake = {
-  };
+    };
+  flake = { };
 }
