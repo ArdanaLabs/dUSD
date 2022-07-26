@@ -36,10 +36,21 @@ main :: Effect Unit
 main =
   HA.runHalogenAff do
     body <- HA.awaitBody
-    let useKeyWallet = true
-    wallet <- if useKeyWallet
-                then loadKeyWallet
-                else mkNamiWalletAff
+    wallet <- mkNamiWalletAff
+    contractConfig <- configWithLogLevel TestnetId wallet Trace
+    let
+      store =
+        { contractConfig
+        , lastOutput: Nothing
+        }
+    rootComponent <- runAppM store Home.component
+    runUI rootComponent unit body
+
+testMain :: Effect Unit
+testMain =
+  HA.runHalogenAff do
+    body <- HA.awaitBody
+    wallet <- loadKeyWallet
     contractConfig <- configWithLogLevel TestnetId wallet Trace
     let
       store =
@@ -61,10 +72,3 @@ loadKeyWallet = do
     $ PrivateStakeKey <$> privateKeyFromBytes (wrap stakeBytes)
   pure $ mkKeyWallet privateKey (Just stakingKey)
 
-testMain :: Effect Unit
-testMain =
-  HA.runHalogenAff do
-    body <- HA.awaitBody
-
-    let rootComponent = H.hoist runTestM Home.component
-    runUI rootComponent unit body
