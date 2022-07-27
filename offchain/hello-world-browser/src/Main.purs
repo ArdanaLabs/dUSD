@@ -6,8 +6,7 @@ module Main
 import Contract.Prelude
 
 import Cardano.TextEnvelope (TextEnvelopeType(PaymentSigningKeyShelleyed25519, StakeSigningKeyShelleyed25519), textEnvelopeBytes)
-import Contract.Monad (configWithLogLevel, defaultTestnetContractConfig)
-import Data.Log.Level (LogLevel(Trace))
+import Contract.Config (testnetNamiConfig,testnetConfig)
 import Data.Newtype (wrap)
 import Effect (Effect)
 import Effect.Exception (error)
@@ -16,15 +15,18 @@ import Halogen.VDom.Driver (runUI)
 import HelloWorld.AppM (runAppM)
 import HelloWorld.Page.Home as Home
 import Serialization (privateKeyFromBytes)
-import Serialization.Address (NetworkId(TestnetId))
-import Wallet (mkKeyWallet, Wallet)
+import Wallet.Spec
+  (WalletSpec(UseKeys)
+  ,PrivatePaymentKeySource(PrivatePaymentKeyValue)
+  ,PrivateStakeKeySource(PrivateStakeKeyValue)
+  )
 import Wallet.Key (PrivatePaymentKey(PrivatePaymentKey), PrivateStakeKey(PrivateStakeKey))
 
 main :: Effect Unit
 main =
   HA.runHalogenAff do
     body <- HA.awaitBody
-    contractConfig <- defaultTestnetContractConfig
+    let contractConfig = testnetNamiConfig
     let
       store =
         { contractConfig
@@ -37,8 +39,8 @@ testMain :: Effect Unit
 testMain =
   HA.runHalogenAff do
     body <- HA.awaitBody
-    wallet <- loadKeyWallet
-    contractConfig <- configWithLogLevel TestnetId wallet Trace
+    walletSpec <- loadKeyWallet
+    let contractConfig = testnetConfig{walletSpec=Just walletSpec}
     let
       store =
         { contractConfig
@@ -47,7 +49,7 @@ testMain =
     rootComponent <- runAppM store Home.component
     runUI rootComponent unit body
 
-loadKeyWallet :: Aff Wallet
+loadKeyWallet :: Aff WalletSpec
 loadKeyWallet = do
   let keyStr = "{\"type\":\"PaymentSigningKeyShelley_ed25519\",\"description\":\"PaymentSigningKey\",\"cborHex\":\"5820d071b5fc9e6f8d1cbc0a4b22dd2ce4fb8f537d0bfe3e6073a758e65c1591275e\"}"
   let stakeStr = "{\"type\":\"StakeSigningKeyShelley_ed25519\",\"description\":\"StakeSigningKey\",\"cborHex\":\"58204b43bbce308317030a526ae92f9579ecafebaa0da20fa46ddc48e12e07de6472\"}"
@@ -59,4 +61,4 @@ loadKeyWallet = do
   stakingKey <- liftM (error "Unable to decode private stake key")
     $ PrivateStakeKey
     <$> privateKeyFromBytes (wrap stakeBytes)
-  pure $ mkKeyWallet privateKey (Just stakingKey)
+  pure $ UseKeys (PrivatePaymentKeyValue privateKey) (Just $ PrivateStakeKeyValue stakingKey)
