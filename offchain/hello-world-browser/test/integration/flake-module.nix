@@ -70,11 +70,9 @@
       haskellNixFlake =
         fixHaskellDotNix (project.flake { })
           [ ./hello-world-browser-test.cabal ];
+      integrationTestName = "hello-world-browser-test:test:integration";
     in
     {
-      packages = haskellNixFlake.packages;
-      devShells."offchain:hello-world-browser-test" = haskellNixFlake.devShell;
-      checks = haskellNixFlake.checks // { };
       apps = {
         "offchain:hello-world-browser:test" =
           dusd-lib.mkApp
@@ -96,6 +94,16 @@
                 }
             );
       };
+      checks = haskellNixFlake.checks // {
+        # skip tests that require ctl-runtime
+        ${integrationTestName} =
+          haskellNixFlake.checks.${integrationTestName}.overrideAttrs
+            (_: { NO_RUNTIME = "TRUE"; });
+      };
+      devShells."offchain:hello-world-browser-test" = haskellNixFlake.devShell;
+      packages =
+        # we don't need to have the test also in packages, we have it in checks
+        builtins.removeAttrs haskellNixFlake.packages [ integrationTestName ];
     };
   flake = { };
 }
