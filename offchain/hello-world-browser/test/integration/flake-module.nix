@@ -80,16 +80,13 @@
               pkgs.writeShellApplication
                 {
                   name = "run-hello-world-browser-tests";
-                  runtimeInputs =
-                    let shell = haskellNixFlake.devShell; in
-                    [ shell.stdenv.cc ]
-                    ++ shell.buildInputs
-                    ++ shell.nativeBuildInputs;
+                  runtimeInputs = [ pkgs.nix ];
                   text = ''
-                    export HELLO_WORLD_BROWSER_INDEX="${self'.packages."offchain:hello-world-browser-for-testing"}"
-                    builddir="$PWD/dist-newstyle"
-                    cd ${./.}
-                    cabal --builddir="$builddir" run
+                    nix \
+                      --extra-experimental-features 'nix-command flakes' \
+                      --option sandbox false build --keep-failed -L \
+                      ${self}#checks.\"${system}\".\"${integrationTestName}\"
+                    cat result/test-stdout
                   '';
                 }
             );
