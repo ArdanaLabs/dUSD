@@ -83,6 +83,7 @@
                 {
                   name = "run-hello-world-browser-tests";
                   text = ''
+                    export NO_RUNTIME='TRUE'
                     nix build -L ${self}#checks.\"${system}\".\"hello-world-browser-test:test:integration\"
                     cat result/test-stdout
                   '';
