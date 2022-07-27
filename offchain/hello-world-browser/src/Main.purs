@@ -60,4 +60,3 @@ loadKeyWallet = do
     $ PrivateStakeKey
     <$> privateKeyFromBytes (wrap stakeBytes)
   pure $ mkKeyWallet privateKey (Just stakingKey)
-
