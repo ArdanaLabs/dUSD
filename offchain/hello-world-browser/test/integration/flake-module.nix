@@ -85,7 +85,7 @@
                     nix \
                       --extra-experimental-features 'nix-command flakes' \
                       --option sandbox false build --keep-failed -L \
-                      ${self}#checks.\"${system}\".\"${integrationTestName}\"
+                      ${self}#checks.\"${system}\".\"${integrationTestName}\".passthru.originalDerivation
                     cat result/test-stdout
                   '';
                 }
@@ -95,7 +95,12 @@
         # skip tests that require ctl-runtime
         ${integrationTestName} =
           haskellNixFlake.checks.${integrationTestName}.overrideAttrs
-            (_: { NO_RUNTIME = "TRUE"; });
+            (old: {
+              NO_RUNTIME = "TRUE";
+              passthru = (old.passthru or { }) // {
+                originalDerivation = haskellNixFlake.checks.${integrationTestName};
+              };
+            });
       };
       devShells."offchain:hello-world-browser-test" = haskellNixFlake.devShell;
       packages =
