@@ -51,7 +51,7 @@
           purs-nix.purs
             {
               inherit (hello-world-api) dependencies;
-              srcs = [ ./hello-world-api ];
+              dir = ./hello-world-api;
             };
         package =
           purs-nix.build
@@ -96,7 +96,7 @@
                   node-child-process
                   stringutils
                 ];
-              srcs = [ ./hello-world-cli ];
+              dir = ./hello-world-cli;
             };
       };
 
@@ -117,41 +117,38 @@
 
       hello-world-api-tests =
         let
-          testModule = hello-world-api.ps.modules."Test.Main".output { };
-          scriptName = "hello-world-api-tests";
+          testExe =
+            hello-world-api.ps.test.script
+              {
+                esbuild.external =
+                  builtins.attrNames
+                    (pkgs.lib.importJSON
+                      (self.inputs.cardano-transaction-lib + /package.json)
+                    ).dependencies;
+              };
         in
         pkgs.writeShellApplication
           {
-            name = scriptName;
+            name = "hello-world-api-tests";
             runtimeInputs = [ pkgs.nodejs ];
             text = ''
               export TEST_RESOURCES=${./hello-world-api/fixtures}
               export NODE_PATH=${ctlNodeModules}/node_modules
-              node \
-                --preserve-symlinks \
-                --input-type=module \
-                -e 'import { main } from "${testModule}/Test.Main/index.js"; main()' \
-                -- "${scriptName}" "''$@"
+              ${testExe} "$@"
             '';
           };
       hello-world-cli-tests =
-        let
-          testExe =
-            hello-world-cli.ps.modules."Test.Main".app
-              { name = scriptName; };
-          scriptName = "hello-world-cli-tests";
-        in
+        let testExe = hello-world-cli.ps.test.script { }; in
         pkgs.writeShellApplication
           {
-            name = scriptName;
+            name = "hello-world-cli-tests";
             runtimeInputs = [
-              testExe
               self'.packages."offchain:hello-world-cli"
               pkgs.coreutils
             ];
             text = ''
               export TEST_RESOURCES=${./hello-world-cli/fixtures}
-              ${scriptName}
+              ${testExe}
             '';
           };
       prefixOutputs = dusd-lib.prefixAttrNames "offchain";
