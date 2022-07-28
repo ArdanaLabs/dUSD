@@ -25,7 +25,7 @@ You can ensure that the Cachix is being used by trying to build one of the outpu
 When editing any documents within ./docs/test-plan you can set up a latex pdf rendering feedback loop by running
 ```
 # Or, if you are already inside nix-shell, run: `dusd-feedback-loop`
-nix run .#feedback-loop
+nix run .#docs:feedback-loop
 ```
 
 ## Development workflow
@@ -38,11 +38,12 @@ The onchain and offchain code have different dependencies, thus different dev sh
 nix develop .#onchain
 ```
 
-For offchain, run:
+For various offchain components, run:
 
 ```
-nix develop .#offchain
+nix develop .#offchain:component
 ```
+for example, for `hello-world-cli` this would be `nix develop .#offchain:hello-world-cli`.
 
 ### Formatting
 
@@ -66,6 +67,10 @@ nix flake check -L
 
 ### Making a new package (flake module)
 
+Every project is imported by the top-level default.nix in each folder. For
+example, `offchain/default.nix` imports the flake-module.nix for multiple
+projects.
+
 Each project in this repository should have a `flake-module.nix` based on the
 following template, at its root. You can run `nix flake init -t .`
 anywhere in this repository, and a new `flake-module.nix` with the following
@@ -74,7 +79,7 @@ skeleton template will be created in your current directory.
 ```
 { self, ... }:
 {
-  perSystem = system: { config, self', inputs', ... }: {
+  perSystem = { config, self', inputs', system, ... }: {
   };
   flake = {
   };
@@ -82,7 +87,7 @@ skeleton template will be created in your current directory.
 ```
 
 This is part of the
-[flake-modules-core](https://github.com/hercules-ci/flake-modules-core)
+[flake-parts](https://github.com/hercules-ci/flake-parts)
 framework. Each of these `flake-module.nix` files can be thought of as a
 subflake. They can also be thought of as a `default.nix` similar to what you see
 in Nixpkgs next to every package. The real name for this, though, is a "flake

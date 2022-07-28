@@ -2,32 +2,43 @@ module Gen (
   address,
   assetClass,
   currencySymbol,
-  tokenName,
-  pubKeyHash,
-  validatorHash,
-  datumHash,
-  maybeOf,
-  rational,
-  integer,
   datum,
+  datumHash,
+  datumOf,
+  genData,
+  hexString,
+  integer,
+  maybeOf,
+  pos,
+  pubKeyHash,
+  rational,
+  tokenName,
+  txOutRef,
+  validatorHash,
+  value,
 ) where
 
 import Apropos (Gen, choice, element, int, linear, list)
 
 import Plutus.V1.Ledger.Api (
   Address (Address),
+  BuiltinData (..),
   Credential (..),
   CurrencySymbol,
+  Data,
   Datum (Datum),
   DatumHash,
   PubKeyHash,
   StakingCredential (..),
   TokenName,
+  TxId,
+  TxOutRef (TxOutRef),
   ValidatorHash,
   Value,
   singleton,
+  toData,
  )
-import PlutusTx.IsData.Class (ToData (toBuiltinData))
+import PlutusTx.IsData.Class (ToData)
 
 import Control.Monad (replicateM)
 import Data.Ratio
@@ -96,13 +107,27 @@ rational :: Gen Rational
 rational = (%) <$> integer <*> pos
 
 datum :: Gen Datum
-datum = choice [datumOf integer, datumOf value]
+datum = Datum . BuiltinData <$> genData
+
+genData :: Gen Data
+genData =
+  choice
+    [ asData integer
+    , asData value
+    ]
+
+value :: Gen Value
+value = mconcat <$> list (linear 0 8) singletonValue
   where
-    value :: Gen Value
-    value = mconcat <$> list (linear 0 64) singletonValue
     singletonValue :: Gen Value
     singletonValue =
       singleton <$> currencySymbol <*> tokenName <*> pos
 
+asData :: ToData a => Gen a -> Gen Data
+asData g = toData <$> g
+
 datumOf :: ToData a => Gen a -> Gen Datum
-datumOf g = Datum . toBuiltinData <$> g
+datumOf g = Datum . BuiltinData . toData <$> g
+
+txOutRef :: Gen TxOutRef
+txOutRef = TxOutRef <$> hexString @TxId <*> pos

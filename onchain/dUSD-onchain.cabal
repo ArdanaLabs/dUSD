@@ -74,17 +74,36 @@ library
   exposed-modules:
     DUSD
     Hello
+    NFT
     Plutarch.Extensions.Api
     Plutarch.Extensions.List
     Plutarch.Extensions.Monad
+    Validator
+    VaultDeposit
+    Utils
 
   hs-source-dirs:  src
   build-depends:
     , base
     , bytestring
+    , generics-sop
     , plutarch
     , plutarch-extra
     , plutus-core
+    , plutus-ledger-api
+    , serialise
+
+executable hello-world
+  import:         lang
+  type:           exitcode-stdio-1.0
+  main-is:        HelloWorld.hs
+  hs-source-dirs: hello-world
+  ghc-options:    -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+    , base
+    , bytestring
+    , directory
+    , dUSD-onchain
     , plutus-ledger-api
     , serialise
 
@@ -112,9 +131,12 @@ test-suite tests
     Apropos.Plutus.Auction
     Apropos.Plutus.HelloValidator
     Apropos.Plutus.Integer
+    Apropos.Plutus.MainValidator
+    Apropos.Plutus.NFT
     Apropos.Plutus.SingletonValue
     Apropos.Plutus.Value
     Apropos.Plutus.Vault
+    Apropos.Plutus.VaultDeposit
     Gen
     Tests
 
@@ -129,6 +151,7 @@ test-suite tests
     , hedgehog
     , lens
     , memory
+    , mtl
     , plutarch
     , plutus-ledger-api
     , plutus-tx
