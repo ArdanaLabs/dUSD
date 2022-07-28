@@ -23,6 +23,7 @@ module.exports = {
 
   devServer: {
     port: 4008,
+		server: 'https',
   },
 
   // we can add more entrypoints as needed
@@ -58,7 +59,7 @@ module.exports = {
       url: false,
       stream: false,
       crypto: false,
-      https: false,
+      https: true,
       net: false,
       tls: false,
       zlib: false,
