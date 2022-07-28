@@ -5261,6 +5261,10 @@
         ],
         "plutus": "plutus_3",
         "plutus-apps": "plutus-apps",
+        "ps-tools": [
+          "purs-nix",
+          "ps-tools"
+        ],
         "purs-nix": "purs-nix"
       }
     },

@@ -4,6 +4,7 @@
     let
       pkgs = inputs'.nixpkgs.legacyPackages;
       projectName = "hello-world";
+      ps-tools = self.inputs.ps-tools.legacyPackages.${system};
       purs-nix = self.inputs.purs-nix { inherit system; };
       npmlock2nix = pkgs.callPackages self.inputs.npmlock2nix { };
 
@@ -247,9 +248,9 @@
               buildInputs = (with pkgs; [
                 nodejs-16_x
                 (project.ps.command cmdArgs)
+                ps-tools.for-0_14.purescript-language-server
                 purs-nix.ps-pkgs.psci-support
                 purs-nix.purescript
-                purs-nix.purescript-language-server
                 nodePackages.purs-tidy
               ]);
               shellHook = "export NODE_PATH=${ctlNodeModules}/node_modules/";
