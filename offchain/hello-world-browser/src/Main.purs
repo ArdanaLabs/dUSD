@@ -2,6 +2,13 @@ module Main
   ( main
   ) where
 
+import Api
+  (helloScript
+  ,sendDatumToScript
+  ,setDatumAtScript
+  ,redeemFromScript
+  ,datumLookup
+  )
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Halogen.Aff as HA
@@ -12,9 +19,15 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Contract.Prelude
 import Contract.Config(testnetConfig)
+import Contract.Log (logInfo')
+import Contract.Scripts (validatorHash)
 import Contract.Monad
   ( runContract
+  , liftContractAffM
   )
+import Test.Spec.Assertions (shouldEqual)
+import Wallet.Spec(WalletSpec(ConnectToGero))
+
 
 data Action
   = Init
@@ -71,5 +84,18 @@ main =
   HA.runHalogenAff do
     body <- HA.awaitBody
     _ <- runUI component unit body
-    let cfg = testnetConfig
-    void $ runContract cfg (pure unit)
+    let cfg = testnetConfig{walletSpec = Just ConnectToGero}
+    void $ runContract cfg $ do
+      let param = 4
+      let init = 3
+      logInfo' "Full integrationTest"
+      validator <- helloScript param
+      vhash <- liftContractAffM "Couldn't hash validator" $ validatorHash validator
+      ti1 <- sendDatumToScript init vhash
+      datum1 <- datumLookup ti1
+      datum1 `shouldEqual` init
+      ti2 <- setDatumAtScript (init + param) vhash validator ti1
+      datum2 <- datumLookup ti2
+      datum2 `shouldEqual` (init + param)
+      redeemFromScript vhash validator ti2
+

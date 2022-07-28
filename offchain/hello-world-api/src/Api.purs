@@ -36,7 +36,7 @@ import Data.Foldable(for_)
 import Data.List((..),List)
 
 waitTime :: Minutes
-waitTime = Minutes 2.0
+waitTime = Minutes 10.0
 
 sendDatumToScript :: Int -> ValidatorHash -> Contract () TransactionInput
 sendDatumToScript n vhash = do
@@ -164,4 +164,4 @@ spendRedeemer :: Redeemer
 spendRedeemer = Redeemer (toData Spend)
 
 enoughForFees :: Value.Value
-enoughForFees = Value.lovelaceValueOf $ BigInt.fromInt 10_000_000
+enoughForFees = Value.lovelaceValueOf $ BigInt.fromInt 2_000_000
