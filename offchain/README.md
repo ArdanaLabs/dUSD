@@ -3,7 +3,7 @@
 To obtain a repl:
 ```
 nix develop .#offchain:hello-world-browser
-purs-nix srcs repl
+purs-nix repl
 ```
 
 To build the bundle:
@@ -33,7 +33,7 @@ or
 ```
 nix develop .#offchain:hello-world-api
 cd offchain/hello-world-api
-purs-nix test Main
+purs-nix test
 ```
 
 To run the browser integration tests
