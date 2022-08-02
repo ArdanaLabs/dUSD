@@ -5,7 +5,7 @@
 Protocol versions are defined by entries in the configuration utxo.
 Each entry is a list of currency symbols who's minting policies define the allowable protocol actions.
 Protocol updates are issued by appending new protocols to the list.
-The script validate only needs to control which actions are available for which utxos when (and that some action is always taken):
+The main spending validator only needs to control which actions are available for which utxos when (and that some action is always taken):
  - Certain actions are available only in the newest version.
    - Minting dUSD (this can be enforced by the dUSD minting policy)
    - Releasing a new protocol version
@@ -14,11 +14,11 @@ The script validate only needs to control which actions are available for which 
 
 [This approach is based on this article](https://github.com/Plutonomicon/plutonomicon/blob/main/transaction-token-pattern.md)
 
-## Validators
+## Spending Validators
 
 Protocol versions are defined by script addresses.
 The dUSD minting policy must check with a config utxo to know which address corresponds to the newest version and can be used for minting.
-The validators must also check the config to know where migrations are valid.
+The spending validators must also check the config to know where migrations are valid.
 For migrations to be possible for vaults which are more than one version behind the configuration must keep a list of addresses, or each protocol needs a new config utxo.
 Vaults need to receive new NFTs to be migrated so that the new protocol can define the migration logic.
 Ideally the old vault also knows the currency symbol for new vault NFTs so it can enforce that this switch occurs otherwise a vault could be lost by transferring without the switch.
@@ -29,7 +29,7 @@ Ideally the old vault also knows the currency symbol for new vault NFTs so it ca
 
 #### Script sizes would likely be smaller
 
-The main validator can be fairly simple and the minting policies spread out the logic so less unused code needs to be loaded in each Tx.
+The main spending validator can be fairly simple and the minting policies spread out the logic so less unused code needs to be loaded in each Tx.
 
 #### Migration is simpler
 
@@ -51,7 +51,7 @@ This should be helpful while defining implementation details and should simplify
 #### Protocol versions need to be stored in datum
 
 Since the addresses are the same the distinction must be kept in datum.
-This slightly increases the size of the datum and requires some main validator logic to enforce.
+This slightly increases the size of the datum and requires some main spending validator logic to enforce.
 
 #### Protocol Risks
 
