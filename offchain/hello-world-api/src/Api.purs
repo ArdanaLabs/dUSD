@@ -17,11 +17,11 @@ import Data.BigInt as BigInt
 import Data.Time.Duration(Minutes(..))
 
 import Contract.Aeson (decodeAeson, fromString)
-import Contract.Log(logInfo')
+import Contract.Log(logInfo',logError')
 import Contract.Monad ( Contract , liftContractM,liftContractAffM)
 import Contract.PlutusData (Datum(Datum),Redeemer(Redeemer),getDatumByHash)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (Validator, ValidatorHash, applyArgsM,validatorHash)
+import Contract.Scripts (Validator, ValidatorHash, applyArgs,validatorHash)
 import Contract.Transaction ( TransactionInput)
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as Constraints
@@ -34,6 +34,7 @@ import Data.Map(keys)
 import Data.Set as Set
 import Data.Foldable(for_)
 import Data.List((..),List)
+import Effect.Exception(throw)
 
 waitTime :: Minutes
 waitTime = Minutes 5.0
@@ -108,8 +109,13 @@ helloScript n = do
             # hush
             # map wrap
   paramValidator <- liftContractM "decoding failed" maybeParamValidator
-  liftContractM "apply args failed" =<< applyArgsM paramValidator [Integer $ BigInt.fromInt n]
-         -- TODO It'd be cool if this could be an Integer not Data
+  result <- applyArgs paramValidator [Integer $ BigInt.fromInt n]
+     -- TODO It'd be cool if this could be an Integer not Data
+  case result of
+    Left err -> do
+      logError' $ "Apply args failed with: " <> show err
+      liftEffect $ throw $ show err
+    Right validator -> pure validator
 
 datumLookup :: TransactionInput -> Contract () Int
 datumLookup lastOutput = do
