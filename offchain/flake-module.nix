@@ -123,15 +123,7 @@
 
       hello-world-api-tests =
         let
-          testExe =
-            hello-world-api.ps.test.script
-              {
-                esbuild.external =
-                  builtins.attrNames
-                    (pkgs.lib.importJSON
-                      (self.inputs.cardano-transaction-lib + /package.json)
-                    ).dependencies;
-              };
+          testExe = hello-world-api.ps.test.run { };
         in
         pkgs.writeShellApplication
           {
@@ -144,7 +136,7 @@
             '';
           };
       hello-world-cli-tests =
-        let testExe = hello-world-cli.ps.test.script { }; in
+        let testExe = hello-world-cli.ps.test.run { }; in
         pkgs.writeShellApplication
           {
             name = "hello-world-cli-tests";
