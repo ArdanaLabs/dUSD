@@ -1,6 +1,7 @@
 {
   "devDependencies": {
-    "css-minimizer-webpack-plugin": "^4.0.0",
-    "mini-css-extract-plugin": "^2.6.1"
+    "cssnano": "^5.1.12",
+    "postcss": "^8.4.16",
+    "postcss-cli": "^10.0.0"
   }
 }

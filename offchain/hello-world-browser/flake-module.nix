@@ -28,6 +28,15 @@
               dir = ./.;
             };
         package =
+          let
+            nodeModules = pkgs.symlinkJoin {
+              name = "hello-world-browser-node-modules";
+              paths = [
+                config.ctl.nodeModules
+                (npmlock2nix.node_modules { src = ./.; })
+              ];
+            };
+          in
           pkgs.runCommand "build-hello-world-browser" { }
             # see buildPursProject: https://github.com/Plutonomicon/cardano-transaction-lib/blob/c906ead97563fef3b554320bb321afc31956a17e/nix/default.nix#L74
             # see bundlePursProject: https://github.com/Plutonomicon/cardano-transaction-lib/blob/c906ead97563fef3b554320bb321afc31956a17e/nix/default.nix#L149
@@ -39,14 +48,13 @@
               cp ${./index.html} index.html
               cp ${./package.json} package.json
               cp ${./package-lock.json} package-lock.json
+              cp ${./postcss.config.js} postcss.config.js
               cp ${../webpack.config.js} webpack.config.js
-              cp -r ${config.ctl.nodeModules}/* .
-              ${npmlock2nix.node_modules { src = ./.; }}
-              ls ./node_modules
+              cp -r ${nodeModules}/* .
               export NODE_PATH="node_modules"
               export PATH="bin:$PATH"
               mkdir dist
-              cp ${./main.css} dist/main.css
+              postcss ${./main.css} > dist/main.css
               webpack --mode=production -c webpack.config.js -o ./dist --entry ./index.js
             '';
       };
