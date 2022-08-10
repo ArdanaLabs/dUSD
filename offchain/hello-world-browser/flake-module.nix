@@ -4,6 +4,7 @@
     let
       pkgs = inputs'.nixpkgs.legacyPackages;
       purs-nix = config.ps.purs-nix;
+      npmlock2nix = pkgs.callPackages self.inputs.npmlock2nix { };
       inherit (purs-nix) ps-pkgs;
       inherit (config.ps) ctl-pkgs;
       inherit (config) dusd-lib offchain-lib dream2nix;
@@ -36,8 +37,12 @@
               cp -r ${hello-world-browser.ps.modules.Main.output { }} output
               cp ${./index.js} index.js
               cp ${./index.html} index.html
+              cp ${./package.json} package.json
+              cp ${./package-lock.json} package-lock.json
               cp ${../webpack.config.js} webpack.config.js
               cp -r ${config.ctl.nodeModules}/* .
+              ${npmlock2nix.node_modules { src = ./.; }}
+              ls ./node_modules
               export NODE_PATH="node_modules"
               export PATH="bin:$PATH"
               mkdir dist

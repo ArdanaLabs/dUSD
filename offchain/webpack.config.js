@@ -4,6 +4,8 @@ const path = require("path");
 const webpack = require("webpack");
 const NodePolyfillPlugin = require("node-polyfill-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
 
 module.exports = {
   mode: "development",
@@ -46,9 +48,19 @@ module.exports = {
           },
         ],
       },
+      {
+        test: /.css$/,
+        use: [MiniCssExtractPlugin.loader, "css-loader"],
+      }
     ],
   },
-
+  optimization: {
+    minimizer: [
+      // For webpack@5 you can use the `...` syntax to extend existing minimizers (i.e. `terser-webpack-plugin`), uncomment the next line
+      // `...`,
+      new CssMinimizerPlugin(),
+    ],
+  },
   resolve: {
     modules: [process.env.NODE_PATH],
     extensions: [".js"],
@@ -86,5 +98,6 @@ module.exports = {
     }),
     new webpack.ContextReplacementPlugin(/cardano-serialization-lib-browser/),
     new webpack.ContextReplacementPlugin(/cardano-serialization-lib-nodejs/),
+    new MiniCssExtractPlugin()
   ],
 };
