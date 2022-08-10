@@ -45,9 +45,10 @@ module.exports = {
             },
           },
         ],
-      }
+      },
     ],
   },
+
   resolve: {
     modules: [process.env.NODE_PATH],
     extensions: [".js"],
@@ -84,6 +85,6 @@ module.exports = {
       Buffer: ["buffer", "Buffer"],
     }),
     new webpack.ContextReplacementPlugin(/cardano-serialization-lib-browser/),
-    new webpack.ContextReplacementPlugin(/cardano-serialization-lib-nodejs/)
+    new webpack.ContextReplacementPlugin(/cardano-serialization-lib-nodejs/),
   ],
 };
