@@ -48,13 +48,13 @@
               cp ${./index.html} index.html
               cp ${./package.json} package.json
               cp ${./package-lock.json} package-lock.json
-              cp ${./postcss.config.js} postcss.config.js
+              cp ${./.postcssrc.json} .postcssrc.json
               cp ${../webpack.config.js} webpack.config.js
               cp -r ${nodeModules}/* .
               export NODE_PATH="node_modules"
               export PATH="bin:$PATH"
               mkdir dist
-              postcss ${./main.css} > dist/main.css
+              postcss ${./main.css} --config=.postcssrc.json > dist/main.css
               webpack --mode=production -c webpack.config.js -o ./dist --entry ./index.js
             '';
       };
