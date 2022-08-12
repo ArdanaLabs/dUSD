@@ -80,8 +80,22 @@
             name = scriptName;
             runtimeInputs =
               [ self'.packages."offchain:hello-world-browser" ]
-              ++ (with pkgs; [ nodejs chromium unzip coreutils ]);
+              ++ ([
+                pkgs.chromium
+                pkgs.coreutils
+                pkgs.nodejs
+                pkgs.postgresql
+                pkgs.unzip
+                self'.packages."offchain:hello-world-cli"
+                self.inputs.cardano-transaction-lib.inputs.plutip.packages.${pkgs.system}."plutip:exe:plutip-server"
+                self.inputs.cardano-transaction-lib.packages.${pkgs.system}."ctl-server:exe:ctl-server"
+                self.inputs.mlabs-ogmios.defaultPackage.${pkgs.system}
+                self.inputs.ogmios-datum-cache.defaultPackage.${pkgs.system}
+              ]);
             text = ''
+              export LC_ALL=C.utf-8
+              # this fixes a postgresql issue for me (Brian)
+              # I think this is related https://github.com/NixOS/nixpkgs/issues/60414
               export NODE_PATH=${config.ctl.nodeModules}/node_modules
               export CHROME_EXE="${pkgs.chromium}/bin/chromium"
               export HELLO_WORLD_BROWSER_INDEX=${self'.packages."offchain:hello-world-browser"}
@@ -109,7 +123,7 @@
       };
       checks.run-hello-world-browser-tests =
         let test = hello-world-browser-tests; in
-        pkgs.runCommand test.name { NO_RUNTIME = "TRUE"; }
+        pkgs.runCommand test.name { }
           "${test}/bin/${test.meta.mainProgram} | tee $out";
       devShells = {
         "offchain:hello-world-browser" =
