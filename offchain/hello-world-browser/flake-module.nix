@@ -103,7 +103,24 @@
     {
       apps = {
         "offchain:hello-world-browser:serve" =
-          dusd-lib.makeServeApp self'.packages."offchain:hello-world-browser";
+        {
+          type = "app";
+          program =
+            let
+              cmd = ''
+                nix build .#offchain:hello-world-browser;
+                live-server ${hello-world-browser.package}/dist --host=127.0.0.1 2>&1 &
+              '';
+            in
+            pkgs.writeShellApplication
+              {
+                name = "hello-world-browser-serve";
+                runtimeInputs = [ pkgs.entr pkgs.nodePackages.live-server ];
+                text = ''
+                  find ./offchain/hello-world-browser/src -name "*.purs" | entr -s "${cmd}"
+                '';
+              };
+        };
         "offchain:hello-world-browser:test" =
           dusd-lib.mkApp hello-world-browser-tests;
       };
