@@ -5,5 +5,6 @@
     ./hello-world-browser/flake-module.nix
     ./hello-world-cli/flake-module.nix
     ./hello-world-api/flake-module.nix
+    ./local-ctl-runtime/flake-module.nix
   ];
 }
