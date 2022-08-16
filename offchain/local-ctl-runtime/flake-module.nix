@@ -27,7 +27,7 @@
               inherit (local-ctl-runtime) dependencies;
               dir = ./.;
             };
-        package = 
+        package =
           let js = "${local-ctl-runtime.ps.modules.Main.output {}}/Main/index.js"; in
           pkgs.writeScriptBin "local-ctl-runtime"
             ''
@@ -49,9 +49,9 @@
     in
     {
       apps."ctl-runtime:local" = {
-          type = "app";
-          program = "${self'.packages."offchain:local-ctl-runtime"}/bin/local-ctl-runtime";
-        };
+        type = "app";
+        program = "${self'.packages."offchain:local-ctl-runtime"}/bin/local-ctl-runtime";
+      };
 
       packages."offchain:local-ctl-runtime" = local-ctl-runtime.package;
 
