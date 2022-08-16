@@ -6,6 +6,7 @@
       purs-nix = config.ps.purs-nix;
       inherit (purs-nix) ps-pkgs;
       inherit (config.ps) ctl-pkgs;
+      inherit (config) offchain-lib;
 
       local-ctl-runtime = {
         dependencies =
@@ -47,15 +48,15 @@
       };
     in
     {
-      apps = {
-        "ctl-runtime:local" = {
+      apps."ctl-runtime:local" = {
           type = "app";
           program = "${self'.packages."offchain:local-ctl-runtime"}/bin/local-ctl-runtime";
         };
-      };
-      packages = {
-        "offchain:local-ctl-runtime" = local-ctl-runtime.package;
-      };
+
+      packages."offchain:local-ctl-runtime" = local-ctl-runtime.package;
+
+      devShells."offchain:local-ctl-runtime" =
+        offchain-lib.makeProjectShell local-ctl-runtime { };
     };
   flake = { };
 }
