@@ -11,18 +11,18 @@ import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Console (logShow)
 import Effect.Class (liftEffect)
-import Options.Applicative (Parser, ParserInfo, execParser, info, fullDesc, progDesc, header, (<**>), helper)
+import Options.Applicative (Parser, ParserInfo, execParser, fullDesc, header, help, helper, info, int, long, metavar, option, progDesc, short, value, (<**>))
 import Wallet.Key (keyWalletPrivatePaymentKey)
 import Wallet.KeyFile (formatPaymentKey)
 
 import Prelude
 
 main :: Effect Unit
-main = do
- logShow =<< execParser opts
- launchAff_ $ withPlutipContractEnv config [ BigInt.fromInt 20_000_00 ] \env wallet -> do
-    let key = fromMaybe "Couldn't format the private payment key" <<< formatPaymentKey <<< keyWalletPrivatePaymentKey $ wallet
-    liftEffect $ logShow key
+main =
+  execParser opts >>= \(LocalCtlRuntimeOptions initialAdaValue) -> do
+    launchAff_ $ withPlutipContractEnv config [ initialAdaValue ] \_ wallets -> do
+        let key = (fromMaybe "Couldn't format the private payment key" <<< formatPaymentKey <<< keyWalletPrivatePaymentKey) $ wallets
+        liftEffect $ logShow key
 
 config :: PlutipConfig
 config =
@@ -57,7 +57,7 @@ config =
       }
   }
 
-data LocalCtlRuntimeOptions = LocalCtlRuntimeOptions String
+data LocalCtlRuntimeOptions = LocalCtlRuntimeOptions BigInt.BigInt
 
 derive instance genericLocalRuntimeOptions :: Generic LocalCtlRuntimeOptions _
 instance showLocalRuntimeOptions :: Show LocalCtlRuntimeOptions where
@@ -72,7 +72,12 @@ opts =
     <> header "local-ctl-runtime")
 
 localCtlRuntimeOptions :: Parser LocalCtlRuntimeOptions
-localCtlRuntimeOptions = LocalCtlRuntimeOptions <$> commandParser
+localCtlRuntimeOptions = LocalCtlRuntimeOptions <$> initialAdaValueParser
 
-commandParser :: Parser String
-commandParser = pure "hello"
+initialAdaValueParser :: Parser BigInt.BigInt
+initialAdaValueParser = option (BigInt.fromInt <$> int)
+    (  long "initial-ada"
+    <> short 'i'
+    <> metavar "INT"
+    <> value (BigInt.fromInt 100_000_000)
+    <> help "The initial funding in lovelace for the test wallet")
