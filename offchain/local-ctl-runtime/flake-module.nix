@@ -47,6 +47,12 @@
       };
     in
     {
+      apps = {
+        "ctl-runtime:local" = {
+          type = "app";
+          program = "${self'.packages."offchain:local-ctl-runtime"}/bin/local-ctl-runtime";
+        };
+      };
       packages = {
         "offchain:local-ctl-runtime" = local-ctl-runtime.package;
       };
