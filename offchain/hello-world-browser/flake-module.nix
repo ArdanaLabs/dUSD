@@ -124,7 +124,7 @@
             nix build .#"offchain:hello-world-browser" --out-link $PWD/tmp-build
             trap "pkill -f live-server && rm $PWD/tmp-build" EXIT
             # runs this in a subshell for the trap to kill
-            (live-server $PWD/tmp-build 1<&- &)
+            (live-server $PWD/tmp-build &)
             find $PWD/offchain -regex ".*\(\.purs\|\.html\|\.css\)" | entr -ps "echo building; nix build .#"offchain:hello-world-browser" --out-link $PWD/tmp-build; echo 'refresh the page'"
           '';
         };
