@@ -19,6 +19,7 @@
             effect
             optparse
             prelude
+            tailrec
             uint
           ];
         ps =
