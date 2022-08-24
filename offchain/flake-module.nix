@@ -137,7 +137,8 @@
       import (nixpkgsSource + "/nixos/lib/make-disk-image.nix") {
         inherit pkgs lib;
         format = "qcow2";
-        diskSize = "30000";
+        diskSize = "auto";
+        additionalSpace = "1000M";
         config = (import (nixpkgsSource + "/nixos/lib/eval-config.nix") {
           inherit pkgs system;
           modules = [
