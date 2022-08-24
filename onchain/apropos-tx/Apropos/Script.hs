@@ -8,7 +8,9 @@ import Apropos.HasLogicalModel
 import Apropos.HasParameterisedGenerator
 import Apropos.LogicalModel
 
-import Control.Monad (void, (=<<))
+import Prelude
+
+import Control.Monad (void)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.String (fromString)
@@ -37,28 +39,6 @@ import Text.PrettyPrint (
  )
 import Text.PrettyPrint qualified as PP
 import Text.Show.Pretty (ppDoc)
-import Prelude (
-  Bool (..),
-  Bounded (..),
-  Either (..),
-  Int,
-  Ord,
-  Show (..),
-  String,
-  fmap,
-  fst,
-  pure,
-  sequence,
-  snd,
-  zip,
-  ($),
-  (&&),
-  (.),
-  (<$>),
-  (<=),
-  (<>),
-  (>=),
- )
 
 class (Enumerable p, HasLogicalModel p m, HasParameterisedGenerator p m) => ScriptModel p m where
   expect :: Formula p
@@ -107,7 +87,7 @@ class (Enumerable p, HasLogicalModel p m, HasParameterisedGenerator p m) => Scri
                     Left (EvaluationError logs err) -> deliverResult @p m (Left (logs, err))
                     Right res -> deliverResult @p m (Right res)
                     Left err -> failWithFootnote (show err)
-              sequence (run <$> ms)
+              sequence $ map run ms
 
   deliverResult ::
     m ->
