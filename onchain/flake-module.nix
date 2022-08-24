@@ -110,7 +110,7 @@
               ${haskellNixFlake.packages."dUSD-onchain:exe:hello-world"}/bin/hello-world $out/src
             '';
         };
-        checks = haskellNixFlake.checks //
+      checks = haskellNixFlake.checks //
         {
           "onchain:hls-check" =
             let s = self'.devShells.onchain; in
@@ -118,14 +118,7 @@
               { inherit (s) buildInputs nativeBuildInputs; }
               ''
                 ${s.shellHook}
-                if (haskell-language-server typecheck | grep Severity)
-                then
-                  echo hls had a warning
-                  haskell-language-server typecheck
-                  exit 1
-                else
-                  echo hls all good
-                fi
+                haskell-language-server typecheck
               '';
         };
       devShells.onchain = haskellNixFlake.devShell // { };

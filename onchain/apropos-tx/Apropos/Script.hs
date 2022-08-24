@@ -87,7 +87,7 @@ class (Enumerable p, HasLogicalModel p m, HasParameterisedGenerator p m) => Scri
                     Left (EvaluationError logs err) -> deliverResult @p m (Left (logs, err))
                     Right res -> deliverResult @p m (Right res)
                     Left err -> failWithFootnote (show err)
-              sequence $ map run ms
+              sequence (run <$> ms)
 
   deliverResult ::
     m ->
