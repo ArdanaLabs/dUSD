@@ -6,12 +6,29 @@ module Apropos.Plutus.Vault (
 
 import Apropos
 
+import Plutarch.Prelude
+
 import Apropos.Plutus.AssetClass (AssetClassProp (..))
 import Apropos.Plutus.Integer (IntegerProp (..))
 import Apropos.Plutus.SingletonValue (SingletonValue, SingletonValueProp (..))
 import Control.Lens (lens)
 import Test.Syd
 import Test.Syd.Hedgehog (fromHedgehogGroup)
+
+import Plutarch (PCon (pcon), (#))
+import Plutarch.Api.V1 (PDatum (PDatum))
+import Plutarch.Builtin (
+  PIsData (pdata),
+  pforgetData,
+  ppairDataBuiltin,
+ )
+import Plutarch.Lift (pconstant, plift)
+
+import Plutarch.Api.V1 (PDatum (PDatum))
+import Plutarch.Builtin (
+  pforgetData,
+  ppairDataBuiltin,
+ )
 
 spec :: Spec
 spec = do

@@ -1,7 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Plutarch.Extensions.Monad (pletFieldC, pmatchFieldC) where
+module Plutarch.Extensions.Monad (pletFieldC, pmatchFieldC, pifC) where
 
 import Plutarch.Prelude
 
@@ -37,3 +37,14 @@ pmatchFieldC ::
   Term s p ->
   TermCont s (a s)
 pmatchFieldC t = pmatchC $ pfield @name # t
+
+pifC :: forall s a. Term s PBool -> TermCont @a s (Term s a) -> TermCont @a s (Term s a) -> TermCont @a s (Term s a)
+pifC cond whenTrue whenFalse =
+  pure $ pif cond (unTermCont whenTrue) (unTermCont whenFalse)
+
+-- TODO is one of these better than the other?
+{-
+pifC cond whenTrue whenFalse = pmatchC cond >>= \case
+  PTrue -> whenTrue
+  PFalse -> whenFalse
+-}

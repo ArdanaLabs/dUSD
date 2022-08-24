@@ -78,11 +78,16 @@ library
     Plutarch.Extensions.Api
     Plutarch.Extensions.List
     Plutarch.Extensions.Monad
+<<<<<<< HEAD
     Types
     Validator
     VaultDeposit
     Utils
     VaultTransfer
+||||||| b7ceca5
+=======
+    Validator
+>>>>>>> origin/brian/minting-validator
 
   hs-source-dirs:  src
   build-depends:
