@@ -109,8 +109,8 @@ mkCtx :: HelloModel -> Context
 mkCtx HelloModel {..} =
   buildContext $ do
     withTxInfo $ do
-      addInput nullTxOutRef helloAddress someAda (Just datumIn)
-      addOutput outAddr someAda (Just datumOut)
+      addInput $ TxInInfo' nullTxOutRef (TxOut' helloAddress someAda (Just datumIn))
+      addOutput $ TxOut' outAddr someAda (Just datumOut)
 
       txInfoIdUntouched
       txInfoSignatoriesUntouched

@@ -156,9 +156,9 @@ instance ScriptModel ValidatorProp ValidatorModel where
               case configInput m of
                 Nothing -> pure ()
                 Just (ref, adr, val, Right maybeDatum) ->
-                  addInput ref adr val maybeDatum
+                  addInput $ TxInInfo' ref $ TxOut' adr val maybeDatum
                 Just (ref, adr, val, Left config) ->
-                  addInput ref adr val (Just $ Datum $ BuiltinData $ toData config)
+                  addInput $ TxInInfo' ref $ TxOut' adr val (Just $ Datum $ BuiltinData $ toData config)
      in applyValidator
           ctx
           (mkValidator mainValidator)

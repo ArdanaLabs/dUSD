@@ -9,6 +9,7 @@ import Apropos.Plutus.AssetClass (ada)
 import Apropos.Script
 
 import Gen
+import Types
 import VaultDeposit
 
 import Plutus.V1.Ledger.Api
@@ -20,7 +21,6 @@ import Test.Syd
 import Test.Syd.Hedgehog (fromHedgehogGroup)
 
 import Apropos.ContextBuilder
-import Control.Arrow (second)
 
 import Plutarch.Api.V1 (PDatum (..))
 import Plutarch.Builtin (pforgetData)
@@ -123,8 +123,8 @@ instance ScriptModel VaultDepProp VaultDepModel where
   script m =
     let ctx = buildContext $ do
           withTxInfo $ do
-            uncurry (addInput (TxOutRef "" 0) mainAdr) $ second (Just . toDatum) (input m)
-            uncurry (addOutput mainAdr) $ second (toDatum <$>) (output m)
+            addInput $ TxInInfo' (TxOutRef "" 0) $ TxOut' mainAdr (fst $ input m) (Just . toDatum . snd $ input m)
+            addOutput $ TxOut' mainAdr (fst $ output m) (fmap toDatum . snd $ output m)
      in applyMintingPolicyScript
           ctx
           vaultDepositPolicy

@@ -78,9 +78,11 @@ library
     Plutarch.Extensions.Api
     Plutarch.Extensions.List
     Plutarch.Extensions.Monad
+    Types
     Validator
     VaultDeposit
     Utils
+    VaultTransfer
 
   hs-source-dirs:  src
   build-depends:
@@ -137,6 +139,7 @@ test-suite tests
     Apropos.Plutus.Value
     Apropos.Plutus.Vault
     Apropos.Plutus.VaultDeposit
+    Apropos.Plutus.VaultTransfer
     Gen
     Tests
 
