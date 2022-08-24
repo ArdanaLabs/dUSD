@@ -138,7 +138,7 @@
         inherit pkgs lib;
         format = "qcow2";
         diskSize = "auto";
-        additionalSpace = "1000M";
+        additionalSpace = "10000M";
         config = (import (nixpkgsSource + "/nixos/lib/eval-config.nix") {
           inherit pkgs system;
           modules = [
