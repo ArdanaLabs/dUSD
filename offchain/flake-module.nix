@@ -124,4 +124,87 @@
             '';
       };
     };
+
+  flake = {
+    ctl-qemu-image =
+      let
+        nixpkgsSource = self.inputs.nixpkgs.sourceInfo.outPath;
+        system = "x86_64-linux";
+        pkgs = self.inputs.nixpkgs.legacyPackages.${system};
+        lib = pkgs.lib;
+        name = "ogmios-datum-cache";
+      in
+      import (nixpkgsSource + "/nixos/lib/make-disk-image.nix") {
+        inherit pkgs lib;
+        format = "qcow2";
+        diskSize = "30000";
+        config = (import (nixpkgsSource + "/nixos/lib/eval-config.nix") {
+          inherit pkgs system;
+          modules = [
+            self.inputs.nixpkgs.nixosModules.notDetected
+            (nixpkgsSource + "/nixos/modules/profiles/qemu-guest.nix")
+            ({ pkgs, config, ... }: {
+              fileSystems."/".device = "/dev/disk/by-label/nixos";
+              boot.loader.grub.device = "/dev/vda";
+              boot.loader.timeout = 0;
+              users.extraUsers.root.password = "";
+              system.stateVersion = "22.05";
+              imports = [
+                self.nixosModules.ctl-server
+                self.nixosModules.ogmios-datum-cache
+                self.inputs.cardano-ogmios.nixosModules.ogmios
+                self.inputs.cardano-node.nixosModules.cardano-node
+              ];
+
+              networking.firewall.allowedTCPPorts = [
+                config.services.cardano-node.port
+                config.services.ctl-server.port
+                config.services.cardano-ogmios.port
+                config.services.ogmios-datum-cache.port
+              ];
+
+              # networking.nameservers = ["8.8.8.8" "8.8.4.4" ];
+
+              services.postgresql = {
+                enable = true;
+                ensureDatabases = [ name ];
+                ensureUsers = [
+                  {
+                    inherit name;
+                    ensurePermissions = {
+                      "DATABASE \"${name}\"" = "ALL PRIVILEGES";
+                    };
+                  }
+                ];
+              };
+
+              services.cardano-node = {
+                enable = true;
+                environment = "testnet";
+                nodeConfigFile = "${self.inputs.cardano-node}/configuration/cardano/testnet-config.json";
+                topology = "${self.inputs.cardano-node}/configuration/cardano/testnet-topology.json";
+                systemdSocketActivation = true;
+                extraSocketConfig = i: { socketConfig.SocketMode = "0666"; }; # for some reason ogmios needs write access for the socket
+              };
+
+              services.cardano-ogmios = {
+                enable = true;
+                nodeConfig = "${self.inputs.cardano-node}/configuration/cardano/testnet-config.json";
+                nodeSocket = config.services.cardano-node.socketPath;
+              };
+
+              services.ogmios-datum-cache = {
+                enable = true;
+                postgresql = {
+                  user = name;
+                  dbName = name;
+                };
+              };
+
+              services.ctl-server.enable = true;
+            })
+          ];
+        }).config;
+      };
+  };
 }

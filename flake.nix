@@ -5,7 +5,7 @@
       url = "github:input-output-hk/haskell.nix";
     };
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    cardano-node.url = "github:input-output-hk/cardano-node?rev=73f9a746362695dc2cb63ba757fbcabb81733d23";
+    cardano-node.url = "github:input-output-hk/cardano-node?rev=950c4e222086fed5ca53564e642434ce9307b0b9";
     cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib?rev=6cdbad6e3250101ac909c582be743c9ab2566d99";
     cardano-ogmios.url = "github:input-output-hk/cardano-ogmios";
     mlabs-ogmios.follows = "cardano-transaction-lib/ogmios";
