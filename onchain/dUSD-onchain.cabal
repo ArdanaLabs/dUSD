@@ -135,6 +135,7 @@ test-suite tests
     Apropos.Plutus.Integer
     Apropos.Plutus.MainValidator
     Apropos.Plutus.NFT
+    Apropos.Plutus.PriceModule
     Apropos.Plutus.SingletonValue
     Apropos.Plutus.Value
     Apropos.Plutus.Vault

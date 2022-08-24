@@ -16,6 +16,9 @@ module Gen (
   txOutRef,
   validatorHash,
   value,
+  hexString,
+  txId,
+  rationalRange,
 ) where
 
 import Apropos (Gen, choice, element, int, linear, list)
@@ -31,8 +34,8 @@ import Plutus.V1.Ledger.Api (
   PubKeyHash,
   StakingCredential (..),
   TokenName,
-  TxId,
   TxOutRef (TxOutRef),
+  TxId (TxId),
   ValidatorHash,
   Value,
   singleton,
@@ -41,10 +44,12 @@ import Plutus.V1.Ledger.Api (
 import PlutusTx.IsData.Class (ToData)
 
 import Control.Monad (replicateM)
+import Data.ByteString qualified as BS
 import Data.Ratio
 import Data.String (IsString (..))
 import Plutus.V1.Ledger.Value (AssetClass)
 import Plutus.V1.Ledger.Value qualified as Value
+import PlutusTx.Builtins.Class (toBuiltin)
 
 -- TODO address should get it's own apropos model
 address :: Gen Address
@@ -91,6 +96,11 @@ validatorHash = hexString
 datumHash :: Gen DatumHash
 datumHash = hexString
 
+txId :: Gen TxId
+txId = do
+  bytes <- replicateM 32 (fromIntegral <$> int (linear 0 255))
+  return $ TxId $ toBuiltin $ BS.pack bytes
+
 hexit :: Gen Char
 hexit = element $ ['0' .. '9'] ++ ['a' .. 'f']
 
@@ -105,6 +115,15 @@ pos = fromIntegral <$> int (linear 1 1_000_000)
 
 rational :: Gen Rational
 rational = (%) <$> integer <*> pos
+
+-- | Generate a value with lo < x < hi.
+rationalRange :: Integer -> Rational -> Rational -> Gen Rational
+rationalRange prec lo hi = do
+  let prec' = fromIntegral prec
+      iLo = fromInteger $ ceiling $ lo * prec'
+      iHi = fromInteger $ floor $ hi * prec'
+  val <- fromIntegral <$> int (linear iLo iHi)
+  return $ val / prec'
 
 datum :: Gen Datum
 datum = Datum . BuiltinData <$> genData
