@@ -2,12 +2,12 @@ module Main (main) where
 
 import Prelude
 
-import Contract.Prelude (LogLevel(..), liftEffect)
+import Contract.Prelude (liftEffect)
 import Contract.Test.Plutip (withPlutipContractEnv, PlutipConfig)
 import Control.Monad.Rec.Class (forever)
 import Data.BigInt as BigInt
 import Data.Generic.Rep (class Generic)
-import Data.Log.Level (LogLevel(Error, Info))
+import Data.Log.Level (LogLevel(Trace, Debug, Info, Warn, Error))
 import Data.Maybe (Maybe(Nothing), fromMaybe)
 import Data.String (toLower)
 import Data.UInt as UInt
@@ -109,13 +109,15 @@ plutipLogLevelParser = option (logLevelFromString <$> str) (
   <> short 'l'
   <> metavar "LOG_LEVEL"
   <> value Info
-  <> help "Plutip log-level")
+  <> help "Plutip log-level, one of: trace, debug, info, warn, error")
 
 logLevelFromString :: String -> LogLevel
 logLevelFromString level
-  | toLower level ==  "error" = Error
-  | toLower level ==  "info" = Info
+  | toLower level ==  "trace" = Trace
   | toLower level ==  "debug" = Debug
+  | toLower level ==  "info" = Info
+  | toLower level ==  "warn" = Warn
+  | toLower level ==  "error" = Error
   | otherwise = Info
 
 makePortParser :: String -> UInt.UInt -> Parser UInt.UInt
