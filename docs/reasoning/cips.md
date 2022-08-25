@@ -14,7 +14,7 @@ This cip allows datums to be stored directly in utxos rather than storing their 
 ### Cons
 
 - If you have several identical datum in the same transaction which are much larger than hashes it could reduce total tx size at the cost of some script complexity to use hashes instead.
-	This should be rare or imposible in dUSD. Liqlidating large numbers of identical vaults might be slightly slower.
+	This should be rare or imposible in dUSD. Inline datums could make liqlidating large numbers of identical vaults (including the owner) slightly slower.
 
 ### Options:
 
@@ -23,7 +23,7 @@ This almost certainly has the best performance.
 I think we should do this.
 
 #### Allow
-This has the most script complexity but retains the most of the rest of the transaction size reduction.
+This has the most script complexity but probably retains most of the transaction size reduction.
 I don't think this makes sense to do this.
 
 ### Disallow
