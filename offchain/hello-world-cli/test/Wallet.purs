@@ -28,7 +28,7 @@ withPlutipWalletFile config vals walletDir f = withPlutipContractEnv config vals
   w <- makeWallet (unwrap env).config.networkId walletDir "plutip" wallet
   let
     portArgs =
-        fromMaybe "" ((" --ctl-port " <> _) <<< show <<< UInt.toInt <<< _.port <$> (unwrap env).config.ctlServerConfig)
+      fromMaybe "" ((" --ctl-port " <> _) <<< show <<< UInt.toInt <<< _.port <$> (unwrap env).config.ctlServerConfig)
         <> " --ogmios-port "
         <> show (UInt.toInt (unwrap env).config.ogmiosConfig.port)
         <> " --odc-port "

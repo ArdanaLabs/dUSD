@@ -99,13 +99,13 @@ runCmd (Options { conf, statePath, command, ctlPort, ogmiosPort, odcPort }) = do
   let
     (cfg :: ConfigParams ()) = cfg'
       { ctlServerConfig = ctlPort <#>
-        (\port ->
-          {port:port
-          , host: "127.0.0.1"
-          , secure: false
-          , path: Nothing
-          }
-        )
+          ( \port ->
+              { port: port
+              , host: "127.0.0.1"
+              , secure: false
+              , path: Nothing
+              }
+          )
       , ogmiosConfig { port = fromMaybe cfg'.ogmiosConfig.port ogmiosPort }
       , datumCacheConfig { port = fromMaybe cfg'.datumCacheConfig.port odcPort }
       }
