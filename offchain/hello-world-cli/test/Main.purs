@@ -243,6 +243,8 @@ config =
   , port: UInt.fromInt 8084
   , logLevel: Error
   -- Server configs are used to deploy the corresponding services.
+  ,customLogger : Nothing -- TODO do we want a custom logger here?
+  ,suppressLogs : false
   , ogmiosConfig:
       { port: UInt.fromInt 1339
       , host: "127.0.0.1"
@@ -256,6 +258,7 @@ config =
       , path: Nothing
       }
   , ctlServerConfig:
+      Just
       { port: UInt.fromInt 8085
       , host: "127.0.0.1"
       , secure: false

@@ -5,18 +5,16 @@ module Test.HelloWorld.Api
 import Data.BigInt as BigInt
 import Data.UInt as UInt
 
-import Plutus.Types.Value (Value, lovelaceValueOf, valueToCoin, getLovelace)
+import Plutus.Types.Value (Value, valueToCoin, getLovelace)
 
-import Test.Spec (Spec, describe, it, itOnly)
+import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldReturn, expectError, shouldEqual, shouldSatisfy)
-import Test.QuickCheck ((===))
-import Test.Spec.QuickCheck (quickCheck)
 
 import HelloWorld.Api (initialize, increment, redeem, query, helloScript, sendDatumToScript, datumLookup)
 import Contract.Monad (liftContractAffM)
 import Contract.Prelude
 import Contract.Scripts (validatorHash)
-import Contract.Test.Plutip (PlutipConfig, InitialUTxO, runPlutipContract, withPlutipContractEnv, runContractInEnv)
+import Contract.Test.Plutip (PlutipConfig, runPlutipContract, withPlutipContractEnv, runContractInEnv)
 import Contract.Wallet (withKeyWallet)
 
 config :: PlutipConfig
@@ -24,6 +22,8 @@ config =
   { host: "127.0.0.1"
   , port: UInt.fromInt 8082
   , logLevel: Error
+  , customLogger : Nothing
+  , suppressLogs : false
   -- Server configs are used to deploy the corresponding services.
   , ogmiosConfig:
       { port: UInt.fromInt 1338
@@ -37,7 +37,7 @@ config =
       , secure: false
       , path: Nothing
       }
-  , ctlServerConfig:
+  , ctlServerConfig: Just
       { port: UInt.fromInt 8083
       , host: "127.0.0.1"
       , secure: false
