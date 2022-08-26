@@ -164,8 +164,6 @@
                 config.services.ogmios-datum-cache.port
               ];
 
-              # networking.nameservers = ["8.8.8.8" "8.8.4.4" ];
-
               services.postgresql = {
                 enable = true;
                 ensureDatabases = [ name ];
@@ -182,10 +180,26 @@
               services.cardano-node = {
                 enable = true;
                 environment = "testnet";
-                nodeConfigFile = "${self.inputs.cardano-node}/configuration/cardano/testnet-config.json";
-                topology = "${self.inputs.cardano-node}/configuration/cardano/testnet-topology.json";
-                systemdSocketActivation = true;
-                extraSocketConfig = i: { socketConfig.SocketMode = "0666"; }; # for some reason ogmios needs write access for the socket
+                nodeConfigFile = "${self.inputs.cardano-node}/configuration/cardano/${config.services.cardano-node.environment}-config.json";
+                topology = "${self.inputs.cardano-node}/configuration/cardano/${config.services.cardano-node.environment}-topology.json";
+                extraServiceConfig = i: {
+                  serviceConfig.ExecStartPost = pkgs.writeShellScript "change-cardano-node-socket-permissions" ''
+                    timeout=10
+
+                    while [ ! -S ${config.services.cardano-node.socketPath} ]; do
+                      if [ "$timeout" == 0 ]; then
+                        echo "ERROR: Timeout while waiting for the cardano-node socket to appear ${config.services.cardano-node.socketPath}"
+                        exit 1
+                      fi
+
+                      sleep 1
+
+                      ((timeout--))
+                    done
+
+                    chmod 0666 ${config.services.cardano-node.socketPath}
+                  '';
+                };
               };
 
               services.cardano-ogmios = {
