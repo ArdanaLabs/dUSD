@@ -14,6 +14,8 @@ import Data.Maybe (Maybe(Nothing))
 
 main :: Effect Unit
 main = do
-  launchAff_ $ runSpec' defaultConfig { timeout = Nothing } [ consoleReporter ] do
-    Encoding.spec
-    Test.HelloWorld.Api.spec
+  launchAff_ $ do
+    runner <- Test.HelloWorld.Api.getRunner
+    runSpec' defaultConfig { timeout = Nothing } [ consoleReporter ] do
+      Encoding.spec
+      Test.HelloWorld.Api.spec runner

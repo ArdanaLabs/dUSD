@@ -1,23 +1,28 @@
 module Test.HelloWorld.Api
   ( spec
+  , getRunner
   ) where
 
+import Contract.Prelude
+
+import Contract.Config (ConfigParams, testnetConfig)
+import Contract.Monad (Contract, ContractEnv, liftContractAffM, mkContractEnv, withContractEnv)
+import Contract.Scripts (validatorHash)
+import Contract.Test.Plutip (PlutipConfig, runPlutipContract, withPlutipContractEnv, runContractInEnv)
+import Contract.Wallet (privateKeysToKeyWallet, withKeyWallet)
+import Contract.Wallet.KeyFile (privatePaymentKeyFromFile, privateStakeKeyFromFile)
 import Data.BigInt as BigInt
 import Data.UInt as UInt
-
+import Effect.Aff (launchAff_)
+import Effect.Exception (throw)
+import HelloWorld.Api (initialize, increment, redeem, query, helloScript, sendDatumToScript, datumLookup)
+import Node.Process (lookupEnv)
 import Plutus.Types.Value (Value, lovelaceValueOf, valueToCoin, getLovelace)
-
+import Test.QuickCheck ((===))
 import Test.Spec (Spec, describe, it, itOnly)
 import Test.Spec.Assertions (shouldReturn, expectError, shouldEqual, shouldSatisfy)
-import Test.QuickCheck ((===))
 import Test.Spec.QuickCheck (quickCheck)
-
-import HelloWorld.Api (initialize, increment, redeem, query, helloScript, sendDatumToScript, datumLookup)
-import Contract.Monad (liftContractAffM)
-import Contract.Prelude
-import Contract.Scripts (validatorHash)
-import Contract.Test.Plutip (PlutipConfig, InitialUTxO, runPlutipContract, withPlutipContractEnv, runContractInEnv)
-import Contract.Wallet (withKeyWallet)
+import Wallet (KeyWallet)
 
 config :: PlutipConfig
 config =
@@ -55,23 +60,41 @@ config =
 getAmount :: Value -> BigInt.BigInt
 getAmount = getLovelace <<< valueToCoin
 
-spec :: Spec Unit
-spec = do
-  describe "HelloWorld.Api" $ do
-    testInitialize
-    testIncrement
-    testRedeem
-    testDatumLookup
+type Runner = ((ContractEnv () -> KeyWallet -> Aff Unit) -> Aff Unit)
 
-testInitialize :: Spec Unit
-testInitialize = do
+getRunner :: Aff Runner
+getRunner = do
+  (liftEffect $ lookupEnv "MODE") >>= case _ of
+    Just "local" -> pure $ withPlutipContractEnv config [ BigInt.fromInt 20_000_000 ]
+    Just "testnet" -> do
+      testResourcesDir <- liftEffect $ fromMaybe "./fixtures/" <$> lookupEnv "TEST_RESOURCES"
+      key <- privatePaymentKeyFromFile $ testResourcesDir <> "/wallet.skey"
+      stakeKey <- privateStakeKeyFromFile $ testResourcesDir <> "/staking.skey"
+      let keyWallet = privateKeysToKeyWallet key (Just stakeKey)
+      pure
+        $ \f -> withContractEnv testnetConfig
+        $ \env -> f (env :: ContractEnv ()) (keyWallet :: KeyWallet)
+    Just e -> liftEffect $ throw $ "expected local or testnet got: " <> e
+    Nothing -> liftEffect $ throw "expected MODE to be set"
+
+
+spec :: Runner -> Spec Unit
+spec runner = do
+  describe "HelloWorld.Api" $ do
+    testInitialize runner
+    testIncrement runner
+    testRedeem runner
+    testDatumLookup runner
+
+testInitialize :: Runner -> Spec Unit
+testInitialize runner = do
   describe "initialize" do
     it "should set the datum to the initial value" $ do
       let
         initialAdaAmount = BigInt.fromInt 20_000_000
         initialValue = 20
         incParam = 200
-      withPlutipContractEnv config [ initialAdaAmount ] \env alice -> do
+      runner \env alice -> do
         initOutput <-
           runContractInEnv env $
             withKeyWallet alice do
@@ -85,19 +108,20 @@ testInitialize = do
     it "should fail if there isn't enough Ada available"
       $ expectError
       $
-        runPlutipContract config [ BigInt.fromInt 1_000_000 ] \alice -> do
-          withKeyWallet alice do
-            initialize 0 1
+        runner \env alice -> do
+          runContractInEnv env $
+            withKeyWallet alice do
+              void $ initialize 0 1
 
-testIncrement :: Spec Unit
-testIncrement = do
+testIncrement :: Runner -> Spec Unit
+testIncrement runner = do
   describe "increment" do
     it "should increment the datum by the specified increment parameter" $ do
       let
         initialValue = 10
         incParam = 2
         distribution = [ BigInt.fromInt 20_000_000 ]
-      withPlutipContractEnv config distribution \env alice -> do
+      runner \env alice -> do
         initOutput <-
           runContractInEnv env $
             withKeyWallet alice do
@@ -115,7 +139,7 @@ testIncrement = do
       let
         initialValue = 10
         distribution = [ BigInt.fromInt 20_000_000 ]
-      withPlutipContractEnv config distribution \env alice -> do
+      runner \env alice -> do
         lastOutput <-
           runContractInEnv env $
             withKeyWallet alice do
@@ -126,8 +150,8 @@ testIncrement = do
             withKeyWallet alice do
               increment 3 lastOutput
 
-testRedeem :: Spec Unit
-testRedeem = do
+testRedeem :: Runner -> Spec Unit
+testRedeem runner = do
   describe "redeem" do
     it "should return the locked Ada to a wallet" $ do
       let
@@ -175,8 +199,8 @@ testRedeem = do
         datum `shouldEqual` (initialValue + incParam)
         getAmount value `shouldSatisfy` (>) (BigInt.fromInt 20_000_000)
 
-testDatumLookup :: Spec Unit
-testDatumLookup = do
+testDatumLookup :: Runner -> Spec Unit
+testDatumLookup runner = do
   describe "datumLookup"
     $ it "should fetch the correct datum"
     $ do
