@@ -27,3 +27,4 @@ Auction sizing doesn’t really work, because you can’t prove on-chain there a
 
 Auctions happen within the buffer.
 
+
