@@ -184,7 +184,7 @@
                 topology = "${self.inputs.cardano-node}/configuration/cardano/${config.services.cardano-node.environment}-topology.json";
                 extraServiceConfig = i: {
                   serviceConfig.ExecStartPost = pkgs.writeShellScript "change-cardano-node-socket-permissions" ''
-                    timeout=10
+                    timeout=600
 
                     while [ ! -S ${config.services.cardano-node.socketPath} ]; do
                       if [ "$timeout" == 0 ]; then
