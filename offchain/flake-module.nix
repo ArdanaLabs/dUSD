@@ -177,6 +177,8 @@
                 ];
               };
 
+              systemd.services.cardano-node.serviceConfig.Type = "simple";
+
               services.cardano-node = {
                 enable = true;
                 environment = "testnet";
@@ -184,17 +186,8 @@
                 topology = "${self.inputs.cardano-node}/configuration/cardano/${config.services.cardano-node.environment}-topology.json";
                 extraServiceConfig = i: {
                   serviceConfig.ExecStartPost = pkgs.writeShellScript "change-cardano-node-socket-permissions" ''
-                    timeout=600
-
                     while [ ! -S ${config.services.cardano-node.socketPath} ]; do
-                      if [ "$timeout" == 0 ]; then
-                        echo "ERROR: Timeout while waiting for the cardano-node socket to appear ${config.services.cardano-node.socketPath}"
-                        exit 1
-                      fi
-
                       sleep 1
-
-                      ((timeout--))
                     done
 
                     chmod 0666 ${config.services.cardano-node.socketPath}
