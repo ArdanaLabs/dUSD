@@ -55,7 +55,7 @@ increment param lastOutput = do
   let newDatum = oldDatum + param
   setDatumAtScript newDatum vhash validator lastOutput
 
-redeem :: Int -> TransactionInput -> Contract () Unit
+redeem :: Int -> TransactionInput -> Contract () TransactionInput
 redeem param lastOutput = do
   validator <- helloScript param
   vhash <- liftContractAffM "Couldn't hash validator" $ validatorHash validator
@@ -121,7 +121,7 @@ redeemFromScript
   :: ValidatorHash
   -> Validator
   -> TransactionInput
-  -> Contract () Unit
+  -> Contract () TransactionInput
 redeemFromScript vhash validator txInput = do
   utxos <- getUtxos vhash
   let
@@ -131,8 +131,8 @@ redeemFromScript vhash validator txInput = do
 
     constraints :: TxConstraints Unit Unit
     constraints = Constraints.mustSpendScriptOutput txInput spendRedeemer
-  _ <- buildBalanceSignAndSubmitTx lookups constraints
-  logInfo' "finished"
+  txId <- buildBalanceSignAndSubmitTx lookups constraints
+  liftContractM "failed waiting for redeem" =<< waitForTx waitTime vhash txId
 
 helloScript :: Int -> Contract () Validator
 helloScript n = do
