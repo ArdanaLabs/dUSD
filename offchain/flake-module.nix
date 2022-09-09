@@ -177,14 +177,13 @@
                 ];
               };
 
-              systemd.services.cardano-node.serviceConfig.Type = "simple";
-
               services.cardano-node = {
                 enable = true;
                 environment = "testnet";
                 nodeConfigFile = "${self.inputs.cardano-node}/configuration/cardano/${config.services.cardano-node.environment}-config.json";
                 topology = "${self.inputs.cardano-node}/configuration/cardano/${config.services.cardano-node.environment}-topology.json";
                 extraServiceConfig = i: {
+                  serviceConfig.TimeoutStartSec = "infinity";
                   serviceConfig.ExecStartPost = pkgs.writeShellScript "change-cardano-node-socket-permissions" ''
                     while [ ! -S ${config.services.cardano-node.socketPath} ]; do
                       sleep 1
