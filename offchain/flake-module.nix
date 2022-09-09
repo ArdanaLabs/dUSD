@@ -126,6 +126,7 @@
     };
 
   flake = {
+    # run using qemu-system-x86_64 -boot d --drive file=nixos.qcow2 -cpu host -m 4G -accel kvm -net nic -net user,hostfwd=tcp::3001-:3001,hostfwd=tcp::9999-:9999,hostfwd=tcp::1337-:1337,hostfwd=tcp::8081-:8081
     ctl-qemu-image =
       let
         nixpkgsSource = self.inputs.nixpkgs.sourceInfo.outPath;
