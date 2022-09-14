@@ -1,11 +1,23 @@
 # How to build and run
 
+## Test-bundles
+
+To run all offchain tests with plutip use
+```
+nix run .#offchain:test:local
+```
+to run all offchain tests with testnet run
+```
+nix run .#offchain:test:testnet
+```
+(this requires ctl-runtime)
+
 ## Ctl-runtime
 
-In order for most tests and apps to work you need to be running the Ctl-runtime.
+In order for some tests and apps to work you need to be running the Ctl-runtime.
 The ctl-runtime requires that docker is installed and the docker daemon is running.
 Installing docker will depend on your package manager, but might look like `sudo apt-get docker` or `pacman -S docker`.
-Starting the docker daemon depends on your init system but is usally `sudo systemctl start docker`.
+Starting the docker daemon depends on your init system but is usually `sudo systemctl start docker`.
 You probably also want to run `sudo systemctl enable docker` so that docker will start automatically when your reboot.
 
 Once you have docker you can start the ctl-runtime by running:
@@ -14,14 +26,24 @@ Once you have docker you can start the ctl-runtime by running:
 nix run .#ctl-runtime
 ```
 
+Currently only the browser tests require the ctl-runtime.
+The cli and api tests use plutip.
+
 ## The API
 
 The api also has a dev shell which can be entered with `nix develop .#offchain:hello-world-api`.
-From the dev shell you can run tests with `purs-nix test` obtain a repl with `purs-nix repl` or compile the api with `purs-nix compile`.
+From the dev shell you can:
+- run tests with `purs-nix test` (after setting the mode `export MODE=local` or `export MODE=testnet`)
+- obtain a repl with `purs-nix repl`
+- compile the api with `purs-nix compile` This will not compile tests
 
-To run the api tests without the devshell run:
+To run the api tests with plutip run:
 ```
-nix run .#offchain:hello-world-api:test
+nix run .#offchain:hello-world-api:test:local
+```
+or with testnet run:
+```
+nix run .#offchain:hello-world-api:test:testnet
 ```
 
 ## The Browser-app
@@ -35,10 +57,21 @@ To run the browser app you can use:
 nix run .#offchain:hello-world-browser:serve
 ```
 
-To run the browser tests use:
+To run the browser tests with testnet use:
 ```
-nix run .#offchain:hello-world-browser:test
+nix run .#offchain:hello-world-browser:test:testnet
 ```
+
+To run the browser tests with plutip use:
+```
+nix run .#offchain:hello-world-browser:test:local
+```
+
+To run the lighthouse tests use:
+```
+nix build .#checks.x86_64-linux."offchain:hello-world-browser:lighthouse"
+```
+then view the generated report (result/lighthouse-report.json) with https://googlechrome.github.io/lighthouse/viewer/
 
 # The CLI
 
@@ -59,18 +92,28 @@ nix build .#hello-world-cli
 ./result/bin/hello-world-cli <args>
 ```
 
-To run the CLI tests, run:
+To run the CLI tests, with plutip run:
 ```
-nix run .#offchain:hello-world-cli:test
+nix run .#offchain:hello-world-cli:test:local
 ```
-or use `purs-nix test` in the dev shell.
+or with testnet run
+```
+nix run .#offchain:hello-world-cli:test:testnet
+```
+or in the dev shell run
+```
+nix build .#offchain:hello-world-cli
+export PATH=$PATH:./result/bin
+export MODE=local # or testnet if you want testnet
+purs-nix test
+```
 
 ## wallet configs
 
 The wallet config is a json file who's path must be provided in the `CONFIG_FILE` argument of each cli command.
-It must provide the fields:
+The config format has the following fields:
 - `walletPath` which needs to be the path to a skey file for the wallet
-- `stakingPath` which needs to be the path to a skey file for the staking credential
+- Optional `stakingPath` which needs to be the path to a skey file for the staking credential, if omitted the wallet will not have a staking key.
 - network which needs to be `Testnet` or `Mainnet` and must indicate which network the wallet belongs to and the test will use.
 
 Here's an example config:
@@ -80,12 +123,3 @@ Here's an example config:
 , "network" : "Testnet"
 }
 ```
-
-# Test-wallet
-
-Many of our tests use a keywallet on testnet.
-The test-wallet addres is:
-`addr_test1qqevfdhu80jsmjhzkf8lkkv5rza9h6k0u6hmwwr0r7vyjt9j3f374a2all0hc6vzxa6v7sax7du2lk5fu5q592d5fhqswar4hc`.
-Here's a link to faucet: https://testnets.cardano.org/en/testnets/cardano/tools/faucet/ .
-If the wallet runs out tests can fail.
-

@@ -10,16 +10,16 @@ import Apropos.Script
 import Test.Syd hiding (Context)
 import Test.Syd.Hedgehog
 
-import Plutus.V1.Ledger.Address (pubKeyHashAddress)
-import Plutus.V1.Ledger.Api (
+import PlutusLedgerApi.V1 (
   BuiltinData (BuiltinData),
   Redeemer (..),
   Value (..),
   toBuiltinData,
  )
-import Plutus.V1.Ledger.Scripts (Context (..), Datum (..), applyValidator)
-import Plutus.V1.Ledger.Value (currencySymbol, tokenName)
-import Plutus.V2.Ledger.Api (fromList)
+import PlutusLedgerApi.V1.Address (pubKeyHashAddress)
+import PlutusLedgerApi.V1.Scripts (Context (..), Datum (..), applyValidator)
+import PlutusLedgerApi.V1.Value (currencySymbol, tokenName)
+import PlutusLedgerApi.V2 (fromList)
 
 import Plutarch.Prelude
 
@@ -63,8 +63,8 @@ instance HasPermutationGenerator HelloProp HelloModel where
             HelloModel <$> bool
               <*> bool
               <*> bool
-              <*> (fromIntegral <$> int (linear minBound maxBound))
-              <*> (fromIntegral <$> int (linear minBound maxBound))
+              <*> (toInteger <$> int (linear minBound maxBound))
+              <*> (toInteger <$> int (linear minBound maxBound))
         }
     ]
   generators =
@@ -79,7 +79,7 @@ instance HasPermutationGenerator HelloProp HelloModel where
         , match = Not $ Var IsInvalid
         , contract = swap IsInvalid IsValid
         , morphism = \hm@HelloModel {..} -> do
-            j <- genFilter (/= (inDatum + 1)) (fromIntegral <$> int (linear minBound maxBound))
+            j <- genFilter (/= (inDatum + 1)) (toInteger <$> int (linear minBound maxBound))
             pure hm {outDatum = j}
         }
     , Morphism
@@ -111,14 +111,6 @@ mkCtx HelloModel {..} =
     withTxInfo $ do
       addInput nullTxOutRef helloAddress someAda (Just datumIn)
       addOutput outAddr someAda (Just datumOut)
-
-      txInfoIdUntouched
-      txInfoSignatoriesUntouched
-      txInfoValidRangeUntouched
-      txInfoWdrlUntouched
-      txInfoDCertUntouched
-      txInfoMintUntouched
-      txInfoFeeUntouched
   where
     outAddr = if isContinuing then helloAddress else pubKeyHashAddress ""
     datumIn = Datum $ toBuiltinData inDatum

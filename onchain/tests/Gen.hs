@@ -14,7 +14,7 @@ module Gen (
 
 import Apropos (Gen, choice, element, int, linear, list)
 
-import Plutus.V1.Ledger.Api (
+import PlutusLedgerApi.V1 (
   Address (Address),
   Credential (..),
   CurrencySymbol,
@@ -30,10 +30,10 @@ import Plutus.V1.Ledger.Api (
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
 
 import Control.Monad (replicateM)
-import Data.Ratio
 import Data.String (IsString (..))
-import Plutus.V1.Ledger.Value (AssetClass)
-import Plutus.V1.Ledger.Value qualified as Value
+import GHC.Real (Ratio ((:%)))
+import PlutusLedgerApi.V1.Value (AssetClass)
+import PlutusLedgerApi.V1.Value qualified as Value
 
 -- TODO address should get it's own apropos model
 address :: Gen Address
@@ -87,13 +87,13 @@ maybeOf :: Gen a -> Gen (Maybe a)
 maybeOf g = choice [pure Nothing, Just <$> g]
 
 integer :: Gen Integer
-integer = fromIntegral <$> int (linear (-1_000_000) 1_000_000)
+integer = toInteger <$> int (linear (-1_000_000) 1_000_000)
 
 pos :: Gen Integer
-pos = fromIntegral <$> int (linear 1 1_000_000)
+pos = toInteger <$> int (linear 1 1_000_000)
 
 rational :: Gen Rational
-rational = (%) <$> integer <*> pos
+rational = (:%) <$> integer <*> pos
 
 datum :: Gen Datum
 datum = choice [datumOf integer, datumOf value]

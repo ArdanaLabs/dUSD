@@ -1,31 +1,24 @@
 module Main (main) where
 
-import Apropos.Plutus.AssetClass qualified as AssetClass
-import Apropos.Plutus.Auction qualified as Auction
 import Apropos.Plutus.HelloValidator qualified as HelloValidator
-import Apropos.Plutus.Integer qualified as Integer
-import Apropos.Plutus.SingletonValue qualified as SingletonValue
-import Apropos.Plutus.Value qualified as Value
-import Apropos.Plutus.Vault qualified as Vault
+import Goldens.Cbor qualified as Cbor
 
+import Control.Monad (when)
+import Data.Maybe (fromMaybe, isNothing)
+import System.Environment (lookupEnv)
 import Test.Syd
-
---import Apropos
---import Apropos.LogicalModel
---import Apropos.Plutus.Vault
 
 -- TODO use sydtest-discover once nix stabalizes a bit more
 -- TODO figure out why sydtest breaks the histograms and fix it
 
 main :: IO ()
-main =
-  --print (length $ solveAll (logic :: Formula VaultProp))
-  sydTest $
+main = do
+  maybeGoldenDir <- lookupEnv "GOLDEN_FILES"
+  when (isNothing maybeGoldenDir) $ putStrLn "env GOLDEN_FILES not set"
+  let goldenDir = fromMaybe "./goldens/" maybeGoldenDir
+  putStrLn goldenDir
+  sydTest $ do
     describe "plutus" $ do
-      AssetClass.spec
-      Integer.spec
-      SingletonValue.spec
-      Value.spec
-      Vault.spec
-      Auction.spec
       HelloValidator.spec
+    describe "goldens" $ do
+      Cbor.spec goldenDir

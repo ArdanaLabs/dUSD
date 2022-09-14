@@ -5,24 +5,23 @@ module Hello (
   helloLogic,
   helloValidatorHash,
   helloAddress,
-  helloWorldHexString,
-  paramHelloCBOR,
+  helloWorldCbor,
+  paramHelloCbor,
+  trivialCbor,
   HelloRedemer (..),
 ) where
 
-import GHC.Generics qualified as GHC
-import Generics.SOP (Generic, I (I))
+import Data.Default (Default (def))
 import Utils (closedTermToHexString, validatorToHexString)
 
-import Plutus.V1.Ledger.Address (Address (..))
-import Plutus.V1.Ledger.Credential (Credential (..))
-import Plutus.V1.Ledger.Scripts (Validator, ValidatorHash)
+import PlutusLedgerApi.V1.Address (Address (..))
+import PlutusLedgerApi.V1.Credential (Credential (..))
+import PlutusLedgerApi.V1.Scripts (Validator, ValidatorHash)
 
 import Plutarch.Prelude
 
 import Plutarch.Api.V1 (PScriptContext, PValidator, mkValidator, validatorHash)
 import Plutarch.Builtin (pforgetData)
-import Plutarch.DataRepr (PIsDataReprInstances (PIsDataReprInstances))
 import Plutarch.Extensions.Api (passert, pgetContinuingDatum)
 import Plutarch.Unsafe (punsafeCoerce)
 
@@ -31,27 +30,31 @@ import Plutarch.Extra.TermCont (pmatchC)
 data HelloRedemer (s :: S)
   = Inc (Term s (PDataRecord '[]))
   | Spend (Term s (PDataRecord '[]))
-  deriving stock (GHC.Generic)
-  deriving anyclass (Generic)
-  deriving anyclass (PIsDataRepr)
-  deriving
-    (PlutusType, PIsData, PEq)
-    via (PIsDataReprInstances HelloRedemer)
+  deriving stock (Generic)
+  deriving anyclass (PlutusType, PIsData, PEq)
 
-helloWorldHexString :: String
-helloWorldHexString = validatorToHexString helloValidator
+instance DerivePlutusType HelloRedemer where type DPTStrat _ = PlutusTypeData
 
-paramHelloCBOR :: String
-paramHelloCBOR = closedTermToHexString paramValidator
+helloWorldCbor :: String
+helloWorldCbor = validatorToHexString helloValidator
+
+paramHelloCbor :: Maybe String
+paramHelloCbor = closedTermToHexString paramValidator
+
+trivialCbor :: Maybe String
+trivialCbor = closedTermToHexString trivial
 
 helloValidator :: Validator
-helloValidator = mkValidator (paramValidator #$ pforgetData (pdata (1 :: Term _ PInteger)))
+helloValidator = mkValidator def (paramValidator #$ pforgetData (pdata (1 :: Term _ PInteger)))
 
 helloValidatorHash :: ValidatorHash
 helloValidatorHash = validatorHash helloValidator
 
 helloAddress :: Address
 helloAddress = Address (ScriptCredential helloValidatorHash) Nothing
+
+trivial :: ClosedTerm (PData :--> PValidator)
+trivial = plam $ \_ _ _ _ -> popaque $ pcon PUnit
 
 paramValidator :: ClosedTerm (PData :--> PValidator)
 paramValidator = plam $ \dCountBy dn dunit dsc -> do
