@@ -1,13 +1,17 @@
 \documentclass{article} % Use the custom invoice class (invoice.cls)
-\usepackage{hyperref}
+\usepackage[hidelinks]{hyperref}
 \usepackage{todonotes}
 \setuptodonotes{inline}
 \setlength{\parindent}{0em}
+\setlength{\parskip}{1pt}
 
 \title{dUSD specification}
 \begin{document}
 
 \maketitle
+
+\tableofcontents
+\newpage
 
 \section{Introduction}
 
@@ -41,13 +45,13 @@ Module (PM).
 This module contains $48$ hours of price data, aggregated off-chain and put
 on-chain by admin.
 
-\subsubsection{Price module: Write}
+\subsubsection*{Price module: Write}
 
 Admin can update the price information in the PM's datum by adding one more
 price point.
 When doing so, any price points older than $48$ hours are removed.
 
-\subsubsection{Price module: Read}
+\subsubsection*{Price module: Read}
 
 Anyone can use the price module as a read-only input UTXO to their transactions
 in order to discover the last $48$ hours of price information, one price point
@@ -85,48 +89,48 @@ per hour.
 % 
 % Note: We will build price oracles both for ADA and dUSD.
 % 
-% \subsubsection{Price oracle: Read}
+% \subsubsection*{Price oracle: Read}
 % 
 % The OSM can read all the pricing data stored in the price oracle.
 % 
-% \subsubsection{Write}
+% \subsubsection*{Write}
 % 
 % The owner/creator of the price oracle can write a new price value to the oracle.
 % This endpoint can be called once per hour.
 % 
 % \subsection{Oracle security module}
 % 
-% \subsubsection{Read the `current' price}
+% \subsubsection*{Read the `current' price}
 % 
 % Anyone can use the OSM as a read-only input UTXO to discover the price
 % information of the last $48$ hours of some currency (e.g. ADA or dUSD relative
 % to USD).
 % 
-% \subsubsection{Update}
+% \subsubsection*{Update}
 % 
 % The OSM is updated once per hour.
 % Anyone can do this by connecting the OSM to all accepted price oracles.
 % 
-% \subsubsection{Update list of accepted price oracles}
+% \subsubsection*{Update list of accepted price oracles}
 % 
 % Admin/governance can update the list of price oracles accepted by the OSM.
 % 
 \subsection{Vault}
 
-\subsubsection{Collect vault information}
+\subsubsection*{Collect vault information}
 
 As a user, I can collect information on my vaults, i.e. the vaults I created.
 
-\subsubsection{Initialize vault}
+\subsubsection*{Initialize vault}
 
 As a user, I can open a new vault.
 
-\subsubsection{Deposit}
+\subsubsection*{Deposit}
 
 As a user, I can deposit ADA into a vault, so that I may take out a loan of dUSD
 (see below).
 
-\subsubsection{Withdrawal}
+\subsubsection*{Withdrawal}
 
 As a user, I can withdraw ADA from a vault, as long as my collateralization
 ratio is above the liquidation ratio.
@@ -139,7 +143,7 @@ Power users can easily circumvent this by running our PAB directly. \\
 
 Note: The liquidation ratio can only be changed when the protocol is updated.
 
-\subsubsection{Take out loan}
+\subsubsection*{Take out loan}
 
 Any user can take out a loan in dUSD from one of his vaults if the vault has
 enough collateral. There is a minimum size for dUSD loans, called the ``debt
@@ -148,14 +152,14 @@ floor''\footnote{
 }, as well as a ceiling for the total debt in one vault, called the ``debt
 ceiling``.
 
-\subsubsection{Pay back loan}
+\subsubsection*{Pay back loan}
 
 Any user can pay back (part of) a loan he created in one of his vaults. The
 remaining stability fee in the vault is paid back first, and sent the buffer.
 The rest of the dUSD paid, is burnt in exchange for lowering the outstanding
 debt.
 
-\subsubsection{Liquidate vault}
+\subsubsection*{Liquidate vault}
 
 A vault is considered in an unhealthy state if its collateralization ratio is
 below the liquidation ratio, both according to the current price and the price
@@ -175,7 +179,7 @@ The auction Module is where the collateral and debt of any liquidated vault ends
 up. The auction Module allows any user to buy enough collateral to cover the
 dUSD debt.
 
-\subsubsection{Buy collateral}
+\subsubsection*{Buy collateral}
 
 The auction module will track its current amount of collateral and debt.  Any
 user can buy any amount of collateral in the auction module as long as the
@@ -227,12 +231,12 @@ market rate for USD/ADA creates a discount. Similarly, selling ADA in exchange
 for dUSD happens when dUSD trades below peg, which means that selling it at the
 market rate for ADA/USD creates a discount.
 
-\subsubsection{Trigger auction of dUSD for ADA}
+\subsubsection*{Trigger auction of dUSD for ADA}
 
 Admin can trigger a dUSD $\leftrightarrow$ ADA auction of any size smaller than
 the amount of dUSD held in the buffer.
 
-\subsubsection{Trigger auction of ADA for dUSD}
+\subsubsection*{Trigger auction of ADA for dUSD}
 
 Admin can trigger an ADA $\leftrightarrow$ dUSD auction of any size smaller than
 the amount of ADA held in the buffer.
@@ -241,22 +245,22 @@ the amount of ADA held in the buffer.
 
 The Protocol Parameters Module is a UTXO responsible for setting the protocol-wide parameters.
 
-\subsubsection{Set liquidation discount}
+\subsubsection*{Set liquidation discount}
 
 The admin user can set the liquidation discount, through a command line
 interface available on the Ardana tenant.
 
-\subsubsection{Set stability fee}
+\subsubsection*{Set stability fee}
 
 The admin user can set the stability fee (in percentage per year), through a
 command line interface available on the Ardana Tenant.
 
-\subsubsection{Set debt floor}
+\subsubsection*{Set debt floor}
 
 The admin user can set the debt floor (in dUSD), through a command line
 interface available on the Ardana Tenant.
 
-\subsubsection{Set debt ceiling}
+\subsubsection*{Set debt ceiling}
 
 The admin user can set the debt ceiling (in dUSD), through a command line
 interface available on the Ardana Tenant.
@@ -448,6 +452,22 @@ Note: The off-chain bot will combine the price feeds through two operations:
   \item Take the median of the resulting values
 \end{enumerate}
 
+\subsubsection*{Protocol updates}
+
+Protocol updates work a bit differently for the price module than for the other
+on-chain components.
+The reason for this is that maintaining a price module costs a significant
+amount in gas fees, so we only want to maintain one version.
+This means that the price module will not be part of the regular protocol
+updates, but instead the configuration module will refer to one NFT as
+identifying the price module.
+Admin is then allowed to update the price module by moving its NFT to a new
+UTXO, which is associated with the new price module script.
+Lastly, it is important to note the drawback of this update mechanism, namely
+that the price module must forever remain backwards compatible.
+This is because an arbitrary number of old protocols will still depend on the
+most up-to-date price module, and these old protocols must still be viable.
+
 % \subsection{Price oracle}
 % 
 % Each price oracle will carry an NFT used as a unique identifier.
@@ -632,6 +652,37 @@ contains an NFT as an ID with the correct CurrencySymbol).
 % - Test what happens if someone hacks one or more price oracles
 % - Other attack vectors which are not specific to our application, should be
 %   listed and tested for
+
+\section{Remarks}
+
+One important question to discuss, is what happens in case a bug is found in the
+dUSD protocol.
+Let us start by categorizing any protocol bug into two types:
+\begin{enumerate}
+  \item Someone can mint dUSD at a discount
+  \item Someone can get others' collateral at a discount
+\end{enumerate}
+
+In the former case, we can fix the issue and launch a protocol update. Since old
+protocol versions cannot mint dUSD, this resolves the problem.
+If the problem is too complex to fix quickly, a temporary "no minting" protocol
+update can be launched, and then update that one once we actually fixed it. \\
+
+The latter case forms a bigger issue.
+The only way out that we can see, is to give governance the option to freeze the
+protocol.
+However, upon unfreezing, the vault script would be unchanged.
+Given that hackers are more technically capable than most users, they will be
+able to steal much collateral at a discount despite the freeze.
+One option would be that governance cannot only freeze the protocol, but also
+launch a new vault script and force-update vaults to that script.
+This in turn creates a new issue, namely that it opens up the possibility for a
+protocol-wide rugpull.
+At least for PR purposes, this seems much more dangerous than the option of
+having people steal collateral at a discount, given the extensive testing Ardana
+is engaging in.
+Therefore, we decided to accept the risk of bugs over the risk of full
+centralized `emergency' control.
 
 \section{To be determined}
 
