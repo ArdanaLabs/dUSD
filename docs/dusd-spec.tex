@@ -112,7 +112,7 @@ per hour.
 % Admin/governance can update the list of price oracles accepted by the OSM.
 % 
 \subsection{Vault}
-
+ 
 \subsubsection{Collect vault information}
 
 As a user, I can collect information on my vaults, i.e. the vaults I created.
@@ -135,7 +135,7 @@ prevents users from transacting with their vault in such a way that their
 collateralization ratio drops below the minimum collateralization ratio.
 The reason for this is that many people use the MakerDAO system as
 experimentation and lose thousands of dollars on day one.
-Power users can easily circumvent this by running our PAB directly. \\
+Power users can circumvent this by interacting with the protocol directly. \\
 
 Note: The liquidation ratio can only be changed when the protocol is updated.
 
@@ -430,9 +430,10 @@ Off-chain bot:
 Price module:
 \begin{itemize}
   \item The on-chain code will be written in Plutarch
-  \item The off-chain code will be built as a PAB
+  \item The off-chain code will be built as a command line application using
+    CTL for network interactions.
   \item The datum will contain a map from timestamps (in POSIX time) to price
-    values
+    values.
   \item The script address will be dependent on three admin public
     keys\footnote{
       These admin keys can only be updated when the protocol is updated.
@@ -482,29 +483,11 @@ Note: The off-chain bot will combine the price feeds through two operations:
 
 \begin{itemize}
   \item On-chain code: Plutarch
-  \item Off-chain code: PAB, tested through Maeserat and ContractModel tests.
-    This means that users will use the frontend to contact our remote wallet
-    PAB\footnote{
-      The following statement is still being verified by Dan Firth's research.
-      The protocol implementation as outlined in this document requires us to
-      run two separate PABs.
-      One PAB, referred to as the ``admin PAB'', will be connected to a wallet
-      running locally on the Ardana Tenant.
-      This admin PAB will be used to sign and submit admin transactions.
-      On the other hand, the ``remote PAB'' will use Cardano's remote wallet
-      implementation in order to generate the unsigned tranasctions our users
-      need and yield them.
-      These unsigned transactions will be sent to the user, where locally
-      running javascript will connect to their wallet in order to sign and
-      submit the transactions.
-    }, which will generate the unsigned transaction they need.
-  \item Collecting information on one person's vaults as well as vaults in
-    general, are implemented as off-chain endpoints within the PAB, to avoid
-    having to build a separate backend for the dUSD system
+  \item Off-chain code: CTL, tested through Plutip and Puppeteer tests.
+  \item Information on each user's vault is available to them through CTL
+    calls after connecting their wallet.
   \item A vault is a UTXO which holds an NFT, as a unique ID, and the collateral
-    assets
-  \item The vault's address is dependent on the owner's public key, ensuring the
-    key cannot be changed by any transactions
+    assets.
   \item The vault's address is dependent on the three admin keys, ensuring the
     vault is connected to the correct buffer and price modules
   \item The vault's datum consists of two pieces of information: A timestamp of
@@ -517,7 +500,7 @@ Note: The off-chain bot will combine the price feeds through two operations:
     healthy whenever the price of the collateral dropped.
   \item All transactions must have a ``txInfoValidRange'' that's less than $12$
     hours long, to provide sufficiently accurate temporal information. This is
-    enforced on-chain. The timestamp extracted from any transaction is the the
+    enforced on-chain. The timestamp extracted from any transaction is the
     beginning of this interval.
   \item When a dUSD loan gets paid back, the dUSD coins get burned in the vault.
     This means that the stability fee is burned as well, which drives up the
