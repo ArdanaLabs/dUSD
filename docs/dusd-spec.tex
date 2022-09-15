@@ -540,7 +540,7 @@ Notes:
   \item The names of the NFTs carried in the buffer and price modules, will be
     used as arguments to the vault's Plutus script.
     This ensures the vaults connect with the correct protocol setup.
-  \item The frontend code will set the minimum collateralization ratio, which
+  \item The frontend code will display the minimum collateralization ratio, which
     will be adjustable by Ardana itself.
 \end{itemize}
 
@@ -548,10 +548,11 @@ In addition to the vault itself, we need a liquidation bot in order to liquidate
 sick vaults as quickly as possible.
 This liquidation bot will be a Haskell script running once every $10$ minutes on
 the Ardana Tenant, as a systemd service.
-The script will connect to a separate contract instance (set up specifically for
-this script) of the dUSD admin PAB to collect information on all dUSD vaults,
+The script will connect to the network to collect information on all dUSD vaults
 and determine which ones are sick\footnote{
-  This will be done by querying the ChainIndex.
+  This will be done by scanning the vault UTxOs at the vault validator address
+  and comparing the vault's collatoralization ratio with the minimum collatoralization
+  ratio.
   \todo{Figure out how to do this efficiently.
     Can we specifically find the vaults by checking the ADA price module's
     history?
