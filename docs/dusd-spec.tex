@@ -506,13 +506,19 @@ most up-to-date price module, and these old protocols must still be viable.
   \item Off-chain code: CTL, tested through Plutip and Puppeteer tests.
   \item Information on each user's vault is available to them through CTL
     calls after connecting their wallet.
-  \item A vault is a UTXO which holds an NFT, as a unique ID, and the collateral
-    assets.
+  \item A vault's current state is managed through a UTXO which holds an NFT, 
+    as a unique ID, and the collateral assets.
+  \item When a state change occurs and a new vault UTxO is submitted, the NFT must
+    transfer from the UTxO being spent to the new vault UTxO.
   \item The vault's address is dependent on the three admin keys, ensuring the
     vault is connected to the correct buffer and price modules
-  \item The vault's datum consists of two pieces of information: A timestamp of
-    its last update and the amount of dUSD debt (including stability fee)
-    calculated at that time
+  \item The vault's datum consists of two pieces of information
+    \begin{itemize}
+      \item The amount of dUSD debt (including stability fee) calculated at that
+       time.
+      \item A timestamp of its last update.
+      \item The address of the vault owner.
+    \end{itemize}
   \item Liquidation is only allowed if both the current price and the price of
     an hour ago state that the current collateralization ratio is below the
     liquidation ratio.
