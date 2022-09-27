@@ -32,6 +32,14 @@
 	- doesn't throw error
 	- lookup sees vault as closed
 
+## Auction Tests
+
+
+## Buffer Tests
+- Can't start auction without admin
+probably more?
+
+
 ## Attack tests
 
 As these are attack tests of onchain code they should all fail at script evaluation
@@ -75,3 +83,8 @@ As these are attack tests of onchain code they should all fail at script evaluat
  - Can't mint with invalid vault
  - Can't mint with wrong vault address
  - Can't mint with wrong vault address supported by invalid parameters utxo
+
+### Basic nft tests
+Let's just coppy them from hello world
+
+### Auction attack tests

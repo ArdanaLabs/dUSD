@@ -16,8 +16,8 @@ Outputs: Protocol type which includes:
 	- The Protocol parameter utxo's nft's currency symbol
 	- Protocol addresses which depend on that
 		- Vault address
-		- auction address ?
 		- dUSD minting policy
+		- auction address ?
 		- buffer address?
 Note the protocol type needs to be easy to broad
 
@@ -48,6 +48,21 @@ I'm not sure how this should work
 
 This part of the api should work with any wallet
 
+## Get protocol
+
+I'm not sure what the best way to get the protocol data to users would be.
+For admin/the cli it can just read it from a file which the cli can create when
+the protocol is initialized.
+The browser tests on the other hand I'm not sure what's best:
+- Hard codding
+	makes the most sense in production where the value is determined once and never changes
+	forces lots of recompiling during tests
+- Environment variable
+	easy for nix testing but not clear how that would work in production
+- Serve it as a file
+	this might be good?
+	I don't know enough web development and should ask Evan about this.
+
 ## Open a vault
 
 Inputs: Protocol, initial ada amount
@@ -57,7 +72,7 @@ Should do:
 	Create a valid vault with the initial ada amount and a valid nft
 	return the token name of that nft (which is the vault's uuid)
 
-## Querry all vaults
+## Query all vaults
 
 Inputs: Protocol
 Outputs: uuids for all valid vaults
@@ -65,7 +80,7 @@ Should do:
 	lookup vault address
 	filter out invalid vaults
 
-## Querry User's vaults
+## Query User's vaults
 
 Inputs: Protocol, PubKeyHash
 Outputs: uuids for all valid vaults with that owner
@@ -74,7 +89,7 @@ Should do:
 	filter out invalid vaults
 	filter vaults owned by pubkey
 
-## Querry Vault by id
+## Query Vault by id
 Inputs: Protocol, vault uuid
 Outputs: owner, debt, ada, anything else in datum?
 
@@ -103,7 +118,7 @@ Should do
 	(vault must remain above liquidation ratio)
 
 ## Pay back debt
-Inputs: Protocl, vault uuid, amount
+Inputs: Protocol, vault uuid, amount
 Outputs: unit
 
 Should do
