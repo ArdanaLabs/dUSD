@@ -1,4 +1,4 @@
-# onchain spec
+# Onchain spec
 
 # Changes
 
@@ -20,20 +20,25 @@ We can enforce that the oracle and parameter utxos are only referenced for free
 so we might as well
 
 If the redeemer action is close:
-	- Validation NFT burned
-	- Debt paid (Maybe we require that the debt was already 0?)
-	- Signed by owner
+
+- Validation NFT burned
+- Debt paid (Maybe we require that the debt was already 0?)
+- Signed by owner
+
 If the redeemer was adjust:
-	I think it makes sense to bundle deposit withdraw etc into one action
-	They all have the same constraints so this seems simpler
-	- output vault is above liquidation ratio
-	- exactly the original vault validation nft is at the output
-	- Signed by owner
-  - (total?) debt increase/decrease matches minted dUSD
-	- debt is not negative
+
+I think it makes sense to bundle deposit withdraw etc into one action
+They all have the same constraints so this seems simpler
+
+- output vault is above liquidation ratio
+- exactly the original vault validation nft is at the output
+- Signed by owner
+- (total?) debt increase/decrease matches minted dUSD
+- debt is not negative
+
 If the redeemer was liquidate:
-	- Vault was bellow liquidation ratio
-	- Auction triggered appropriately? maybe first purchase included in this?
+- Vault was bellow liquidation ratio
+- Auction triggered appropriately? maybe first purchase included in this?
 
 ## Auction Address validator
 
@@ -51,6 +56,7 @@ so it probably needs to support starting auctions.
 Constraints:
 
 - Admin signed tx
+
 Maybe:
 - New datum parses?
 - Nft remains at address?
@@ -97,6 +103,7 @@ currency symbol of dUSD to update it
 - Output utxo (with the token) must be at the vault address
 - Output utxo datum must parse as a vault datum
 - Output utxo datum must have a debt of 0
+
 Maybe:
 - Output utxo datum must have an owner who signed this tx
 
