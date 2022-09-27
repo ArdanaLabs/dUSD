@@ -1,72 +1,12 @@
-# low level spec for dUSD
+# Low level offchain api spec
 
-The spec doesn't seem detailed enough to say much about testing,
-so this is a more detailed version.
+This is a spec for the low level api that will be used in the cli and browser components
 
-# Changes
+# Admin only API
 
-I'm assuming like with hello discovery we are just using one
-vault address
+This part of the api will require the Admin wallet available using yubihsm
 
-# Onchain Components
-
-### Admin
-
-3 keys?
-
-## Validators
-
-### Vault Address validator
-
-### Auction Address validator
-
-Performs (dutch?) auctions or maybe flat sales?
-vault liquidation auctions handled here
-
-
-### Buffer Address
-
-### Protocol parameter Address validator
-
-Constraints:
-
-- Only allows update only by admin
-
-We could add some constraints so Admin can't brick the protocol
-
-- New datum parses?
-- Nft remains at address?
-
-### Price oracle Address
-
-Constraints:
-- Only admin can write
-
-Maybe more constraints?
-
-We could add some more constraints that would prevent
-Admin from suddenly adding 2 fradulent entries to
-liquidate all the vaults without warning
-
-- Must be valid update
-	- any expired entries dropped
-	- Previous data otherwise not altered
-	- One new entry
-- Must wait between writes
-	- write must occur at least one hour after the last entry
-
-
-## Minting Policies
-
-### dUSD minting policy
-
-### Vault validation+tracking minting policy
-
-# Offchain components
-
-## Admin
-
-### Initialize protocol
+## Initialize protocol
 
 Inputs:
 	The list of admin keys?
@@ -86,7 +26,7 @@ Should do:
 	send that nft with to the protocol parameter address with the initial parameters
 	compute parametized scripts for all of the scripts that depend on that NFT (including transitiviely)
 
-### Add price data
+## Add price data
 
 Inputs: Protocol, the current price
 Outputs: none
@@ -95,14 +35,20 @@ Should do:
 	update the price data to include the new price
 	and drop any old price data
 
-### Set Protocol parameters
+## Set Protocol parameters
 
 Inputs: Protocol, New Parameters
 Outputs: unit
 
-## Anyone
+## Trigger buffer auction
 
-### Open a vault
+I'm not sure how this should work
+
+# Anyone
+
+This part of the api should work with any wallet
+
+## Open a vault
 
 Inputs: Protocol, initial ada amount
 Outputs: vault uuid
@@ -111,7 +57,7 @@ Should do:
 	Create a valid vault with the initial ada amount and a valid nft
 	return the token name of that nft (which is the vault's uuid)
 
-### Querry all vaults
+## Querry all vaults
 
 Inputs: Protocol
 Outputs: uuids for all valid vaults
@@ -119,7 +65,7 @@ Should do:
 	lookup vault address
 	filter out invalid vaults
 
-### Querry User's vaults
+## Querry User's vaults
 
 Inputs: Protocol, PubKeyHash
 Outputs: uuids for all valid vaults with that owner
@@ -128,7 +74,7 @@ Should do:
 	filter out invalid vaults
 	filter vaults owned by pubkey
 
-### Querry Vault by id
+## Querry Vault by id
 Inputs: Protocol, vault uuid
 Outputs: owner, debt, ada, anything else in datum?
 
@@ -148,5 +94,38 @@ Outputs: unit
 Should do
 	add amount of ada to the vault
 
-## Bot/non-script Addresses
+## Withdraw
+Inputs: Protocol, vault uuid, amount
+Outputs: unit
 
+Should do
+	remove ada from vault
+	(vault must remain above liquidation ratio)
+
+## Pay back debt
+Inputs: Protocl, vault uuid, amount
+Outputs: unit
+
+Should do
+	burn dUSD
+	and reduce debt apropriately
+
+## Maybe adjust?
+
+In the onchain code it makes sense to treat
+take out loan, deposit, withdraw, and payback debt
+as one type of transaction. If we do that we
+might as well expose that here too as it would
+often be cheaper and faster.
+
+## Liquidate
+
+inputs: protocol, vault uuid, ?
+outputs: ?
+
+I'm not sure how this should work
+it needs to interface with the auction module
+
+## Bid in an auction
+
+I'm not sure how this will work
