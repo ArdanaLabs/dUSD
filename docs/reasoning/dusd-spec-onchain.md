@@ -7,6 +7,8 @@ vault address
 
 # Address Validators
 
+Validators which are invoked when a utxo from a certain address (the hash of the validator itself) is spent
+
 ## Vault Address validator
 
 Constraints:
@@ -22,8 +24,20 @@ so we might as well
 If the redeemer action is close:
 
 - Validation NFT burned
-- Debt paid (Maybe we require that the debt was already 0?)
 - Signed by owner
+
+Either:
+- The vault has no debt
+
+Or
+- Any remaining debt is paid off
+- The time stamp is updated to the end of the time window of the tx
+- the stability fee on that debt is paid
+
+If we allow debt in the input vault we probably want to re use code in adjust for this
+we could do that by putting most of the adjust logic in a function that looks at the input and output
+and calling it with an output with 0 debt, 0 ada and probably a time stamp of the end of the time
+window so the stability fee includes time right up to closing
 
 If the redeemer was adjust:
 
@@ -35,10 +49,32 @@ They all have the same constraints so this seems simpler
 - Signed by owner
 - (total?) debt increase/decrease matches minted dUSD
 - debt is not negative
+- the time stamp of the debt is updated
+	- the time window of the tx is not too large (maybe an hour or a day)
+	- the time stamp is set to a time within that window
+	- the new time zone is after the last
+		(this is probably redundant as even a naive implementation
+		would just require negative tokens to be sent to the buffer
+		which the node will reject anyway)
+- the stability fee is paid to the buffer address
+	- we could allow the stability fee to just increase the debt
+	  but this is equivelent to just minting dUSD to pay it as part of the same transaction
 
 If the redeemer was liquidate:
 - Vault was bellow liquidation ratio
+	- this may need to include debt that would be induced by borrowing dUSD to pay stability fees
+		- if this is allowed those fees should be paid by minted dUSD increaseing the debt
+		- this update also needs to use the time at the
+			begining of the time range as the liquidator is incentivised
+			to update into the future if that would push the vault over
+			and the time range should be pretty small
+		- this part could probably also reuse the core
+		  adjust logic
 - Auction triggered appropriately? maybe first purchase included in this?
+
+Stability fee calculation presumably includes some amount of rounding.
+For the onchain code we probably want to enforce a maximum rounding error
+and a maximum precision.
 
 ## Auction Address validator
 
@@ -50,6 +86,10 @@ vault liquidation and buffer auctions handled here
 I'm not clear on what the buffer should do.
 It says admin can trigger an auction from the buffer,
 so it probably needs to support starting auctions.
+Post MVP this needs to support payment to DANA owners.
+The buffer may need to support protocol migration.
+Maybe the buffer just checks for an admin signature as allow migration
+is basically just letting admin control it anyway?
 
 ## Protocol parameter Address validator
 
@@ -118,3 +158,12 @@ the price oracle and protocol parameters utxos
 Constraints:
 
 - Seed tx must be consumed
+
+Maybe:
+- Exactly one token is minted
+
+Arguably it's simpler to trust the correctness of the protocol if we add this constraint
+as it wouldn't depend on the initialization being done correctly,
+but if the initialization is done correctly that will be observable to anyone
+by looking at the block chain so it shouldn't really matter.
+I think it's better not to enforce this.

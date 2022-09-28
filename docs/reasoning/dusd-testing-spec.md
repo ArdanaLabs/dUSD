@@ -34,15 +34,17 @@ a wallet other than the vault owner
 
 ## Auction Tests
 
-
 ## Buffer Tests
+
 - Can't start auction without admin
 probably more?
 
-
 ## Attack tests
 
-As these are attack tests of onchain code they should all fail at script evaluation
+As these are attack tests of onchain code they should all fail at script evaluation.
+We should make some tools for more specific requirements on how and when things fail
+than we have in hello world. We should probably even test that contracts with traces
+fail with the expected traces.
 
 ### Protocol parameter utxo
 - Can't edit without admin
@@ -90,3 +92,6 @@ Maybe:
 Let's just coppy them from hello world
 
 ### Auction attack tests
+These will depend on the type of auction.
+For dutch auctions we could look at submiting a price that's too low/too early
+
