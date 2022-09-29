@@ -6,6 +6,13 @@ This is a spec for the low level api that will be used in the cli and browser co
 
 This part of the api will require the Admin wallet available using yubihsm
 
+## Admin signing
+
+I assume the signatures are all via yubihsm.
+If the standard use case of yubihsm will be signing with 3 keys
+we probably want to make some changes to facilitate this more
+easily (ie. not with 3 separate calls)
+
 ## Initialize protocol
 
 Inputs:
@@ -24,7 +31,7 @@ Note the protocol type needs to be easy to broad
 Should do:
 - Create an NFT
 - send that nft with to the protocol parameter address with the initial parameters
-- compute parametized scripts for all of the scripts that depend on that NFT (including transitiviely)
+- compute parameterized scripts for all of the scripts that depend on that NFT (including transitively)
 
 ## Add price data
 
@@ -134,7 +141,7 @@ Outputs: unit
 
 Should do
 - burn dUSD
-- reduce debt apropriately
+- reduce debt appropriately
 
 ## Maybe adjust?
 

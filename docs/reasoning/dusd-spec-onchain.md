@@ -41,8 +41,8 @@ window so the stability fee includes time right up to closing
 
 If the redeemer was adjust:
 
-I think it makes sense to bundle deposit withdraw etc into one action
-They all have the same constraints so this seems simpler
+I think it makes sense to bundle deposit withdraw etc into one action called adjust
+they all have the same constraints so this seems simpler
 
 - output vault is above liquidation ratio
 - exactly the original vault validation nft is at the output
@@ -76,10 +76,22 @@ Stability fee calculation presumably includes some amount of rounding.
 For the onchain code we probably want to enforce a maximum rounding error
 and a maximum precision.
 
+There's a fair amount of complexity regarding time here.
+Maybe we use the last entry in the price oracle as the current time?
+This is less precise, but an hour of stability fees shouldn't be a huge deal
+even for large vaults, and it would make transactions more reliable
+as well as avoid any strange issues that might arise from things
+happening anachronistically.
+
 ## Auction Address validator
 
 Performs (dutch?) auctions or maybe flat sales?
 vault liquidation and buffer auctions handled here
+maybe the utxos control where the payout goes
+for dUSD auctions I think it's burned
+for buffer auctions I assume it goes back to the buffer
+do we need to authenticate auctions here?
+or is it okay if users post custom auctions here?
 
 ## Buffer Address
 
@@ -100,8 +112,15 @@ Constraints:
 Maybe:
 - New datum parses?
 - Nft remains at address?
+- Liquidation ratio changed only in update
 
 We need these to prevent admin from being able to freeze everything
+
+Maybe we want a list of protocol versions in the parameter
+where a version is a vault address maybe a currency symbol
+and any parameters that can't be changed without an update
+ie. liquidation ratio and this could even change between protocol versions
+then we could enforce that the protocol list is append only.
 
 ## Price oracle Address
 
@@ -131,6 +150,10 @@ Constraints:
 
 - parameter input is valid and parses
 - (at least or maybe exactly one) Input must be a valid vault (The vault address must come from the parameter utxo)
+Maybe:
+- enforce that the vault has a valid token
+
+The token check should be redundant because the vault should be making the same check
 
 We don't want much logic here because we would need to change the
 currency symbol of dUSD to update it
@@ -167,3 +190,8 @@ as it wouldn't depend on the initialization being done correctly,
 but if the initialization is done correctly that will be observable to anyone
 by looking at the block chain so it shouldn't really matter.
 I think it's better not to enforce this.
+
+# Admin Authorization
+
+Admin authorization just means a TX has been signed by 3 keys
+
