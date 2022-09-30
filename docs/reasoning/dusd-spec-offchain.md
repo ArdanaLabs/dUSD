@@ -27,7 +27,7 @@ Outputs: Protocol type which includes:
 	  It may be nice to make this small as it has to get sent arnound a lot
 	  and recomputing is cheap anyway
 	Or
-	- The validators computed in the initilization procedure
+	- The validators computed in the initialization procedure
 	Or
 	- Just the addresses because the policies
 	  are provided by reference scripts
@@ -40,8 +40,10 @@ Note the protocol type may need to be easy to broadcast
 
 Should do:
 - Create an NFT for the protocol parameters utxo
-- Creat an NFT for the price oracle utxo
+- Create an NFT for the price oracle utxo
 - compute parameterized scripts
+	- protocol address validator
+	- price oracle address validator
 	- vault address validator
 	- vault validation token minting policy
 	- dUSD minting policy
@@ -50,14 +52,14 @@ Should do:
 - send that nft to the price oracle address with initial price data
 	- this may also be a good place for a reference script?
 - create reference script utxos as needed
-	- We could make an admin controled address and a token
+	- We could make an admin controlled address and a token
 		certifiying them and then look them up easily offchain.
 
 I think the admin address for lookups makes the most sense
 This doesn't require any additional trust from users
 (ie. you could make a custom api not use this)
-This solves the issue of comunicating to the browser code
-because the admin controled address and currency symbol can be
+This solves the issue of communicating to the browser code
+because the admin controlled address and currency symbol can be
 known at compile time which means the offchain code
 can discover all the protocol information from
 scratch as needed.

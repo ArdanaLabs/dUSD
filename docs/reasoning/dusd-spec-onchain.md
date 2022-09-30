@@ -1,5 +1,16 @@
 # Onchain spec
 
+# Time
+
+There are a few places where time is used in time is used here.
+Since extremely precise time is not needed I think it would be
+easier to require the time stamp of all output vaults to be
+the most recent entry in the price oracle this makes transaction
+submission a bit more reliable by correlating the time issues
+with the utxo spending issues and it provides a simple reasonably
+accurate notion of time which shouldn't have any room for abuse
+or strange edge cases that can be hard to get right.
+
 # Address Validators
 
 Validators which are invoked when a utxo from a certain address (the hash of the validator itself) is spent
@@ -7,9 +18,11 @@ Validators which are invoked when a utxo from a certain address (the hash of the
 ## Vault Address validator
 
 Parameters:
-- Admin keys? (this is in the spec I think in error)
 - Protocol config address/currency symbol
 - Price oracle address/ currency symbol
+
+Maybe:
+- Admin keys? (this is in the spec I think in error)
 
 Constraints:
 - input must be a valid vault
@@ -27,9 +40,11 @@ If the redeemer action is close:
 - Signed by owner
 
 Either:
+
 - The vault has no debt
 
 Or
+
 - Any remaining debt is paid off
 - The time stamp is updated to the end of the time window of the tx
 - the stability fee on that debt is paid
@@ -52,7 +67,7 @@ they all have the same constraints so this seems simpler
 - the time stamp of the debt is updated
 	- the time window of the tx is not too large (maybe an hour or a day)
 	- the time stamp is set to a time within that window
-	- the new time zone is after the last
+	- the new time stamp is after the last
 		(this is probably redundant as even a naive implementation
 		would just require negative tokens to be sent to the buffer
 		which the node will reject anyway)
