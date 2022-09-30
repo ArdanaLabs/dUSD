@@ -18,20 +18,49 @@ easily (ie. not with 3 separate calls)
 Inputs:
 	The list of admin keys?
 	The initial protocol parameters
+	Initial price data? (we could just start with [])
 
 Outputs: Protocol type which includes:
-- The Protocol parameter utxo's nft's currency symbol
-- Protocol addresses which depend on that
-	- Vault address
-	- dUSD minting policy
-	- auction address ?
-	- buffer address?
-Note the protocol type needs to be easy to broad
+	Either
+	- The Protocol parameter utxo's nft's currency symbol
+	  and then addresses can be re computed?
+	  It may be nice to make this small as it has to get sent arnound a lot
+	  and recomputing is cheap anyway
+	Or
+	- The validators computed in the initilization procedure
+	Or
+	- Just the addresses because the policies
+	  are provided by reference scripts
+	Or
+	- Nothing we could use the reference script utxos
+	  and querry an admin controled address
+    to just discover the protocol info as needed
+
+Note the protocol type may need to be easy to broadcast
 
 Should do:
-- Create an NFT
-- send that nft with to the protocol parameter address with the initial parameters
-- compute parameterized scripts for all of the scripts that depend on that NFT (including transitively)
+- Create an NFT for the protocol parameters utxo
+- Creat an NFT for the price oracle utxo
+- compute parameterized scripts
+	- vault address validator
+	- vault validation token minting policy
+	- dUSD minting policy
+- send that nft to the protocol parameter address with the initial parameters
+	- this may be a good place for a reference script?
+- send that nft to the price oracle address with initial price data
+	- this may also be a good place for a reference script?
+- create reference script utxos as needed
+	- We could make an admin controled address and a token
+		certifiying them and then look them up easily offchain.
+
+I think the admin address for lookups makes the most sense
+This doesn't require any additional trust from users
+(ie. you could make a custom api not use this)
+This solves the issue of comunicating to the browser code
+because the admin controled address and currency symbol can be
+known at compile time which means the offchain code
+can discover all the protocol information from
+scratch as needed.
 
 ## Add price data
 
@@ -70,6 +99,12 @@ The browser tests on the other hand I'm not sure what's best:
 - Serve it as a file
 	- this might be good?
 	I don't know enough web development and should ask Evan about this.
+- Get it from onchain (ties in with reference scripts)
+
+I think getting it from onchain is the best solution for the browser app,
+but power users still need a way to get the protocol parameters.
+We could just push it to github or host the cli file ourselves.
+
 
 ## Open a vault
 

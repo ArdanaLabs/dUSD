@@ -1,15 +1,15 @@
 # Onchain spec
 
-# Changes
-
-I'm assuming like with hello discovery we are just using one
-vault address
-
 # Address Validators
 
 Validators which are invoked when a utxo from a certain address (the hash of the validator itself) is spent
 
 ## Vault Address validator
+
+Parameters:
+- Admin keys? (this is in the spec I think in error)
+- Protocol config address/currency symbol
+- Price oracle address/ currency symbol
 
 Constraints:
 - input must be a valid vault
@@ -105,6 +105,11 @@ is basically just letting admin control it anyway?
 
 ## Protocol parameter Address validator
 
+Parameters:
+- Admin keys
+Maybe:
+-Currency symbol of auth nft
+
 Constraints:
 
 - Admin signed tx
@@ -123,6 +128,11 @@ ie. liquidation ratio and this could even change between protocol versions
 then we could enforce that the protocol list is append only.
 
 ## Price oracle Address
+
+Parameters:
+- Admin Keys
+Maybe:
+- Currency symbol of auth nft
 
 Constraints:
 - Only admin can write
@@ -145,6 +155,9 @@ liquidate all the vaults without warning
 # Minting Policies
 
 ## dUSD minting policy
+
+Parameters:
+- Protocol config address/currency symbol
 
 Constraints:
 
@@ -177,6 +190,9 @@ but there's not much advantage either. I don't think we should allow it
 
 This would be used to make the NFTs used to authenticate
 the price oracle and protocol parameters utxos
+
+Parameters:
+- Seed tx out
 
 Constraints:
 
