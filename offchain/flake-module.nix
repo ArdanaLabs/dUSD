@@ -21,10 +21,20 @@
 
       # use more recent slot to avoid long sync time
       ctlRuntimeConfig = {
-        datumCache.blockFetcher.firstBlock = {
-          slot = 62153233;
-          id = "631c621b7372445acf82110282ba72f4b52dafa09c53864ddc2e58be24955b2a";
+        network = {
+          name = "mainnet";
+          magic = null; # use `null` for mainnet
         };
+
+        datumCache.blockFetcher.firstBlock = {
+          slot = 73329118;
+          id = "ca19cf5f76931c7c979abc49ba39d457ebe35c363a8c3b2bdc0a9afd67dcde6b";
+        };
+
+        # datumCache.blockFetcher.firstBlock = {
+        #   slot = 62153233;
+        #   id = "631c621b7372445acf82110282ba72f4b52dafa09c53864ddc2e58be24955b2a";
+        # };
       };
 
       hello-world-cbor =
