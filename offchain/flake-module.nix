@@ -20,15 +20,17 @@
       };
 
       # use more recent slot to avoid long sync time
+      # TODO: Possibly make into a function with network as input and add switching logic.
       ctlRuntimeConfig = {
+
         network = {
           name = "mainnet";
-          magic = null; # use `null` for mainnet
+          magic = null;
         };
 
         datumCache.blockFetcher.firstBlock = {
-          slot = 73329118;
-          id = "ca19cf5f76931c7c979abc49ba39d457ebe35c363a8c3b2bdc0a9afd67dcde6b";
+          slot = 73338501;
+          id = "48911f3489a94af1bd9ceeca87041a6f28a86b85c66f2a3c8930c34ee87d25f2";
         };
 
         # datumCache.blockFetcher.firstBlock = {

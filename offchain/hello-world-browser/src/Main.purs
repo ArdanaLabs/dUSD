@@ -5,7 +5,7 @@ module Main
 import Contract.Prelude
 
 import Cardano.TextEnvelope (TextEnvelopeType(..), textEnvelopeBytes)
-import Contract.Config (NetworkId(..), PrivatePaymentKey(..), PrivatePaymentKeySource(..), PrivateStakeKey(..), PrivateStakeKeySource(..), privateKeyFromBytes, testnetConfig, testnetNamiConfig)
+import Contract.Config (NetworkId(..), PrivatePaymentKey(..), PrivatePaymentKeySource(..), PrivateStakeKey(..), PrivateStakeKeySource(..), privateKeyFromBytes, testnetConfig, testnetNamiConfig, mainnetNamiConfig)
 import Effect (Effect)
 import Effect.Exception (error, throw)
 import Halogen.Aff as HA
@@ -25,7 +25,7 @@ main =
         networkId <- loadNetworkId
         pure $ testnetConfig { walletSpec = Just walletSpec, networkId = networkId }
       false -> do
-        pure $ testnetNamiConfig { logLevel = Warn }
+        pure $ mainnetNamiConfig { logLevel = Warn }
     let
       store =
         { contractConfig
