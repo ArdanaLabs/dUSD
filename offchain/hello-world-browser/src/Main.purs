@@ -10,7 +10,7 @@ import Affjax.ResponseFormat (string)
 import Affjax.StatusCode (StatusCode(StatusCode))
 import Aeson (printJsonDecodeError, JsonDecodeError, decodeJsonString)
 
-import Contract.Config (NetworkId(..), PrivatePaymentKey(..), PrivatePaymentKeySource(..), PrivateStakeKey(..), PrivateStakeKeySource(..), privateKeyFromBytes, testnetConfig, testnetNamiConfig, mainnetNamiConfig)
+import Contract.Config (NetworkId(..), PrivatePaymentKey(..), PrivatePaymentKeySource(..), PrivateStakeKey(..), PrivateStakeKeySource(..), privateKeyFromBytes, testnetConfig, testnetNamiConfig, mainnetNamiConfig, mainnetGeroConfig)
 import Contract.Monad (ConfigParams, ServerConfig)
 import Contract.Wallet (WalletSpec(..))
 import Ctl.Internal.Cardano.TextEnvelope (TextEnvelopeType(..), printTextEnvelopeDecodeError, textEnvelopeBytes)
