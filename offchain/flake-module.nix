@@ -26,7 +26,7 @@
         network = {
           name = "mainnet";
           magic = null;
-        };
+        };  
 
         datumCache.blockFetcher.firstBlock = {
           slot = 73338501;
