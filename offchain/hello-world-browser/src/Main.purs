@@ -84,7 +84,7 @@ main =
           , networkId = networkId
           }
       false -> do
-        pure $ mainnetNamiConfig { logLevel = Debug }
+        pure $ mainnetGeroConfig { logLevel = Debug }
     let
       store =
         { contractConfig
