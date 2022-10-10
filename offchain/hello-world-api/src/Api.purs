@@ -128,6 +128,7 @@ redeemFromScript
   -> TransactionInput
   -> Contract () Unit
 redeemFromScript vhash validator txInput = do
+  logDebug' "redeem hello-world start"
   utxos <- getUtxos (scriptHashAddress vhash)
   key <- liftContractM "no wallet" =<< ownPaymentPubKeyHash
   let
@@ -145,7 +146,7 @@ redeemFromScript vhash validator txInput = do
   txId <- buildBalanceSignAndSubmitTx lookups constraints
   adr <- liftContractM "no wallet" =<< getWalletAddress
   void $ waitForTx waitTime adr txId
-  logInfo' "finished"
+  logDebug' "redeem hello-world finished"
 
 helloScript :: Int -> Contract () Validator
 helloScript n = do
