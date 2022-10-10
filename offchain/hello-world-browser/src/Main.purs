@@ -18,6 +18,7 @@ import Data.Bifunctor (lmap)
 import Effect (Effect)
 import Effect.Exception (error, throw)
 import Effect.Class.Console (warn)
+
 import Halogen.Aff as HA
 import Halogen.VDom.Driver (runUI)
 import HelloWorld.AppM (runAppM)
@@ -83,7 +84,7 @@ main =
           , networkId = networkId
           }
       false -> do
-        pure $ mainnetNamiConfig { logLevel = Warn }
+        pure $ mainnetNamiConfig { logLevel = Debug }
     let
       store =
         { contractConfig
