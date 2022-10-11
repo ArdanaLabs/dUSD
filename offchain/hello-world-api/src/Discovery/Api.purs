@@ -279,4 +279,4 @@ seedTx = do
   pure sending
 
 enoughForFees :: Value.Value
-enoughForFees = Value.lovelaceValueOf $ BigInt.fromInt 5_000_000
+enoughForFees = Value.lovelaceValueOf $ BigInt.fromInt 2_000_000
