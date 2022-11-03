@@ -55,7 +55,7 @@ per hour.
 
 % The V2 version is left here in comments, for now.
 % \subsection{Discover market prices (V2)}
-% 
+%
 % A price oracle is a timeline of UTXOs\footnote{
 %   In the blockchain industry, people often talk about concepts like price
 %   oracles and DEX pools. However, within the EUTXO system built by Cardano, the
@@ -78,39 +78,39 @@ per hour.
 % This is another ``timeline of UTXOs'', which allows admin to select a number of
 % price oracles as trusted price feeds and combines their prices in a secure way.
 % The resulting price is exposed to the blockchain ecosystem.
-% 
+%
 % Note: In this document, off-chain entities containing information about the
 % price will be referred to as price feeds (not price oracles), e.g. the Coinbase
 % website.
-% 
+%
 % Note: We will build price oracles both for ADA and dUSD.
-% 
+%
 % \subsubsection{Price oracle: Read}
-% 
+%
 % The OSM can read all the pricing data stored in the price oracle.
-% 
+%
 % \subsubsection{Write}
-% 
+%
 % The owner/creator of the price oracle can write a new price value to the oracle.
 % This endpoint can be called once per hour.
-% 
+%
 % \subsection{Oracle security module}
-% 
+%
 % \subsubsection{Read the `current' price}
-% 
+%
 % Anyone can use the OSM as a read-only input UTXO to discover the price
 % information of the last $48$ hours of some currency (e.g. ADA or dUSD relative
 % to USD).
-% 
+%
 % \subsubsection{Update}
-% 
+%
 % The OSM is updated once per hour.
 % Anyone can do this by connecting the OSM to all accepted price oracles.
-% 
+%
 % \subsubsection{Update list of accepted price oracles}
-% 
+%
 % Admin/governance can update the list of price oracles accepted by the OSM.
-% 
+%
 \subsection{Vault}
 
 \subsubsection{Collect vault information}
@@ -209,7 +209,7 @@ setup, $90\%$), is used to pay back debt, burning the rest.
 
 \subsection{Buffer}
 
-The buffer is a UTXO responsible for holding the protocol's profits and launching 
+The buffer is a UTXO responsible for holding the protocol's profits and launching
 surplus and debt auctions. \\
 
 Let's start by going through some general information on how the surplus and
@@ -318,16 +318,16 @@ Price feed bot:
 
 % The version 2 price discovery mechanism is stored in these comments:
 % \subsection{Price oracle}
-% 
+%
 % \begin{itemize}
 %   \item Only the owner can write to the oracle
 %   \item Anyone can read the price data
 %   \item Writing a price values removes outdated price values (older than 48
 %     hours) from the datum.
 % \end{itemize}
-% 
+%
 % \subsection{Oracle security module}
-% 
+%
 % \begin{itemize}
 %   \item Admin (and only admin) can update the list of accepted price oracles
 %   \item The OSM's price information cannot be updated without linking to all
@@ -339,7 +339,7 @@ Price feed bot:
 %     values in the last hour. (This smearing prevents flash drops on some
 %     exchanges from making the OSM's result crash and many vaults liquidate.)
 % \end{itemize}
-% 
+%
 \subsection{Vault}
 
 Each user should have access to a website at "www.vault.ardana.com".
@@ -380,7 +380,7 @@ Acceptance criteria:
 %         delay during a price crash, issuing a massive amount of debt thus
 %         cashing out on worthless collateral
 %     \end{enumerate}}
-% 
+%
 % Debt ceilings are not useful against OSM timing attacks, since users can
 % simply create multiple vaults.
 
@@ -442,7 +442,7 @@ Acceptance criteria:
   \item If the protocol-wide parameters are changed, this change is immediately
     and correctly seen in liquidations and when taking out loans
     % Comment for Version 2: Add debt ceiling to the protocol-wide parameters
-\end{itemize}  
+\end{itemize}
 
 \subsection{Update mechanism for the protocol (TBD)}
 
@@ -492,13 +492,13 @@ Note: The off-chain bot will combine the price feeds through two operations:
 \end{enumerate}
 
 % \subsection{Price oracle}
-% 
+%
 % Each price oracle will carry an NFT used as a unique identifier.
 % In addition, each price oracle contains the public key associated with the
 % wallet which created it, so that only the creator of the oracle can update it.
 % The price oracle can be updated once every hour.
 % We will start with $3-5$ price oracles. \\
-% 
+%
 % The OSM can be updated once every hour, and this transaction can be created by
 % anyone.
 % When it does, it pulls in the price information from all accepted price oracles
@@ -506,21 +506,21 @@ Note: The off-chain bot will combine the price feeds through two operations:
 % First, it only retains the $70\%$ of price oracles that have most recently been
 % updated, to assure obtaining the most recent price available.
 % Secondly, it takes the median of the resulting price values.
-% 
+%
 % \todo{How will price oracle updates and the OSM updates be rewarded? With a
 % slight fee every time, coming from the profits stored in the buffer? Or should
 % using a price oracle or OSM cost money, also to dUSD protocol users?}
-% 
+%
 % If the OSM has not been updated for at least two hours, it stops spreading price
 % information, thereby shutting down vault liquidations as well as creating new
 % loans until the OSM is updated.
 % This is a measure which will only kick in in the case of very serious resource
 % contention, in which case once the system starts up again, we want to ensure
 % that updating the OSM is the first transaction that happens.
-% 
+%
 % \todo{Should the price oracles and the OSM all be combined into one UTXO, or
 % be split into separate UTXOs?}
-% 
+%
 \subsection{Vault}
 
 \begin{itemize}
@@ -641,7 +641,7 @@ The main advantage of this price modules-based approach, is that we always sell
 at a trusted price, without allowing as many opportunities for manipulations.
 (Classic auctions are vulnerable for manipulations through resource contention,
 DEXes through executing big transactions, e.g. sandwich attacks.)
- 
+
 \subsection{Protocol Parameters Module}
 
 The protocol parameters module will contain in its datum a map from timestamps to the stability fee
@@ -683,9 +683,39 @@ The protocol parameters module will be a UTXO that includes in its datum the fol
 
 \section{Tests}
 
+\subsection{Config UTXO}
+
+The config utxo consists of two onchain components an NFT and an address validator.
+
+\subsubsection{NFT}
+
+This can be the same NFT from hello discovery and can have the same tests.
+CTL recently added balancing constraints that we can  use to improve these tests,
+so we may want to take advantage of that.
+
+
+\subsubsection{Address validator}
+
+The address validator needs to ensure that the datum retains the NFT
+and that edits are prepend only. The exact format of the update entries is
+TBD (and probably needs to be pretty consistent for the sake of the DUSD minting policy)
+but shouldn't actually change how this validator works.
+
+A valid update keeps the NFT with the utxo
+and adds prepends an arbitrary string to the list
+in the datum.
+
+
+To test this validator we can:
+\begin{itemize}
+	\item Validate a Tx which is a valid update
+	\item Fail to validate an update where the NFT is removed
+	\item Fail to validate an update where the first entry is also changed
+\end{itemize}
+
 
 % \section{Remarks}
-% 
+%
 % - Test for Cardano network congestion
 % - Test what happens if someone hacks one or more price oracles
 % - Other attack vectors which are not specific to our application, should be
