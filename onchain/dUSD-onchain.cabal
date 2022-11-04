@@ -103,6 +103,7 @@ executable hello-world
   build-depends:
     , base
     , bytestring
+    , data-default
     , directory
     , dUSD-onchain
     , plutus-ledger-api
@@ -136,8 +137,8 @@ test-suite tests
     , bytestring
     , containers
     , cryptonite
-    , dUSD-onchain
     , data-default
+    , dUSD-onchain
     , hedgehog
     , lens
     , memory

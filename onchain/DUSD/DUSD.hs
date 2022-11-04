@@ -9,7 +9,6 @@ module DUSD (
 
 import Plutarch.Prelude
 
-import Utils (closedTermToHexString)
 import Plutarch (Config)
 import Plutarch.Api.V2 (
   PMintingPolicy,
@@ -20,6 +19,7 @@ import Plutarch.Extensions.Data (parseData)
 import Plutarch.Extra.TermCont (
   pguardC,
  )
+import Utils (closedTermToHexString)
 
 trivialCbor :: Config -> Maybe String
 trivialCbor = closedTermToHexString trivial
@@ -38,6 +38,7 @@ configScriptCbor = closedTermToHexString configScript
 
 configScript :: ClosedTerm PValidator
 configScript = perror
+
 -- Now a placeholder
 
 nftCbor :: Config -> Maybe String

@@ -1,9 +1,9 @@
 module Goldens.Cbor (spec) where
 
+import Data.Default (def)
 import Data.List (intercalate)
 import Data.Text (unpack)
 import Hello (helloWorldCbor, paramHelloCbor, trivialCbor)
-import Data.Default(def)
 import Test.Syd
 
 spec :: FilePath -> Spec
