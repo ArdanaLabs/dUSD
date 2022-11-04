@@ -1,7 +1,5 @@
 module Main (main) where
 
-import Apropos.Plutus.HelloValidator qualified as HelloValidator
-import Apropos.Plutus.SimpleNFT qualified as SimpleNFT
 import Goldens.Cbor qualified as Cbor
 
 import Test.Syd
@@ -20,8 +18,5 @@ main = do
   let goldenDir = fromMaybe "./goldens/" maybeGoldenDir
   putStrLn goldenDir
   sydTest $ do
-    describe "plutus" $ do
-      HelloValidator.spec
-      SimpleNFT.spec
     describe "goldens" $ do
       Cbor.spec goldenDir

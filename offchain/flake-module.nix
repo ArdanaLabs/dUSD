@@ -31,6 +31,14 @@
         };
       };
 
+      dusd-cbor =
+        purs-nix.build
+          {
+            name = "dusd-cbor";
+            src.path = self'.packages."onchain:dusd-cbor-purs";
+            info.dependencies = [ ];
+            info.version = "0.0.1";
+          };
       hello-world-cbor =
         purs-nix.build
           {
@@ -118,6 +126,7 @@
         "offchain:test:testnet" = makeTestAllApp "testnet";
       };
       packages = {
+        "offchain:dusd-cbor" = dusd-cbor;
         "offchain:hello-world-cbor" = hello-world-cbor;
         "offchain:docs" =
           pkgs.runCommand "offchain-all-docs" { }

@@ -2,7 +2,6 @@ module Utils (
   validatorToHexString,
   trivialHexString,
   closedTermToHexString,
-  globalConfig,
   Cbor (..),
   toPureScript,
 ) where
@@ -30,12 +29,9 @@ import System.Exit (die)
 validatorToHexString :: Validator -> String
 validatorToHexString v = concatMap byteToHex $ BSL.unpack $ serialise (v :: Validator)
 
-globalConfig :: Config
-globalConfig = def {tracingMode = NoTracing}
-
-closedTermToHexString :: forall (p :: PType). ClosedTerm p -> Maybe String
-closedTermToHexString t = do
-  case compile globalConfig t of
+closedTermToHexString :: forall (p :: PType). ClosedTerm p -> Config -> Maybe String
+closedTermToHexString t config = do
+  case compile config t of
     Left _ -> Nothing
     Right script -> Just $ concatMap byteToHex $ BSL.unpack $ serialise (script :: Script)
 
@@ -45,24 +41,27 @@ byteToHex b = padToLen 2 '0' (showHex b "")
 padToLen :: Int -> Char -> String -> String
 padToLen len c w = replicate (len - length w) c <> w
 
+noTracing :: Config
+noTracing = def {tracingMode = NoTracing}
+
 trivialHexString :: String
-trivialHexString = validatorToHexString $ mkValidator globalConfig trivialValidator
+trivialHexString = validatorToHexString $ mkValidator noTracing trivialValidator
 
 trivialValidator :: ClosedTerm PValidator
 trivialValidator = plam $ \_ _ _ -> popaque $ pcon PUnit
 
 -- | Represents a declaration of a constant cbor string in purescript
-data Cbor = Cbor {name :: String, cbor :: Maybe String}
+data Cbor = Cbor {name :: String, cbor :: Config -> Maybe String}
 
 -- | Turns a list of Cbor objects into the text of a purescript module which declares them all
-toPureScript :: [Cbor] -> IO String
-toPureScript cs =
+toPureScript :: Config -> [Cbor] -> IO String
+toPureScript conf cs =
   (("module CBOR (\n  " <> intercalate ",\n  " (name <$> cs) <> "\n) where\n\n") <>)
     . intercalate "\n\n"
-    <$> mapM toDec cs
+    <$> mapM (toDec conf) cs
 
-toDec :: Cbor -> IO String
-toDec c = case cbor c of
+toDec :: Config -> Cbor -> IO String
+toDec conf c = case cbor c conf of
   Nothing -> die $ name c <> " didn't compile"
   Just hex ->
     pure $

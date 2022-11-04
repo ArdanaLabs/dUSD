@@ -104,6 +104,11 @@
             pkgs.runCommand "onchain-scripts"
               { buildInputs = [ haskellNixFlake.packages."dUSD-onchain:exe:scripts" ]; }
               ''mkdir -p $out && scripts $out'';
+          "onchain:dusd-cbor-purs" =
+            pkgs.runCommand "dusd-cbor-purs" { } ''
+              mkdir -p $out/src
+              ${haskellNixFlake.packages."dUSD-onchain:exe:DUSD"}/bin/DUSD $out/src
+            '';
           "onchain:hello-world-cbor-purs" =
             pkgs.runCommand "hello-world-cbor-purs" { } ''
               mkdir -p $out/src

@@ -94,32 +94,6 @@ library
     , pretty
     , serialise
 
-library apropos-tx
-  import:          lang
-  exposed-modules:
-    Apropos.ContextBuilder
-    Apropos.Script
-
-  hs-source-dirs:  apropos-tx
-  build-depends:
-    , apropos
-    , base
-    , containers
-    , free
-    , hedgehog
-    , lens
-    , minisat-solver
-    , mtl
-    , plutarch
-    , plutus-core
-    , plutus-ledger-api
-    , pretty
-    , pretty-show
-    , safe
-    , template-haskell
-    , text
-    , transformers
-
 executable hello-world
   import:         lang
   type:           exitcode-stdio-1.0
@@ -154,20 +128,16 @@ test-suite tests
   hs-source-dirs: tests
   ghc-options:    -threaded -rtsopts -with-rtsopts=-N
   other-modules:
-    Apropos.Plutus.HelloValidator
-    Apropos.Plutus.SimpleNFT
-    Gen
     Goldens.Cbor
     Tests
 
   build-depends:
-    , apropos
-    , apropos-tx
     , base
     , bytestring
     , containers
     , cryptonite
     , dUSD-onchain
+    , data-default
     , hedgehog
     , lens
     , memory
@@ -182,3 +152,21 @@ test-suite tests
     , text
     , transformers
     , with-utf8
+
+executable DUSD
+  import:         lang
+  type:           exitcode-stdio-1.0
+  main-is:        GenCbor.hs
+  hs-source-dirs: DUSD
+  ghc-options:    -threaded -rtsopts -with-rtsopts=-N
+  other-modules:  DUSD
+  build-depends:
+    , base
+    , bytestring
+    , data-default
+    , directory
+    , dUSD-onchain
+    , plutarch
+    , plutarch-extra
+    , plutus-ledger-api
+    , serialise
