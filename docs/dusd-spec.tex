@@ -119,33 +119,34 @@ per hour.
 
 \subsubsection*{Collect vault information}
 
-As a user, I can collect information on my vaults, i.e. the vaults I created.
+Users can collect information on their vaults, i.e. the vaults they created.
+This generates a list of all their (legitimate) vaults, and for each vault,
+reports on the amount of collateral and amount of debt (updated to this moment)
+in them.
 
 \subsubsection*{Initialize vault}
 
-As a user, I can open a new vault.
+Users can open a new vault.
 
 \subsubsection*{Deposit}
 
-As a user, I can deposit ADA into a vault, so that I may take out a loan of dUSD
-(see below).
+Users can deposit ADA into their vaults.
 
 \subsubsection*{Withdrawal}
 
-As a user, I can withdraw ADA from a vault, as long as my collateralization
-ratio is above the liquidation ratio.
-In the frontend, a ``minimum collateralization ratio'' will be built that
-prevents users from transacting with their vault in such a way that their
-collateralization ratio drops below the minimum collateralization ratio.
+Users can withdraw ADA from their vaults, as long as the resulting
+collateralization ratio is above the liquidation ratio.
+The frontend prevents users from dropping their collateralization ratio below
+the so-called ``minimum collateralization ratio''.
 The reason for this is that many people use the MakerDAO system as
 experimentation and lose thousands of dollars on day one.
-Power users can easily circumvent this by running our PAB directly. \\
+Power users can circumvent this by connecting to our Vault-API directly. \\
 
 Note: The liquidation ratio can only be changed when the protocol is updated.
 
 \subsubsection*{Take out loan}
 
-Any user can take out a loan in dUSD from one of his vaults if the vault has
+Users can take out a loan in dUSD from one of their vaults if the vault has
 enough collateral. There is a minimum size for dUSD loans, called the ``debt
 floor''\footnote{
   This is an on-chain mechanism, which means it is enforced on everyone.
@@ -154,10 +155,15 @@ ceiling``.
 
 \subsubsection*{Pay back loan}
 
-Any user can pay back (part of) a loan he created in one of his vaults. The
-remaining stability fee in the vault is paid back first, and sent the buffer.
-The rest of the dUSD paid, is burnt in exchange for lowering the outstanding
-debt.
+Users can pay back (part of) the loan in their vaults. The remaining stability
+fee in the vault is set aside first. The rest of the dUSD paid, is burned in
+exchange for lowering the outstanding debt.
+
+\subsubsection*{Collect stability fees}
+
+Stability fees must be collected as protocol profits. In the MVP, this will be
+done through a ``Collect stability fees'' endpoint, allowing the admin user to
+collect the fees.
 
 \subsubsection*{Liquidate vault}
 
@@ -170,107 +176,90 @@ liquidators to jump into action.
 In addition, if a vault becomes sick through a very temporary ADA crash, but
 recovers within an hour, there is no reason to liquidate. \\
 
-Any user who detects a vault is in an unhealthy state, can kill the vault,
-moving its collateral and debt to the auction UTXO. \\
+Whenever a vault is in an unhealthy state, liquidators can come in and buy
+collateral (ADA) through a Dutch auction.
 
-\subsection{Auction Module}
+\todo{Describe how the Dutch auctions will work, including liquidation fees
+(?).}
 
-The auction Module is where the collateral and debt of any liquidated vault ends
-up. The auction Module allows any user to buy enough collateral to cover the
-dUSD debt.
-
-\subsubsection*{Buy collateral}
-
-The auction module will track its current amount of collateral and debt.  Any
-user can buy any amount of collateral in the auction module as long as the
-resulting debt in the auction module is positive. Collateral is sold for dUSD
-only, and at a price determined by the collateral price module at a discount
-rate called the liquidation discount, initially $3\%$. Imagine the auction
-module contains $100$ ADA in collateral, and the price module claims that the
-current market price of $1$ ADA is $0.50 USD$. Any user can then buy up to $100$
-ADA at the price of $0.50 \cdot 97\% = 0.485$ dUSD per ADA, as long as there is
-debt remaining in the auction module. \\
-
-Things to consider about this component:
-\begin{itemize}
-  \item Resource contention. This can be resolved by splitting up the auction
-    module into multiple UTXOs. The simplest way to do this, is to pick a
-    maximum amount of collateral an auction module can contain, and implement
-    its validator in such a way that liquidated vaults cannot send their
-    collateral to a given auction module if doing so would bring the amount of
-    collateral above its maximum. This has the obvious flaw that it could make a
-    vault too big to liquidate. A more sophisticated mechanism for how to combat
-    resource contention in an automated way, will be discussed and implemented
-    post-MVP.
-  \item If dUSD is trading above peg by more than the discount rate, there is no
-    economic incentive to buy collateral at the auction module. What then???
-\end{itemize}
-
-\subsection{Buffer}
-
-The buffer is a UTXO responsible for holding the protocol's profits. In
-addition, the buffer allows the following actions:
-\begin{itemize}
-  \item Auctions between dUSD (from stability fees) and ADA (to store the
-    protocol profits).
-  \item Post-MVP, a divident payment mechanism will be set up to share the
-    protocol profits (ADA) with DANA holders.
-\end{itemize}
-
-In the MVP, auctions between dUSD and ADA will be triggered by admin, who will
-also determine the size of the auctions. This can be used to bring dUSD closer
-to peg in the short term. Meanwhile, the stability fee can be adjusted to keep
-the buffer from running out of either dUSD or ADA, hence keeping the peg in the
-long term. \\
-
-Auctions are based on selling tokens at a discount, just like in the auction
-module. The price at which the buffer auctions ADA/dUSD is based on the exchange
-rate between ADA and USD (see ADA price module). Note that selling dUSD in
-exchange for ADA happens when dUSD trades above peg, and hence selling it at the
-market rate for USD/ADA creates a discount. Similarly, selling ADA in exchange
-for dUSD happens when dUSD trades below peg, which means that selling it at the
-market rate for ADA/USD creates a discount.
-
-\subsubsection*{Trigger auction of dUSD for ADA}
-
-Admin can trigger a dUSD $\leftrightarrow$ ADA auction of any size smaller than
-the amount of dUSD held in the buffer.
-
-\subsubsection*{Trigger auction of ADA for dUSD}
-
-Admin can trigger an ADA $\leftrightarrow$ dUSD auction of any size smaller than
-the amount of ADA held in the buffer.
+% Post-MVP, collecting stability fees will no longer be an admin-only action.
+% Instead, the protocol will allow anyone to send the stability fees to a
+% dedicated UTXO called the Buffer.
+% 
+% \subsection{Buffer}
+% 
+% The buffer is a UTXO responsible for holding the protocol's profits. In
+% addition, the buffer allows the following actions:
+% \begin{itemize}
+%   \item Auctions between dUSD (from stability fees) and ADA (to store the
+%     protocol profits).
+%   \item Post-MVP, a divident payment mechanism will be set up to share the
+%     protocol profits (ADA) with DANA holders.
+% \end{itemize}
+% 
+% In the MVP, auctions between dUSD and ADA will be triggered by admin, who will
+% also determine the size of the auctions. This can be used to bring dUSD closer
+% to peg in the short term. Meanwhile, the stability fee can be adjusted to keep
+% the buffer from running out of either dUSD or ADA, hence keeping the peg in the
+% long term. \\
+% 
+% Auctions are based on selling tokens at a discount, just like in the auction
+% module. The price at which the buffer auctions ADA/dUSD is based on the exchange
+% rate between ADA and USD (see ADA price module). Note that selling dUSD in
+% exchange for ADA happens when dUSD trades above peg, and hence selling it at the
+% market rate for USD/ADA creates a discount. Similarly, selling ADA in exchange
+% for dUSD happens when dUSD trades below peg, which means that selling it at the
+% market rate for ADA/USD creates a discount.
+% 
+% \subsubsection*{Trigger auction of dUSD for ADA}
+% 
+% Admin can trigger a dUSD $\leftrightarrow$ ADA auction of any size smaller than
+% the amount of dUSD held in the buffer.
+% 
+% \subsubsection*{Trigger auction of ADA for dUSD}
+% 
+% Admin can trigger an ADA $\leftrightarrow$ dUSD auction of any size smaller than
+% the amount of ADA held in the buffer.
 
 \subsection{Protocol Parameters Module}
 
-The Protocol Parameters Module is a UTXO responsible for setting the protocol-wide parameters.
+The Protocol Parameters Module is a UTXO responsible for storing the
+protocol-wide parameters which can be updated without having to go through a
+protocol update.
 
-\subsubsection*{Set liquidation discount}
+\subsubsection*{Set liquidation discount rate}
 
 The admin user can set the liquidation discount, through a command line
-interface available on the Ardana tenant.
+interface available on the Ardana tenant referred to as the `admin CLI`.
 
 \subsubsection*{Set stability fee}
 
-The admin user can set the stability fee (in percentage per year), through a
-command line interface available on the Ardana Tenant.
+The admin user can set the stability fee (in percentage per year), through the
+admin CLI.
 
 \subsubsection*{Set debt floor}
 
-The admin user can set the debt floor (in dUSD), through a command line
-interface available on the Ardana Tenant.
+The admin user can set the debt floor (in dUSD) through the admin CLI.
 
 \subsubsection*{Set debt ceiling}
 
-The admin user can set the debt ceiling (in dUSD), through a command line
-interface available on the Ardana Tenant.
+The admin user can set the debt ceiling (in dUSD) through the admin CLI.
 
-\subsection{Update mechanism for the protocol (TBD)}
+\subsection{Config UTXO}
 
-One important acceptance criterium is that the protocol can be updated without
-requiring users to update their vaults or dUSD becoming a new currency.
+\subsubsection*{Initialize protocol}
 
-Any updates to the protocol will be decided on by admin, and later governance.
+The procedure to initialize the protocol is as follows:
+\begin{enumerate}
+  \item \todo{Fill in the details}
+\end{enumerate}
+
+\subsubsection*{Update protocol}
+
+\todo{Fill in the details}
+
+Initially, protocol updates are performed by admin. Eventually, governance
+voting will take over.
 
 \section{Acceptance criteria}
 
@@ -646,8 +635,12 @@ contains an NFT as an ID with the correct CurrencySymbol).
 \section{Tests}
 
 
-% \section{Remarks}
-% 
+\section{Remarks}
+
+The admin user will collect the stability fees in dUSD. This allows him to trade
+between dUSD and ADA to help dUSD stick to its peg, compensation for short-term
+fluctuations to some extent.
+
 % - Test for Cardano network congestion
 % - Test what happens if someone hacks one or more price oracles
 % - Other attack vectors which are not specific to our application, should be
