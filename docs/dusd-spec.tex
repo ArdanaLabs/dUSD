@@ -186,6 +186,11 @@ from one hour ago\footnote{
 Whenever a vault is in an unhealthy state, anyone can buy collateral (ADA)
 through a Dutch auction.
 
+\subsubsection*{Protocol update vault}
+
+When a vault follows an outdated version of our protocol, a button appears in
+the UX to update it to a newer version.
+
 % Post-MVP, collecting stability fees will no longer be an admin-only action.
 % Instead, the protocol will allow anyone to send the stability fees to a
 % dedicated UTXO called the Buffer.
@@ -386,9 +391,16 @@ existing vaults.
   \item When a vault turns sick, the liquidation bot notices within $5$ minutes
   \item The price at which a vault is liquidated, is correct in accordance with
     Dutch auctions. This is defined in the implementation details.
+  \item When the protocol is currently on a more recent version than a given
+    vault, the UX shows a button to update the protocol one version
 \end{itemize}
 
 \todo{Add criteria for the Dutch auctions.}
+
+\subsubsection*{Protocol update vault}
+
+When a vault follows an outdated version of our protocol, a button appears in
+the UX to update it to a newer version.
 
 \subsection{Protocol Parameters Module}
 
@@ -403,9 +415,18 @@ existing vaults.
 
 \subsection{Config UTXO}
 
-\todo{What is the config UTXO?}
-
-\todo{Protocol updates.}
+\begin{itemize}
+  \item The Config UTXO can be created with the proper contents (see
+    `Implementation details')
+  \item The protocol can be updated if and only if
+    \begin{itemize}
+      \item The new Config UTXO is exactly the same as the old one (in value and
+        datum) except that the list of protocols has an extra element (added to
+        the beginning of the list), and that element is a valid protocol (see
+        `Implementation details') AND
+      \item The transaction is signed by the admin user
+    \end{itemize}
+\end{itemize}
 
 \section{Implementation details}
 
@@ -609,10 +630,26 @@ resigned.
 
 \subsection{Config UTXO}
 
-\todo{Explain the datum of a Config UTXO.}
-% Configuration = [Protocol] + price module ID + dUSD currency info
-% Protocol = vault script address, buffer ID, protocol-wide parameters ID,
-%   auction module ID (optional), "updating vaults to this version" (optional)
+When initializing the Config UTXO, we should manually check if the Config UTXO
+is valid. This means the following:
+\begin{itemize}
+  \item The Config UTXO contains an NFT
+  \item The Config UTXO contains the necessary parameters directly in its datum:
+    \begin{itemize}
+      \item Price module NFT
+      \item dUSD asset class
+    \end{itemize}
+  \item The Config UTXO contains in its datum a non-empty (!) list of protocols,
+    where each protocol constitutes:
+    \begin{enumerate}
+      \item The protocol parameters module's ID
+      \item The vault script
+      \item Optionally: The buffer's ID
+    \end{enumerate}
+\end{itemize}
+
+Note that none of this is enforced automatically, but rather checked manually
+when launching the protocol.
 
 \todo{Explain the Admin CLI implementation of ``update protocol''.}
 
@@ -710,6 +747,17 @@ Some extra remarks:
   \item All parameters the protocol depends on, are either included in the
     Parameters Module or hardcoded into the scripts in order to prevent updating
     them outside of a protocol update
+  \item Random reminder about Cardano lingo:
+    \begin{itemize}
+      \item Minting Policy: the validator script that controls how the tokens
+        are minted
+      \item Currency symbol: The hash of a minting policy that controls how
+        tokens with this currency symbol are minted
+      \item Token name: An arbitrary byte string used to distinguish tokens with
+        the same currency symbol
+      \item Asset Class: A pair of a Currency symbol and Token name useful to
+    have a word for because it's all the information about a token
+    \end{itemize}
 \end{itemize}
 
 One important question to discuss, is what happens in case a bug is found in the
