@@ -38,17 +38,15 @@ The other sections are considered law.
 
 \subsection{Discover market prices}
 
-For the MVP version, we implement a simplified, centralized market price
-discovery mechanism.
-This mechanism involves only a single on-chain component, called the Price
-Module (PM).
-This module contains $48$ hours of price data, aggregated off-chain and put
+For the MVP version, we implement a simple, centralized market price discovery
+mechanism. This mechanism involves only one on-chain component, called the Price
+Module (PM), containing $48$ hours of price data, aggregated off-chain and put
 on-chain by admin.
 
 \subsubsection*{Price module: Write}
 
-Admin can update the price information in the PM's datum by adding one more
-price point.
+Admin can update the price information in the PM's datum at most once an hour by
+adding one more price point.
 When doing so, any price points older than $48$ hours are removed.
 
 \subsubsection*{Price module: Read}
@@ -117,12 +115,18 @@ per hour.
 % 
 \subsection{Vault}
 
-\subsubsection*{Collect vault information}
+\subsubsection*{List my vaults}
 
-Users can collect information on their vaults, i.e. the vaults they created.
-This generates a list of all their (legitimate) vaults, and for each vault,
-reports on the amount of collateral and amount of debt (updated to this moment)
-in them.
+Users can list the (valid) vaults they own through the VaultUI, including their
+information: Amount of collatoral, amount of debt (updated to this moment).
+
+\subsubsection*{List all vaults}
+
+The dUSD-API includes a function to list all existing (valid) vaults.
+
+\subsubsection*{Get vault info}
+
+The dUSD-API includes a function to gather information on a given vault.
 
 \subsubsection*{Initialize vault}
 
@@ -135,52 +139,52 @@ Users can deposit ADA into their vaults.
 \subsubsection*{Withdrawal}
 
 Users can withdraw ADA from their vaults, as long as the resulting
-collateralization ratio is above the liquidation ratio.
-The frontend prevents users from dropping their collateralization ratio below
-the so-called ``minimum collateralization ratio''.
-The reason for this is that many people use the MakerDAO system as
-experimentation and lose thousands of dollars on day one.
-Power users can circumvent this by connecting to our Vault-API directly. \\
+collateralization ratio is above the liquidation ratio. The UX prevents users
+from dropping their collateralization ratio below the so-called ``minimum
+collateralization ratio''. The reason for this is that many people use the
+MakerDAO system as experimentation and lose thousands of dollars on day one.
+Power users can circumvent this by connecting to our dUSD-API directly. \\
 
-Note: The liquidation ratio can only be changed when the protocol is updated.
+Note: The liquidation ratio is hard-coded in the script and can only be changed
+when the protocol is updated.
 
 \subsubsection*{Take out loan}
 
-Users can take out a loan in dUSD from one of their vaults if the vault has
-enough collateral. There is a minimum size for dUSD loans, called the ``debt
+Users can take out a loan in dUSD from one of their vaults if doing so doesn't
+bring the collateralization ratio below the liquidation ratio\footnote{
+  See note above, in `Withdrawal', on the minimum collateralization ratio in the
+  UX.}.
+There is a minimum for the total debt in one vault, called the ``debt
 floor''\footnote{
   This is an on-chain mechanism, which means it is enforced on everyone.
-}, as well as a ceiling for the total debt in one vault, called the ``debt
-ceiling``.
+}, as well as a ``debt ceiling''.
 
 \subsubsection*{Pay back loan}
 
-Users can pay back (part of) the loan in their vaults. The remaining stability
-fee in the vault is set aside first. The rest of the dUSD paid, is burned in
-exchange for lowering the outstanding debt.
+Users can pay back (part of) the loan in their vaults.
 
 \subsubsection*{Collect stability fees}
 
-Stability fees must be collected as protocol profits. In the MVP, this will be
-done through a ``Collect stability fees'' endpoint, allowing the admin user to
-collect the fees.
+Stability fees are stored in the vault and must be collected as protocol
+profits. In the MVP, this will be done through a vault endpoint that allows the
+admin user to collect all the fees. \\
+
+% Post-MVP note: Once there is a concept of a buffer, any protocol update that
+% changes the buffer should require the funds from the old buffer to be sent to
+% the new buffer.
 
 \subsubsection*{Liquidate vault}
 
 A vault is considered in an unhealthy state if its collateralization ratio is
 below the liquidation ratio, both according to the current price and the price
-from one hour ago.
-The reason for this last part (using two prices) is that the vault owner should
-get an hour after a new price gets published to fix his vault before allowing
-liquidators to jump into action.
-In addition, if a vault becomes sick through a very temporary ADA crash, but
-recovers within an hour, there is no reason to liquidate. \\
-
-Whenever a vault is in an unhealthy state, liquidators can come in and buy
-collateral (ADA) through a Dutch auction.
-
-\todo{Describe how the Dutch auctions will work, including liquidation fees
-(?).}
+from one hour ago\footnote{
+  The reason for this last part (using two prices) is that the vault owner
+  should get an hour after a new price gets published to fix his vault before
+  allowing liquidators to jump into action. In addition, if a vault becomes sick
+  through a very temporary ADA crash, but recovers within an hour, there is no
+  reason to liquidate.}.
+Whenever a vault is in an unhealthy state, anyone can buy collateral (ADA)
+through a Dutch auction.
 
 % Post-MVP, collecting stability fees will no longer be an admin-only action.
 % Instead, the protocol will allow anyone to send the stability fees to a
@@ -224,8 +228,8 @@ collateral (ADA) through a Dutch auction.
 \subsection{Protocol Parameters Module}
 
 The Protocol Parameters Module is a UTXO responsible for storing the
-protocol-wide parameters which can be updated without having to go through a
-protocol update.
+protocol-wide parameters which can be updated without requiring a protocol
+update.
 
 \subsubsection*{Set liquidation discount rate}
 
@@ -249,17 +253,34 @@ The admin user can set the debt ceiling (in dUSD) through the admin CLI.
 
 \subsubsection*{Initialize protocol}
 
-The procedure to initialize the protocol is as follows:
+The procedure to initialize the protocol is the same as in the Hello Cardano
+Template:
 \begin{enumerate}
-  \item \todo{Fill in the details}
+  \item Create an NFT through the generic NFT minting policy (see Hello Cardano
+    Template)
+  \item Using this NFT as the protocol's master NFT (identifying its Config
+    UTXO), generate the script hashes of all the on-chain components' scripts
+  \item Create the NFTs identifying the protocol parameters module and the price
+    module
+  \item Launch a protocol-wide parameters module and a price module
+  \item Create a Config UTXO with the master NFT and a datum listing the script
+    hashes and (parameters module and price module) NFTs
 \end{enumerate}
 
 \subsubsection*{Update protocol}
 
-\todo{Fill in the details}
-
 Initially, protocol updates are performed by admin. Eventually, governance
-voting will take over.
+voting will take over. This is done through the Admin CLI. The process looks as
+follows:
+\begin{enumerate}
+  \item If you want to update the price module, create a new price module and
+    send the NFT identifying the old one to the new one
+  \item Generate an NFT identifying the new parameters module and create the new
+    module with that NFT
+  \item Set the debt ceiling in the old parameters module to $0$
+  \item Add the new vault script hash and NFTs (price module and parameters
+    module) to the protocol's Config UTXO
+\end{enumerate}
 
 \section{Acceptance criteria}
 
@@ -267,21 +288,21 @@ voting will take over.
 
 Off-chain and on-chain criteria:
 \begin{itemize}
-  \item Only admin can create a price module
-  \item Only admin can write to the price module
-  \item Writing a price value removes price values older than 48 hours from the
-    datum
-%   \item Writing the price value cannot be done more than once per hour
+  \item Writing the price value succeeds if and only if it is done by admin and
+    at least an hour after the last update
   \item Reading the price data after writing a new price point successfully,
-    works
-  \item Anyone can read the price data
+    shows no price information older than $48$ hours
+  \item Reading the price data after writing a new price point successfully,
+    shows the new price information
 \end{itemize}
 
 Price feed bot:
 \begin{itemize}
   \item Always collects information from at least three sources successfully
-  \item Running the systemd service makes the UTXO get updated by at least three
-    sources at least once every two hours
+  \item Running the cron service makes the UTXO get updated by at least three
+    sources within $5$ minutes from the hour passing. What we mean by this, is
+    that the price module can only be updated at least one hour after its last
+    update, and should hence be updated soon after that limit.
 \end{itemize}
 
 % The version 2 price discovery mechanism is stored in these comments:
@@ -310,31 +331,34 @@ Price feed bot:
 % 
 \subsection{Vault}
 
-Each user should have access to a website at "www.vault.ardana.com".
-This website must be able to connect to their wallet to find out who they are
-and allow them to set up vaults and interact with their existing vaults.
+Each user has access to "www.vault.ardana.com". On this website, they can
+connect their wallet and subsequently set up vaults and interact with their
+existing vaults.
 
-Acceptance criteria:
 \begin{itemize}
   \item Anyone can create a vault, through a button on the website
   \item Anyone can create multiple vaults
-  \item Vaults owned by the same person are independent, i.e. one of the
-    person's vaults being sick, doesn't influence his other vaults
-  \item There is a page that automatically connects to the user's wallet and
-    displays information about his vaults: How many vaults, and for each vault
-    the amount of collateral, debt, collateralization ratio, and how healthy the
-    vault is.
+  \item One person's vault being sick doesn't affect another vault owned by the
+    same person, i.e. they can still take out loans and take out collateral
+  \item The user can see how many vaults they own, and for each vault the amount
+    of collateral, debt, collateralization ratio, and (post-MVP) how healthy the
+    vault is
+  \item Vault information is traced correctly (as read by the ``Gather vault
+    info'' function in dUSD-API) when performing transactions (withdraw and
+    deposit collateral, take out and pay back debt, and liquidating vaults
+    (partially and fully))
   \item The vault overview is correct, clear and aesthetic
-  \item Users can deposit, withdraw, take out a loan and pay back a loan
-    (through forms on the website) only if the collateralization ratio doesn't
-    drop below the liquidation ratio\footnote{
-      In the UX (frontend only!), the collateralization ratio is banned from
-      dropping under the minimum collateralization ratio.}
+  \item Users can deposit and withdraw collateral, take out and pay back loans
+    through forms on the website only if the collateralization ratio doesn't
+    drop below the liquidation ratio through the dUSD-API
+  \item Users can deposit and withdraw collateral, take out and pay back loans
+    through forms on the website only if the collateralization ratio doesn't
+    drop below the minimum collateralization ratio through the VaultUI
   \item No transaction can update the timestamp in the vault in a way that's
     inaccurate by more than $12$ hours
   \item Users cannot take out a loan or pay one back that leaves the dUSD debt
     above $0$ but below the debt floor\footnote{
-    The puprose of the debt floor is to ensure good debt is issued against a
+    The purpose of the debt floor is to ensure good debt is issued against a
     vault to incentivize a liquidator to liquidate it should it become
     under-collateralized.}
 % Comment for Version 2:
@@ -351,50 +375,37 @@ Acceptance criteria:
 % 
 % Debt ceilings are not useful against OSM timing attacks, since users can
 % simply create multiple vaults.
-
-  \item Users cannot withdraw or take out a loan that drops their
-    collateralization ratio below the liquidation ratio
-  \item When going through a sequence of transactions, stability fees are
-    calculated correctly
+  \item When going through a sequence of transactions, stability fees and dUSD
+    debt are calculated correctly. `Correctly' here is defined in the
+    Implementation details.
   \item Only the owner of the vault can create transactions other than
     liquidation
   \item Anyone can liquidate a sick vault
   \item Liquidation is possibly if and only if the vault is in an unhealthy
     state
-  \item Unless in the case of resource contention, any vault is liquidated
-    within $1$ hour of becoming sick
-    \todo{Improve this acceptance criterium.
-    How do we test whether our liquidation bot works appropriately?
-    What about ``Any vault that becomes sick, is noticed by our liquidation
-    script within X minutes''?}
+  \item When a vault turns sick, the liquidation bot notices within $5$ minutes
+  \item The price at which a vault is liquidated, is correct in accordance with
+    Dutch auctions. This is defined in the implementation details.
 \end{itemize}
 
-\subsection{Auction module}
-
-\begin{itemize}
-  \item During liquidation, collateral is bought at discount compared to the
-    most current price from the price module, where the discount is the
-    liquidation discount (set by admin)
-  \item The amount of dUSD paid back (when paying back a loan) is smaller than
-    (or equal to) the outstanding debt in the auction module
-\end{itemize}
-
-\subsection{Buffer}
-
-\begin{itemize}
-  \item Admin can trigger any dUSD $\leftrightarrow$ ADA auction that tries to
-    sell less tokens than are present in the buffer
-\end{itemize}
+\todo{Add criteria for the Dutch auctions.}
 
 \subsection{Protocol Parameters Module}
+
 \begin{itemize}
   \item Admin and only admin can set the protocol-wide parameters (stability
     fee, liquidation discount, debt floor and debt ceiling)
+  \item The parameters can only be set within reasonable bounds. \todo{@Brian:
+    What are these bounds, exactly?}
   \item If the protocol-wide parameters are changed, this change is immediately
     and correctly seen in liquidations and when taking out loans
 \end{itemize}  
 
-\subsection{Update mechanism for the protocol (TBD)}
+\subsection{Config UTXO}
+
+\todo{What is the config UTXO?}
+
+\todo{Protocol updates.}
 
 \section{Implementation details}
 
@@ -413,17 +424,17 @@ using one of the admin keys. \\
 
 Off-chain bot:
 \begin{itemize}
-  \item Haskell script that collects information and submits a transaction
-  \item Before collecting any price information, the script reads out the
-    relevant UTXO's datum and checks if it has been updated in the last hour. If
-    so, the script terminates successfully right away.
-  \item The script is ran once every five minutes through a systemd service
+  \item The bot is a cron job which runs a Purescript executable, which uses the
+    dUSD-API. This is similar to the Admin CLI.
+  \item The bot runs once every minute until successful, then waits for an hour,
+    and repeats
 \end{itemize}
 
 Price module:
 \begin{itemize}
   \item The on-chain code will be written in Plutarch
-  \item The off-chain code will be built as a PAB
+  \item The off-chain code will be built as an API in CTL, used both by an Admin
+    CLI and a browser app
   \item The datum will contain a map from timestamps (in POSIX time) to price
     values
   \item The script address will be dependent on three admin public
@@ -488,6 +499,20 @@ most up-to-date price module, and these old protocols must still be viable.
 % be split into separate UTXOs?}
 % 
 \subsection{Vault}
+
+How stability fees work:
+\todo{Explain what stability fees are.}
+\todo{Explain how stability fees are stored: In the vault's value, and in its
+datum. Note the requirements this puts on the vault's validator script.}
+\todo{Explain time-dependent stability fees. \\
+Note: Stability fees are calculate in \#days, rounded up, to avoid people
+abusing the $12$h window. \\
+Stability fees can change, but we have a history of them, so we can reconstruct
+the past to calculate the total debt due.}
+
+How Dutch auctions work: \todo{Explain.}
+
+\todo{Explain the VaultID system, and VaultID minting policy.}
 
 \begin{itemize}
   \item On-chain code: Plutarch
@@ -569,6 +594,28 @@ trading dUSD for ADA), liquidating the vault to the extend necessary.
 In brokering this transaction, the liquidation bot earns profits, which are
 stored in the admin wallet and used for protocol development.
 
+\todo{Describe how the Dutch auctions will work, including liquidation fees
+(?).}
+
+Note: If the price module hasn't been updated in the last $4$ hours,
+transactions which require price information\footnote{
+  These transactions are taking out loans, withdrawing collateral and
+  liquidating vaults.
+} are temporarily paused. This is verified by requiring the time span (in the
+vault transaction) to maximally cover $15$ minutes. Note in addition that this
+requirement means that any vault transaction must be added to the blockchain
+within $15$ minutes, or it will be rejected and has to be recreated and
+resigned.
+
+\subsection{Config UTXO}
+
+\todo{Explain the datum of a Config UTXO.}
+% Configuration = [Protocol] + price module ID + dUSD currency info
+% Protocol = vault script address, buffer ID, protocol-wide parameters ID,
+%   auction module ID (optional), "updating vaults to this version" (optional)
+
+\todo{Explain the Admin CLI implementation of ``update protocol''.}
+
 \subsection{Buffer}
 
 The buffer's script address will be dependent on the same three admin public
@@ -634,23 +681,39 @@ contains an NFT as an ID with the correct CurrencySymbol).
 
 \section{Tests}
 
+\begin{itemize}
+  \item Test for Cardano network congestion
+  \item Test what happens if someone hacks one or more price oracles
+  \item Other attack vectors which are not specific to our application, should
+    be listed and tested for
+\end{itemize}
 
 \section{Remarks}
 
-The admin user will collect the stability fees in dUSD. This allows him to trade
-between dUSD and ADA to help dUSD stick to its peg, compensation for short-term
-fluctuations to some extent.
-
-% - Test for Cardano network congestion
-% - Test what happens if someone hacks one or more price oracles
-% - Other attack vectors which are not specific to our application, should be
-%   listed and tested for
-
-\section{Remarks}
+Some extra remarks:
+\begin{itemize}
+  \item The admin user will collect the stability fees in dUSD. This allows him
+    to trade between dUSD and ADA to help dUSD stick to its peg, compensation
+    for short-term fluctuations to some extent.
+  \item The Admin CLI will run on a server called the Ardana Tenant, in a secure
+    facility. This server will run its own CTL runtime dependencies.
+  \item There will be one admin key, stored on three YubiHSMs: One in the Ardana
+    Tenant, one in the secure facility where the Ardana Tenant is located, and
+    one secured personally by a trusted member of the Ardana team. The key will
+    be generated by a trusted member of the Ardana team and put on all three
+    YubiHSMs.
+  \item The website requires CTL runtime dependencies to be running. This will
+    be done in the cloud, on Digital Ocean. As a backup, we will make sure the
+    dUSD frontend can also work against MLabs' public CTL runtime dependencies.
+  \item The admin key is hardcoded in the vault, price module and parameters
+    module scripts, and can only be changed through protocol updates
+  \item All parameters the protocol depends on, are either included in the
+    Parameters Module or hardcoded into the scripts in order to prevent updating
+    them outside of a protocol update
+\end{itemize}
 
 One important question to discuss, is what happens in case a bug is found in the
-dUSD protocol.
-Let us start by categorizing any protocol bug into two types:
+dUSD protocol. Let us start by categorizing any protocol bug into two types:
 \begin{enumerate}
   \item Someone can mint dUSD at a discount
   \item Someone can get others' collateral at a discount
@@ -685,7 +748,6 @@ centralized `emergency' control.
   \item Minimum collateralization ratio
   \item Debt floor
   \item Debt ceiling
-  \item Auction discount
 \end{itemize}
 
 \end{document}
